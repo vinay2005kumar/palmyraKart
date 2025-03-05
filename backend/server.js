@@ -27,11 +27,8 @@ app.use(
 app.options('*', cors()); // Allow preflight requests for all routes
 
 // Routes
-app.get('/', (req, res) => {
-  res.send({
-    activateStatus:true,
-    error:false,
-  });
+app.get("/", (req, res) => {
+  res.send("Backend running on Vercel!");
 });
 
 app.use('/api/user', authRouter);
