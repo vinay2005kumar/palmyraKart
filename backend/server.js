@@ -28,7 +28,10 @@ app.options('*', cors()); // Allow preflight requests for all routes
 
 // Routes
 app.get('/', (req, res) => {
-  res.json('hello');
+  res.send({
+    activateStatus:true,
+    error:false,
+  });
 });
 
 app.use('/api/user', authRouter);
