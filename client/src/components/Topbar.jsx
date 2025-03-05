@@ -23,8 +23,8 @@ const Topbar = () => {
   const[istoggleicon,setistoggleicon]=useState(true)
   const isMobile = window.innerWidth < 765;
   const[iskart,setkart]=useState()
-   // const url = 'https://ice-apple-6.onrender.com';
-   const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
 // ------------------------------------------------------------
   // const socket = io(url, {
   //   transports: ["websocket", "polling"], // Force WebSocket transport

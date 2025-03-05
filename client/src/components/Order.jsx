@@ -19,8 +19,8 @@ const Order = ({ order2, resetOrder }) => {
   const isMobile = window.innerWidth <= 768;
   const[email,setemail]=useState()
   const navigate = useNavigate();
-  // const url = 'https://ice-apple-6.onrender.com';
-  const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
   const getData = async () => {
     try {
       const response = await axios.get(`${url}/data`, { withCredentials: true });

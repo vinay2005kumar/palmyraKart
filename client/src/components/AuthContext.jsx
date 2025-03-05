@@ -5,15 +5,15 @@ import Dhome from '../Dashboard/Dhome';
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 export const AuthProvider = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState();
   const [limit, setlimit] = useState(null); // New state for limit
   const [admin, setAdmin] = useState(false);
   const [alogout,setalogout]=useState(false)
   const [dkart, setdkart] = useState(false);
   const [dkart2,setdkart2]=useState()
- // const url = 'https://ice-apple-6.onrender.com';
-  const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
   // const[email,setemail]=useState(localStorage.getItem('email') ? localStorage.getItem('email'): null)
     const handleKart = async () => {
       try {

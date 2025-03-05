@@ -14,8 +14,8 @@ const Ddelivered = () => {
   const [phoneFilter, setPhoneFilter] = useState('');
   const [sno, setsno] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
- // const url = 'https://ice-apple-6.onrender.com';
- const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
    const isMobile=window.innerWidth<=700
    const getdata = async () => {
     console.log("getdata() function is called ✅"); // Debugging log

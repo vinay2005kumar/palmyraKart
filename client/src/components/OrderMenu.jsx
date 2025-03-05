@@ -19,8 +19,8 @@ const OrderMenu = ({ buy, quantity, llimit2 }) => {
   const navigate = useNavigate();
   const[limit2,setlimit]=useState(limit)
    const[isKart,setKart]=useState(true)
-  // const url = 'https://ice-apple-6.onrender.com';
-  const url = 'http://localhost:4000/api/user';
+   const url = 'https://palmyra-fruit.onrender.com/api/user';
+   //const url = 'http://localhost:4000/api/user';
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true); // For checking time
 
   // const socket = io(url, {

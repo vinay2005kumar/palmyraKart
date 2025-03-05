@@ -12,8 +12,8 @@ const Dreviews = () => {
   const [replyMessage, setReplyMessage] = useState(""); // Reply message
   const isMobile = window.innerWidth < 765;
   const [message, setMessage] = useState('');
- // const url = 'https://ice-apple-6.onrender.com';
- const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
   const [loading,setloading]=useState(false)
   // Function to generate a consistent background color based on the initials
   const generateColorFromInitials = (name) => {

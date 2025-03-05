@@ -12,8 +12,7 @@ import Reviews from './Reviews';
 import './LandingPage.css';
 import Dhome from '../Dashboard/Dhome';
 import { useAuth } from './AuthContext'; // Assuming this provides authentication info
- // const url = 'https://ice-apple-6.onrender.com';
- const url = 'http://localhost:4000/api/user';
+
 
 const Landingpage = () => {
   const {isAuthenticated, admin } = useAuth(); // Get limit, authentication status, and admin status
@@ -25,7 +24,8 @@ const Landingpage = () => {
   const [llimit, setllimit] = useState();
   const [order, setorder] = useState(false);
   const[lmenu,setlmenu]=useState()
-
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
  
   //----------------------------change next
   const handlelimit = async () => {

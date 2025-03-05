@@ -21,8 +21,8 @@ const Dorder = ({ onOrderDetails }) => {
   const [vno, setvno] = useState();
   const[orderid,setorderid]=useState()
   const [sortByAddress, setSortByAddress] = useState(false);  // New state for sorting
-   // const url = 'https://ice-apple-6.onrender.com';
-   const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
   const isMobile = window.innerWidth <= 760;
   
   const getdata = async () => {

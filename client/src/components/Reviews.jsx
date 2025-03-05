@@ -16,8 +16,8 @@ const Reviews = () => {
   const [loading, setLoading] = useState(false);
   const[userEmail,setuserEmail]=useState()
   const isMobile = window.innerWidth < 765;
- // const url = 'https://ice-apple-6.onrender.com';
- const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
 
   useEffect(() => {
     const fetchReviews = async () => {

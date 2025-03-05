@@ -34,7 +34,8 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const passwordInputRef = useRef(null);
-  const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
 
   // Handle login form submission
   const handleSubmit = async (e) => {
@@ -220,7 +221,7 @@ const LoginForm = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
-                  <span onClick={toggleEye} className="eye-icon">
+                  <span onClick={toggleEye} className="eye">
                     {eye ? <FaRegEye /> : <PiEyeClosedBold />}
                   </span>
                 </div>
@@ -258,7 +259,8 @@ const SignupForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [eye, setEye] = useState(false);
-  const url ='http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
   const passwordInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const handleRegister = async (e) => {
@@ -358,7 +360,7 @@ const SignupForm = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-                   <span onClick={toggleEye} className="eye-icon">
+                   <span onClick={toggleEye} className="eye">
                     {eye ? <FaRegEye /> : <PiEyeClosedBold />}
                   </span>
               </div>
