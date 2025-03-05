@@ -1,0 +1,716 @@
+:root {
+    --background: #fce8c4;
+    --background2: #d2c6aa;
+}
+
+body {
+    width: 100%;
+    overflow-x: hidden; 
+    margin: 0;
+    padding: 0;
+}
+
+.home-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    /* border: 1px solid red; */
+    overflow: hidden; 
+    backdrop-filter: blur(15px);
+}
+.home{
+    position:absolute;
+    left: 4em;
+    width: 100%;
+    height: 100%;
+}
+.himg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.hblock1{
+    width:60%;
+    height: 18em;
+    position: absolute;
+    top:6em;
+    left:22%; 
+}
+.mtext{
+    position:relative;
+    left: 25%;
+    font-size: 3.5em;
+   top:-0.6em!important;
+}
+.mtext-img{
+    position: absolute;
+    left: 0%;
+    top:30%;
+    z-index: 999;
+
+}
+.mtext-img img{
+    width:50em;
+}
+.mtext2{
+   position:relative;
+   top:55%!important;
+   left: 24%!important;
+   font-size: 2.5em;
+   text-shadow: 0 0 5px cyan,0 0 10px cyan,0 0 20px cyan;
+  
+}
+.hblock1 h2{
+    position: absolute;
+    top:1em;
+    color: #4B0082;
+    text-align: start;
+    color: white;
+    text-shadow: 0 0 10px cyan,0 0 20px cyan;
+    left: 20%;
+    top:-5%;
+}
+
+.hblock2 {
+    width: 60%;
+    height: 18em;
+    /* border: 1px solid green; */
+    /* border-radius: 50%; */
+    position: absolute;
+    left:20%;
+    top:50%;
+    overflow: hidden;
+    z-index:99999;
+}
+.htext{
+    width: 45%;
+    position: relative;
+    top:-2%;
+    /* font-weight: bold; */
+    font-size: 1.3em;
+    text-align: justify;
+    color: green;
+    left: 0%;
+    /* display:none; */
+}
+.wrapper button{
+    width:100%;
+       height:40px;
+      background-color: orangered;
+       border-style: none;
+       color:#fff;
+       font-size: 23px;
+       letter-spacing: 3px;
+       font-family: 'Lato';
+       font-weight: 600;
+       outline: none;
+       cursor: pointer;
+       position: relative;
+       padding: -4px;
+       overflow: hidden;
+       transition: all .5s;
+       box-shadow: 0px 4px 2px rgba(0,0,0,.2);
+       text-wrap: nowrap;
+   }
+   .hbutton{
+       height: 2em;
+        font-size: 1.2em;
+        position: absolute;
+       left:30%;
+        bottom:25%;
+        cursor: pointer;
+        /* display: none; */
+    }
+   .horder{
+       left: 15%;
+   }
+
+#himg1 {
+    position: absolute;
+   right: 2%;
+    width: 28em;
+    height: 18em;
+    object-fit: cover;
+    z-index: 5;
+    animation: img 0.5s ease 0s forwards;
+}
+@keyframes img {
+    0%{
+        bottom: 15em;
+    }
+    100%{
+        bottom: 0em;
+    }
+}
+#s1{
+    width:43em;
+    height:23em;
+    position: absolute;
+    bottom: 0em;
+    right: -10%;
+    animation: s1 1s ease 0.2s forwards;
+    opacity: 0;
+    /* display: none; */
+}
+@keyframes s1{
+    0%{
+      transform: scale(1,0.0);
+      height: 10em;
+      opacity: 1;
+    }
+    100%{
+        width:43em;
+        height:23em;
+    transform: scale(1,1);
+    height: 23em;
+    opacity: 1;
+    /* display: none; */
+    }
+}
+#s2{
+    position:relative;
+    left:30%;
+    bottom: 15em;
+    z-index:-9;
+    opacity: 0;
+    animation: s2 1s ease 0.5s forwards;
+}
+@keyframes s2 {
+    0%{
+        opacity: 0;
+    }
+    100%{
+        opacity: 1;
+    }
+}
+#s3{
+    position: absolute;
+    right: 0em;
+   bottom: 10em;
+}
+.tree7,.tree8{
+    position: relative;
+   top:36%;
+   left:-8%;
+   opacity: 0;
+   animation: tree3 1s ease 2s forwards;
+}
+@keyframes tree3 {
+    0%{
+        opacity: 0;
+    }
+    100%{
+        opacity: 1;
+    }
+}
+.tree8{
+    left: 15%;
+    z-index: -1;
+}
+.home .himg2{
+    position: absolute;
+    width: 28em;
+    height: 26em;
+    position: relative;
+    left: -15em;
+    top:21%;
+    opacity: 0;
+    animation: tree2 2s ease 0.5s forwards;
+    transform-origin: bottom center;
+}
+.home .himg4{
+    left: 25%;
+}
+@keyframes tree2 {
+    0%{
+        top:39%;
+        transform: scale(0.3,0.3);
+        transition: -0.3s;
+        animation: trees 2s ease 0s forwards;
+        opacity: 0;
+    }
+    100%{
+        top:34%;
+        transform: scale(1,1.2);
+        transition: -0.3s;
+        animation: trees 2s ease 0s forwards;
+        opacity: 1;
+       
+    }
+}
+
+.himg3,.tree1{
+    position: absolute;
+    /* z-index: 444; */
+    /* width:45em;
+    height:53em; */
+    /* border: 1px solid red; */
+    position: absolute;
+    width: 45em;
+    height: 40em;
+    right: -6em;
+    transform: scale(0.3,0.3);
+    transition: -0.3s;
+    animation: trees 2s ease 0s forwards;
+}
+@keyframes trees {
+    0%{
+        /* height: 30em;
+      top:-1em */
+      top:-2em;
+      width: 47%;
+      height:100%;
+      transform-origin: bottom center;
+      transform: scale(0.3,0.3);
+      opacity: 0;
+    }
+    100%{
+        width: 47%;
+        height:95%;
+        top:3%;
+        transform-origin:bottom center;
+        transform: scale(1.1,1.25);
+        opacity: 1;
+    }
+}
+
+.tree1{
+    position: absolute;
+    left: -13em;
+}
+.tree3,.tree4{
+    position: absolute;
+    top:18%;
+    left: -2%;
+    /* border: 1px solid black; */
+    width: 25em;
+    height:35em;
+}
+.tree4{
+    left: 68%;
+}
+
+@media screen and (max-width:700px){
+    .home-container{
+        width: 100%;
+        height: 100vh;
+        /* border: 1px solid red; */
+        background-repeat: no-repeat;
+        background-size: cover;
+        position: relative;
+        background-color: antiquewhite;
+    }
+    .home{
+        position: relative;
+        display: flex;
+        justify-content: center;
+        left: 2em;
+    }
+    .hblock1{
+        width: 95vw;
+        height: 12em;
+        position: absolute;
+        left: -1.7em;
+       /* border: 1px solid black; */
+       top: 21em;
+       padding-right: 1em;
+       padding-left: 0.4em;
+       box-sizing: border-box;
+    }
+  .hblock1 h2{
+    font-size: 1.5em;
+    margin-bottom: 2.4em;
+    position: absolute;
+    top:3em;
+    color: white;
+    text-shadow: 0 0 10px cyan,0 0 20px cyan,0 0 30px cyan;
+  }
+  
+  .hblock1 h1{
+    font-size: 1.4em;
+    margin-bottom: -1.5em;
+    position: relative;
+    top:-14.5em;
+    color: white;
+    text-shadow: 0 0 10px cyan,0 0 20px cyan,0 0 30px cyan;
+  }
+.hblock1 h2{
+    position:relative;
+    top:-12em;
+}
+.hblock1 .mtext-img {
+    left:6%;
+    top:5%;
+}
+.mtext-img img{
+    width: 25em;
+    height: 4em;
+}
+.mtext{
+    left:23%!important;
+    top:-40%!important;
+    font-size:2em!important;
+}
+.mtext2{
+    top:-1.8em!important;;
+    font-size: 1.8em!important;
+    left:28%!important;
+}
+  .htext{
+    font-size:1.1em;
+    line-height: -20px;
+    position: absolute;
+    /* padding-right: 0.3em;
+    padding-left: 0.2em; */
+    top:10em;
+    display: none;
+  
+  }
+.wrapper button{
+    /* width: 4em; */
+    height: 2.5em;
+    font-size: 0.9em;
+    font-weight:'';
+    position: absolute;
+    left:65%;
+    top:1.3em;
+   
+}
+.habout2,.horder{
+    /* letter-spacing: -1px; */
+    width: 4em;
+    height: 3em;
+    position: absolute;
+    top:-25%;
+   left: 7em;
+}
+.habout2{
+    width: 5em;
+    position: absolute;
+    left: 35%;
+}
+.horder{
+    left: 7%;
+}
+.habout2 button,.horder button{
+    width: 6em;
+    
+}
+.hbutton button{
+    margin-top: 7em;
+    -webkit-tap-highlight-color: transparent;
+}
+  .hblock2{
+    width: 85vw;
+    height: 80vw;
+    position: absolute;
+    left:2%;
+    top:49%;
+    /* border: 1px solid green; */
+  }
+  #himg1{
+    position: absolute;
+    left:8%;
+    /* top:30%; */
+    width:90%;
+    height:75%;
+    animation: splash1 0.1s ease 0.1s forwards;
+   
+  }
+  @keyframes splash1 {
+      0%{
+        top:0%;
+      }
+      100%{
+       top:30%;
+      }
+  }
+  #s1{
+    width: 20%;
+    height: 10%;
+    left:0%;
+    display: none;
+  }
+  #s2{
+    left: -45%;
+    top:0%;
+  }
+  .tree1{
+    left: -93%;
+  }
+  .tree7,.tree8{
+    display:none;
+}
+.tree3,.tree4{
+    display: block;
+    width: 10em;
+    height: 25em;
+    top:45%;
+    left: -15%;
+}
+.tree4{
+    left: 65%;
+}
+ .home .himg2{
+    position: absolute;   
+}
+.himg3{
+    width: 11em;
+    height: 19em;
+    object-fit: contain;
+    position: absolute;
+    left:20%;
+}
+.home .himg4{
+    left: 40%;
+}
+
+
+@keyframes tree2 {
+    0%{
+        top:39%;
+        transform: scale(0.3,0.3);
+        transition: -0.3s;
+        animation: trees 2s ease 0s forwards;
+        opacity: 0;
+    }
+    100%{
+        top:44%;
+        transform: scale(0.7,1.15);
+        transition: -0.3s;
+        animation: trees 2s ease 0s forwards;
+        opacity: 1;
+    }
+}
+@keyframes trees {
+    0%{
+        /* height: 30em;
+      top:-1em */
+      top:-2em;
+      width: 45em;
+      height: 45em;
+      transform-origin: bottom center;
+      transform: scale(0.4,0.8);
+      opacity: 0;
+    }
+    100%{
+        width: 45em;
+        height: 45em;
+        top:20%;
+        transform-origin:bottom center;
+        transform: scale(0.7,1.55);
+        opacity: 1;
+    }
+}
+@keyframes tree3 {
+    0%{
+        opacity: 0;
+    }
+    100%{
+        opacity: 1;
+    }
+}
+}
+@media screen and (max-width:400px){
+    .hblock2{
+    }
+    .htext{
+        top:2em;
+        font-size:0.9em;
+    }
+    .hbutton button{
+         top:-3em;
+    }
+
+    .habout2{
+        width: 5em;
+        position: absolute;
+        left: 33%;
+    }
+    .horder{
+        left: 0%;
+    }
+
+      .hblock2{
+        width: 85vw;
+        height: 70vw;
+        position: absolute;
+        left:2%;
+        top:55%;
+        /* border: 1px solid green; */
+      }
+      #himg1{
+        position: absolute;
+        left:5%;
+        top:10%;
+        width:90%;
+        height:80%;
+       
+      }
+      .tree1{
+        left: -105%;
+      }
+      .tree7,.tree8{
+        display:none;
+    }
+    .tree3,.tree4{
+        display: block;
+        width: 10em;
+        height: 25em;
+        top:45%;
+        left: -20%;
+    }
+    .tree4{
+        left: 65%;
+    }
+     .home .himg2{
+        position: absolute;   
+    }
+    .himg3{
+        width: 11em;
+        height: 19em;
+        object-fit: contain;
+        position: absolute;
+        left:10%;
+    }
+    .home .himg4{
+        left: 30%;
+    }
+    .hblock1 .mtext-img {
+        left:6%;
+        top:-40%;
+    }
+    .mtext-img img{
+        width: 100%;
+        height: 4em;
+    }
+    .mtext{
+        left: 20%;
+        top:-80%!important;
+        font-size:2em!important;
+    }
+      .htext{
+        font-size:1.1em;
+        line-height: -20px;
+        position: absolute;
+        /* padding-right: 0.3em;
+        padding-left: 0.2em; */
+        top:7em;
+        display: none;
+      
+      }
+      .mtext2{
+        top:-4.5em!important;
+      }
+    @keyframes tree2 {
+        0%{
+            top:39%;
+            transform: scale(0.3,0.3);
+            transition: -0.3s;
+            animation: trees 2s ease 0s forwards;
+            opacity: 0;
+        }
+        100%{
+            top:44%;
+            transform: scale(0.7,1.2);
+            transition: -0.3s;
+            animation: trees 2s ease 0s forwards;
+            opacity: 1;
+        }
+    }
+    @keyframes trees {
+        0%{
+            /* height: 30em;
+          top:-1em */
+          top:-2em;
+          width: 45em;
+          height: 45em;
+          transform-origin: bottom center;
+          transform: scale(0.4,0.8);
+          opacity: 0;
+        }
+        100%{
+            width: 45em;
+            height: 45em;
+            top:10%;
+            transform-origin:bottom center;
+            transform: scale(0.7,1.45);
+            opacity: 1;
+        }
+    }
+}
+@media screen and (max-width:360px) {
+    .hbutton button{
+        top:4em!important;
+        width: 5em;
+    }
+    .horder button{
+        left: 1em;
+    }
+    .htext{
+        top:3.5em;
+    }
+    .tree4{
+        left: 65%;
+    }
+    .tree1{
+        left: -119%;
+      }
+      .hbutton button{
+        margin-top: 0em;
+    }
+    .habout2 button{
+        left: 25%;
+    }
+    .himg3{
+        width: 11em;
+        height: 19em;
+        object-fit: contain;
+        position: absolute;
+        left:3%;
+    }
+    .home .himg4{
+        left: 28%;
+    }
+    .hblock1 .mtext-img {
+        left:6%;
+        top:-55%;
+    }
+    .mtext-img img{
+        width: 100%;
+        height: 4em;
+    }
+    .mtext{
+        left: 20%!important;
+        top:-95%!important;
+        font-size:2em!important;
+    }
+    .mtext2{
+      left: 25%!important;
+     top: -90%!important;
+    }
+    .habout2{
+        width: 5em;
+        position: absolute;
+        left: 43%;
+    }
+    .horder{
+        left: 13%;
+    }
+    .home .himg4{
+        left: 25%;
+    }
+    .hblock2{
+        width: 90%;
+        height: 18em;
+        left: 0%;
+        /* border: 1px solid green; */
+    }
+    #s2{
+        width: 30em;
+        height: 20em;
+        left:-35%;
+        top: -9%;
+    }
+    
+}

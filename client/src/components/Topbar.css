@@ -1,0 +1,296 @@
+#nav {
+    width: 100%;
+    height: 5em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    z-index: 999999999;
+    backdrop-filter: blur(5px);
+    background-color: rgba(210, 198, 170, 0.6);
+    padding: 0 1em;
+}
+
+.logo {
+    width: 10em;
+    height: 4.4em;
+    /* border: 1px solid red; */
+    /* background-color: #c1e1ec; */
+    position: absolute;
+    top:0em;
+    left: 2em;
+}
+
+.logo #limg1 {
+
+    width: 7em;
+    height: 7em;
+    object-fit: contain;
+    position: absolute;
+    top:-1.4em;
+}
+
+#limg2{
+    width: 7em;
+    height: 7em;
+    object-fit: contain;
+    position: absolute;
+    top:-1.4em;
+    left: 2em; 
+}
+.ttext {
+    text-decoration: none;
+    position: relative;
+    margin-right: 1.5em;
+}
+.active{
+    color: orange;
+}
+.ttext p::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -10px;
+    width: 0;
+    height: 2px;
+    background-color: red;
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.ttext:hover p::before {
+    width: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#ticon {
+    display: none;
+    font-size: 2.5em;
+    cursor: pointer;
+}
+#ticon2{
+    font-size: 1.8em;
+   
+}
+
+#tbox {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+.logotext{
+   position: absolute;
+   left:10em;
+   top:0.8em;
+}
+.note-icon{
+    position: absolute;
+    width: 5%;
+    height: 50%;
+    top:30%; 
+    left: 50%;
+    font-size: 1.7em;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: blue;
+    gap:-1em;
+}
+.notepad{
+    position: absolute;
+    width: 40%;
+    height: 80%;
+    box-shadow: rgba(0, 0, 0, 0.19) 0px 10px 20px, rgba(0, 0, 0, 0.23) 0px 6px 6px;
+    background-color: white;
+    color: black;
+    z-index: 99999999999999;
+    left:30%;
+    border-radius: 10px;
+    overflow-y: scroll;
+    animation: notepad 1.5s ease-in .0s forwards;
+}
+@keyframes notepad {
+    0%{
+        top:-10%;
+    }
+    30%{
+        top:15%;
+    }
+    60%{
+        top:10%;
+    }
+    100%{
+        top:15%;
+    }
+}
+.note-close{
+    position: absolute;
+    right: 0.5em;
+    top:0.5em;
+    font-size: 1.7em;
+    cursor: pointer;
+    color: red;
+}
+.note-content{
+    margin-top:2em;
+    padding: 0.em;
+}
+.note-content h2{
+    color: green;
+}
+.note-content ul li{
+    margin: 0.5em;
+}
+.kart{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    position: absolute;
+    top:7%;
+    height:10%!important;
+    z-index: 9999;
+    backdrop-filter: blur(15px);
+   
+}
+.kart marquee{
+    font-size: 1.7em;
+    color:red;
+    position: absolute;
+    top: 50%;
+  
+}
+.lselect{
+    position: absolute;
+    right: 1em;
+    top:15%;
+}
+@media screen and (max-width: 700px) {
+    .notepad{
+        width: 90%;
+        left: 5%;
+        top: -5%;
+    }
+    @keyframes notepad {
+        0%{
+            top:-5%;
+        }
+        30%{
+            top:8%;
+        }
+        60%{
+            top:6%;
+        }
+        100%{
+            top:8%;
+        }
+    }
+    .note-content{
+        font-size:1em;
+    }
+    .note-icon{
+        font-size: 1.5em;
+        width: 16%;
+        height: 70%;
+        position: absolute;
+ 
+        left: 70%;
+        top:20%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    button{
+        -webkit-tap-highlight-color: transparent; /* for Safari and Chrome on mobile */
+    }
+    #nav{
+        width: 93%;
+        height: 3.7em;
+        /* overflow: hidden; */
+        position: relative;
+        z-index: 99999;
+    }
+    #ticon ,#ticon2{
+        display: block;
+        position: absolute;
+        right: 0.3em;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        top:0.3em;
+    }
+    #ticon2{
+        font-size: 1.8em;
+        top:0.6em;
+        right: 0.5em;
+    }
+    #tbox {
+        display: flex;
+        flex-direction: column;
+        /* align-items: center; */
+        position:absolute;
+        top: 3.7em;
+        background-color: rgba(210, 198, 170, 0.8);
+        width: 8em;
+        padding: 1em;
+        display: none;
+        opacity: 0;
+        transform: translateY(0%) translateX(0%);
+        transition: transform 0.4s ease, opacity 0.4s ease;
+        overflow-x: hidden;
+        right:0em;
+  
+        -webkit-tap-highlight-color: transparent; /* for Safari and Chrome on mobile */
+    }
+    .ttext{
+        position: relative;
+        left: 0.5em;
+        /* z-index: 9999; */
+    }
+    /* When active, show the box smoothly from the top-right corner */
+    #tbox.active {
+       display: flex;
+        opacity: 1;
+        transform: translateY(0) translateX(0);
+    }
+  .logotext{
+
+    position: absolute;
+    left: 4.5em;
+    font-size: 0.9em;
+    top:1.3em;
+  }
+  .logo{
+    width: 5em;
+    position: absolute;
+    left: -1.5em;
+  }
+  #limg1{
+    width: 2em;
+    height: 2em;
+  }
+  #limg2{
+    width: 3.7em;
+  }
+ .kart{
+   height:5em;
+   top:5%;
+
+ }
+ .kart marquee{
+    font-size: 1.4em;
+ }
+}
+@media screen and (max-width:430px){
+    .note-content{
+        font-size: 0.86em;
+    }
+    .kart{
+        top:8%;
+    }
+    .lselect{
+        top:20%;
+    }
+}
+
