@@ -16,12 +16,10 @@ app.use(express.json()); // Parse JSON request bodies
 app.use(cookieParser()); // Parse cookies
 
 // CORS Configuration
-app.use(
-  cors({
-    origin: 'http://localhost:5173', // Replace with your frontend URL
-    credentials: true, // Allow credentials (cookies, authorization headers)
-  })
-);
+app.use(cors({
+  origin: ["https://palmyra-fruit-1.onrender.com", "http://localhost:5173"], // ✅ Allow both frontend and local dev
+  credentials: true,  // ✅ Allow cookies and authentication headers
+}));
 
 // Handle preflight requests
 app.options('*', cors()); // Allow preflight requests for all routes
