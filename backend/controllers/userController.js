@@ -89,10 +89,10 @@ export const updateKartStatus = async (req, res) => {
 
 export const order = async (req, res) => {
   try {
-    if (!req.user) {
-      console.log('❌ Unauthorized access: No user found in req.user');
-      return res.status(401).json({ message: 'Unauthorized: Please log in to place an order.' });
-    }
+    // if (!req.user) {
+    //   console.log('❌ Unauthorized access: No user found in req.user');
+    //   return res.status(401).json({ message: 'Unauthorized: Please log in to place an order.' });
+    // }
     
     // console.log('📩 Order received from:', req.user.id);
     // console.log('📦 Order details:', req.body.orders);

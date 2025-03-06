@@ -44,11 +44,12 @@ export const register = async (req, res) => {
 
         // Set token in HTTP-only cookie
         res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Ensures it works in HTTPS
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site cookies
+            httpOnly: true,  // ✅ Prevents JavaScript access (secure)
+            secure: true,  // ✅ Ensures it only works in HTTPS
+            sameSite: 'None',  // ✅ Required for cross-origin requests
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
+        
         
           
 
@@ -82,11 +83,12 @@ export const login = async (req, res) => {
 
         const token = jwt.sign({ id: user._id, isadmin: user.isadmin }, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.cookie('token', token, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Ensures it works in HTTPS
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site cookies
+            httpOnly: true,  // ✅ Prevents JavaScript access (secure)
+            secure: true,  // ✅ Ensures it only works in HTTPS
+            sameSite: 'None',  // ✅ Required for cross-origin requests
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
+        
       
         if (user.isadmin) {
             return res.json({ success: true, message: 'Admin login successful', isadmin: true, name: user.name });

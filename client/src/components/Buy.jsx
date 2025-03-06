@@ -28,7 +28,7 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity ,llimit3,handl
   // const[orderOtp,setOrderOtp]=useState()
   const navigate = useNavigate();
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
+ // const url = 'http://localhost:4000/api/user';
    const isMobile=window.innerWidth<=765
   const areaPlaceMapping = {
     Parvathipuram: ['Place 1', 'Place 2', 'Place 3'],
