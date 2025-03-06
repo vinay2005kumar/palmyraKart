@@ -32,7 +32,7 @@ app.use(cookieParser()); // Parse cookies
 
 // CORS Configuration
 app.use(cors({
-  origin: ["https://palmyra-fruit-1.onrender.com", "http://localhost:5173"], // ✅ Allow both frontend and local dev
+  origin: ["https://palmyraKart.onrender.com", "http://localhost:5173"], // ✅ Allow both frontend and local dev
   credentials: true,  // ✅ Allow cookies and authentication headers
 }));
 
