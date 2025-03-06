@@ -45,10 +45,12 @@ export const register = async (req, res) => {
         // Set token in HTTP-only cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            secure: process.env.NODE_ENV === 'production', // Ensures it works in HTTPS
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site cookies
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
+        
+          
 
         // Send welcome email
         await sendEmail(email, 'Welcome To My Website', `Welcome to my website! Your account has been created with email id: ${email}`);
@@ -62,7 +64,6 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
     const { email, password } = req.body;
-
     if (!email || !password) {
         return res.status(400).json({ success: false, message: 'Missing email or password' });
     }
@@ -80,14 +81,13 @@ export const login = async (req, res) => {
         }
 
         const token = jwt.sign({ id: user._id, isadmin: user.isadmin }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production', // Use `false` in local dev if needed
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-            maxAge: 7 * 24 * 60 * 60 * 1000,
+            secure: process.env.NODE_ENV === 'production', // Ensures it works in HTTPS
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site cookies
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
-
+      
         if (user.isadmin) {
             return res.json({ success: true, message: 'Admin login successful', isadmin: true, name: user.name });
         }
@@ -105,10 +105,10 @@ export const login = async (req, res) => {
 export const logout = async (req, res) => {
     try {
         // Clear the token cookie
-        res.clearCookie('token', {
+        res.clearCookie('token',token,{
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         });
         return res.json({ success: true, message: 'Logout successful' });
     } catch (error) {
