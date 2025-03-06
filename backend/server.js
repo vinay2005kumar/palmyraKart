@@ -18,7 +18,7 @@ app.use(cookieParser()); // Parse cookies
 // CORS Configuration
 // CORS Configuration
 app.use(cors({
-  origin: ["https://palmyrakart.onrender.com", "http://localhost:5173"], // ✅ Allow frontend & local dev
+  origin: ["https://palmyrakart.onrender.com"], // ✅ Allow frontend & local dev
   credentials: true, // ✅ Allow cookies & authentication headers
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // ✅ Allow necessary methods
   allowedHeaders: ["Content-Type", "Authorization"], // ✅ Allow important headers
