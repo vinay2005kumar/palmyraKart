@@ -121,7 +121,7 @@ const LoginForm = () => {
 
       if (response.data.success) {
         toast.success('Password reset successful!');
-        navigate('/home');
+        navigate('/auth');
         localStorage.setItem('username',response.data.username)
       }
     } catch (error) {
