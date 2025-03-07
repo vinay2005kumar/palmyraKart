@@ -106,18 +106,20 @@ export const login = async (req, res) => {
 // Logout user
 export const logout = async (req, res) => {
     try {
-        // Clear the token cookie
-        res.clearCookie('token',token,{
+        // ✅ Correctly clear the 'token' cookie
+        res.clearCookie('token', { 
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+            secure: true,  // ✅ Ensure it matches the login settings
+            sameSite: 'None', // ✅ Required for cross-origin requests
         });
+
         return res.json({ success: true, message: 'Logout successful' });
     } catch (error) {
         console.error('Logout error:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
     }
 };
+
 
 // Send OTP for email verification
 export const sendVerifyOtp = async (req, res) => {
