@@ -229,7 +229,7 @@ export const resetPassword = async (req, res) => {
             return res.status(404).json({ success: false, message: 'User not found' });
         }
 
-        if (!user.resetOtp || user.resetOtp !== otp) {
+        if (!user.resetOtp || String(user.resetOtp) !==String(otp)) {
             return res.status(400).json({ success: false, message: 'Invalid OTP' });
         }
 
