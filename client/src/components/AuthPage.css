@@ -304,7 +304,7 @@
     .forgotbox{
       width: 80%;
       left:2em;
-      height: 26em;
+      /* height: 26em; */
     }
     .forgot-button{
       position:relative;
@@ -318,7 +318,7 @@
     #pbutton{
       width:72%;
       left: 3em;
-      margin-top:0em;
+      position: relative;
 
     }
     .vgoback{
