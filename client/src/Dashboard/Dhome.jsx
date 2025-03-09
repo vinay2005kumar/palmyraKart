@@ -7,7 +7,8 @@ import AuthPage from '../components/AuthForm';
 import { useAuth } from '../components/AuthContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import {io} from 'socket.io-client';
+import { database, ref, set, onValue } from "../firebase/firebase";
+
 // import { database, ref, set} from '../firebase/firebase'
 const Dhome = () => {
  
@@ -46,36 +47,57 @@ const Dhome = () => {
 //   reconnectionDelay: 1000, // Delay between reconnect attempts
 // });
 // --------------------------------------
+
   const [isOpen, setIsOpen] = useState(true);
-
-  const toggleKart = () => {
+  useEffect(() => {
+    const statusRef = ref(database, "users/AmIewDOW747kvqkfhNE2"); // Updated path in Firebase
+    onValue(statusRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setIsOpen(snapshot.val()); // Update state with the fetched value
+      } else {
+        setIsOpen(false); // Default value if not found
+      }
+    });
+  }, []);
+  const toggleAvailability = async () => {
     const newState = !isOpen;
-    setIsOpen(newState);
-
-    // Update Firebase Realtime Database
-    set(ref(database, "kartStatus"), newState);
+   
+    console.log("state", newState);
+  
+    try {
+      await set(ref(database, "users/AmIewDOW747kvqkfhNE2"), { isOpen: newState });
+      toastfun(
+        newState ? "PalmyraKart Closed Successfully" : "PalmyraKart Opened Successfully",
+        "success"
+      );
+      setIsOpen(newState);
+    } catch (error) {
+      console.error("Error updating Firebase:", error);
+      toastfun("Failed to update PalmyraKart status", "error");
+    }
   };
+  
 
-const handleKartStatus = async (status) => {
-  try {
+// const handleKartStatus = async (status) => {
+//   try {
     
-    console.log('dhome',status)
-    // socket.emit("kart-status-updated", status);
-    await axios.put(`${url}/kart-status`, {value: status });
-   // 🔥 Notify all clients
-    if(status){
-      toastfun(`PalmyraKart Closed Successfully`,'success')
-      setIsKartOpen(status);
-    }
-    else{
-      toastfun(`PalmyraKart Opened Successfully`,'success')
-      setIsKartOpen(status);
-    }
+//     console.log('dhome',status)
+//     // socket.emit("kart-status-updated", status);
+//     await axios.put(`${url}/kart-status`, {value: status });
+//    // 🔥 Notify all clients
+//     if(status){
+//       toastfun(`PalmyraKart Closed Successfully`,'success')
+//       setIsKartOpen(status);
+//     }
+//     else{
+//       toastfun(`PalmyraKart Opened Successfully`,'success')
+//       setIsKartOpen(status);
+//     }
     
-  } catch (error) {
-    console.error("Error updating kart status:", error);
-  }
-};
+//   } catch (error) {
+//     console.error("Error updating kart status:", error);
+//   }
+// };
 
  const handleCloseToday = async () => {
     try {
@@ -133,21 +155,7 @@ const handleKartStatus = async (status) => {
       },
     });
   };
-  const handlevalue= async () => {
-    try {
-      const res = await axios.get(`${url}/get`, )
-  
-      const value = res.data.user.isKart; // Access the value
-      //console.log('value', value);
-  
-      setIsKartOpen(value); // Update the state with the new value
-  
-      // Use a callback to log the updated state
-      //console.log('Updated kart (from state):', value);
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    }
-  };
+
   const getdata = async () => {
     try {
       const { data } = await axios.get(`${url}/getAllUsers`);
@@ -226,23 +234,23 @@ const handleKartStatus = async (status) => {
   // }, []);
   
  
-  const fetchKartStatus = async () => {
-    try {
-      const res = await axios.get(`${url}/kart-status`);
+  // const fetchKartStatus = async () => {
+  //   try {
+  //     const res = await axios.get(`${url}/kart-status`);
   
-      const value = res.data; // Access the value
-     // console.log('dhomebar',value)
-      setIsKartOpen(value); 
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    }
-  };
+  //     const value = res.data; // Access the value
+  //    // console.log('dhomebar',value)
+  //     setIsKartOpen(value); 
+  //   } catch (error) {
+  //     console.error('Error fetching user:', error);
+  //   }
+  // };
 
   useEffect(() => {
     // fetchData();22
-    fetchKartStatus()
+    // fetchKartStatus()
     getdata()
-    sethrender(true)
+    // sethrender(true)
   }, []);
 
   const handleSubmit = async (e) => {
@@ -396,10 +404,14 @@ const handleKartStatus = async (status) => {
       }
     };
     const dstopKart=()=>{
-      handleKartStatus(true)
+      // handleKartStatus(true)
+      toggleAvailability()
+     
   }
   const dopenKart=()=>{
-    handleKartStatus(false)
+    //handleKartStatus(false)
+    toggleAvailability()
+ 
   }
     const handleKart = (msg,type) => {
    
@@ -412,12 +424,9 @@ const handleKartStatus = async (status) => {
               onClick={() => {
                 if(type=='close'){
                dstopKart()
-               setIsKartOpen(prev=>!prev)
                 }
                 else{
                   dopenKart()
-                  setIsKartOpen(prev=>!prev)
-              
                 }
               }}
               style={{
@@ -560,7 +569,7 @@ const handleKartStatus = async (status) => {
                 <span className="value value2"><PiCurrencyInrBold />{totalPrice}</span>
               </div>
               <div className="dkart">
-                {!isKartOpen ?   <div className="close-kart"><button onClick={()=>handleKart('Do you really want to close PalmyraKart','close')}>close kart</button></div>:
+                {!isOpen ?   <div className="close-kart"><button onClick={()=>handleKart('Do you really want to close PalmyraKart','close')}>close kart</button></div>:
                 <div className="open-kart"><button onClick={()=>handleKart('Do you want to open PalmyraKart','open')}>open kart</button></div>
                 }
                 

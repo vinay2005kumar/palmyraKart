@@ -8,7 +8,7 @@ import { IoReorderThree } from "react-icons/io5";
 import { RxCross1 } from "react-icons/rx";
 import { CgNotes } from "react-icons/cg";
 import axios from 'axios';
-import io from 'socket.io-client';
+import { database, ref, set, onValue } from "../firebase/firebase";
 const Topbar = () => {
   const { isAuthenticated, user, logout,dkart,dashboardkart } = useAuth();
   //const [name, setName] = useState(localStorage.getItem('username') ? { name: localStorage.getItem('username') } : null);
@@ -38,6 +38,21 @@ const Topbar = () => {
 const toggleicon=()=>{
   setistoggleicon(prev=>!prev)
 }
+const [isOpen, setIsOpen] = useState(true);
+
+useEffect(() => {
+  const statusRef = ref(database, "users/AmIewDOW747kvqkfhNE2");
+
+  // Listen for real-time updates
+  const unsubscribe = onValue(statusRef, (snapshot) => {
+    if (snapshot.exists()) {
+      setIsOpen(snapshot.val().isOpen);
+    }
+  });
+  console.log('isopen',isOpen)
+  return () => unsubscribe(); // Cleanup on unmount
+}, []);
+
 
 useEffect(() => {
   // console.log('top', user, isAuthenticated);
@@ -74,6 +89,7 @@ useEffect(() => {
     // return () => {
     //   socket.off("kart-status-updated");
     // };
+   
 // ------------------------------------------------------------
 // console.log('top',user,isAuthenticated)
   }, []);
@@ -299,7 +315,7 @@ useEffect(() => {
         </div>
       )}
 
-      {iskart && (<div className='kart'>
+      {isOpen && (<div className='kart'>
         <marquee behavior="" direction="" >
         "PalmyraKart is temporarily unavailable for placing orders. Please visit us again soon to check for updates!"</marquee>
         </div>)}

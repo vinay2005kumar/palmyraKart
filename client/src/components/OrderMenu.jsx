@@ -5,7 +5,7 @@ import { FaIndianRupeeSign } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
-import io from 'socket.io-client';
+import { database, ref, set, onValue } from "../firebase/firebase";
 import { LiaMedkitSolid } from 'react-icons/lia';
 import Whatsapp from './Whatsapp';
 // import { database, ref, set} from '../firebase/firebase'
@@ -18,11 +18,23 @@ const OrderMenu = ({ buy, quantity, llimit2 }) => {
   const [totalAvailable, setTotalAvailable] = useState(0); // To store the available quantity from the backend
   const navigate = useNavigate();
   const[limit2,setlimit]=useState(limit)
-   const[isKart,setKart]=useState(true)
+  //  const[isKart,setKart]=useState(true)
    const url = 'https://palmyra-fruit.onrender.com/api/user';
    //const url = 'http://localhost:4000/api/user';
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true); // For checking time
+  const [isOpen, setIsOpen] = useState(true);
+useEffect(() => {
+  const statusRef = ref(database, "users/AmIewDOW747kvqkfhNE2");
 
+  // Listen for real-time updates
+  const unsubscribe = onValue(statusRef, (snapshot) => {
+    if (snapshot.exists()) {
+      setIsOpen(snapshot.val().isOpen);
+    }
+  });
+  console.log('isopen',isOpen)
+  return () => unsubscribe(); // Cleanup on unmount
+}, []);
   // const socket = io(url, {
   //   transports: ["websocket", "polling"], // Force WebSocket transport
   //   withCredentials: true, // Include credentials (optional)
@@ -97,8 +109,6 @@ const OrderMenu = ({ buy, quantity, llimit2 }) => {
   //   }
   // };
 
-  const [isKartOpen, setIsKartOpen] = useState(true);
-
   // useEffect(() => {
   //   const statusRef = ref(database, "kartStatus");
 
@@ -116,17 +126,17 @@ const OrderMenu = ({ buy, quantity, llimit2 }) => {
   useEffect(() => {
     
     // handlelimit()
-    const fetchKartStatus = async () => {
-      try { 
-        const res = await axios.get(`${url}/kart-status`)
-        const value = res.data; // Access the value
-        setKart(value); 
-        //console.log('order',value)
-      } catch (error) {
-        console.error('Error fetching user:', error);
-      }
-    };
-    fetchKartStatus();
+    // const fetchKartStatus = async () => {
+    //   try { 
+    //     const res = await axios.get(`${url}/kart-status`)
+    //     const value = res.data; // Access the value
+    //     setKart(value); 
+    //     //console.log('order',value)
+    //   } catch (error) {
+    //     console.error('Error fetching user:', error);
+    //   }
+    // };
+    //fetchKartStatus();
       // Listen for real-time updates
     // socket.on("kart-status-updated", (status) => {
     //   setKart(status);
@@ -193,8 +203,8 @@ const OrderMenu = ({ buy, quantity, llimit2 }) => {
                 <button
                   onClick={() => handleBuyClick(count, 'p3.jpeg', 'single')}
                   id="obuy"
-                  className={isKart ? "disabled" : ""}
-                  disabled={!isBeforeTenAM || isKart} // Disable button if past 10:00 AM
+                  className={isOpen ? "disabled" : ""}
+                  disabled={!isBeforeTenAM || isOpen} // Disable button if past 10:00 AM
                 >
                   BUY
                 </button>
@@ -232,9 +242,9 @@ const OrderMenu = ({ buy, quantity, llimit2 }) => {
               <div className="obuy">
                 <button
                   id="obuy2"
-                  className={isKart ? "disabled" : ""}
+                  className={isOpen ? "disabled" : ""}
                   onClick={() => handleBuyClick(count2, 'p2.jpeg', 'dozen')}
-                  disabled={!isBeforeTenAM || isKart} // Disable button if past 10:00 AM
+                  disabled={!isBeforeTenAM || isOpen} // Disable button if past 10:00 AM
                 >
                   BUY
                 </button>
