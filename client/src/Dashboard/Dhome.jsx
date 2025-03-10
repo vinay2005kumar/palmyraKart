@@ -7,7 +7,7 @@ import AuthPage from '../components/AuthForm';
 import { useAuth } from '../components/AuthContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { database, ref, set, onValue } from "../firebase/firebase";
+import { database, ref, set, onValue,get } from "../firebase/firebase";
 
 // import { database, ref, set} from '../firebase/firebase'
 const Dhome = () => {
@@ -53,6 +53,11 @@ const Dhome = () => {
       const url=import.meta.env.VITE_FIREBASE_URL
       const collection=import.meta.env.VITE_FIREBASE_COLLECTION
       const statusRef = ref(database, `${url}/${collection}`); // Updated path in Firebase
+       get(statusRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          setIsOpen(snapshot.val().isOpen);
+        }
+      });
     onValue(statusRef, (snapshot) => {
       if (snapshot.exists()) {
         setIsOpen(snapshot.val()); // Update state with the fetched value

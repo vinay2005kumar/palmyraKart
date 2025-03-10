@@ -5,7 +5,7 @@ import { FaIndianRupeeSign } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import axios from 'axios';
-import { database, ref, set, onValue } from "../firebase/firebase";
+import { database, ref, set, onValue,get } from "../firebase/firebase";
 import { LiaMedkitSolid } from 'react-icons/lia';
 import Whatsapp from './Whatsapp';
 // import { database, ref, set} from '../firebase/firebase'
@@ -28,7 +28,12 @@ useEffect(() => {
     const url=import.meta.env.VITE_FIREBASE_URL
     const collection=import.meta.env.VITE_FIREBASE_COLLECTION
     const statusRef = ref(database, `${url}/${collection}`);
-
+ // Fetch initial value once
+ get(statusRef).then((snapshot) => {
+  if (snapshot.exists()) {
+    setIsOpen(snapshot.val().isOpen);
+  }
+});
   // Listen for real-time updates
   const unsubscribe = onValue(statusRef, (snapshot) => {
     if (snapshot.exists()) {
@@ -42,7 +47,12 @@ useEffect(() => {
   const url = import.meta.env.VITE_FIREBASE_URL;
   const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
   const limitRef = ref(database, `${url}/${collection}`);
-
+ // Fetch initial value once
+ get(limitRef).then((snapshot) => {
+  if (snapshot.exists()) {
+    setOrderLimit(snapshot.val().limit);
+  }
+});
   // Listen for real-time updates for `limit`
   const unsubscribe = onValue(limitRef, (snapshot) => {
     if (snapshot.exists()) {
