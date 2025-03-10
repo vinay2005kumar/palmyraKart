@@ -18,13 +18,16 @@ const OrderMenu = ({ buy, quantity, llimit2 }) => {
   const [totalAvailable, setTotalAvailable] = useState(0); // To store the available quantity from the backend
   const navigate = useNavigate();
   const[limit2,setlimit]=useState(limit)
+  const[orderLimit,setOrderLimit]=useState()
   //  const[isKart,setKart]=useState(true)
    const url = 'https://palmyra-fruit.onrender.com/api/user';
    //const url = 'http://localhost:4000/api/user';
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true); // For checking time
   const [isOpen, setIsOpen] = useState(true);
 useEffect(() => {
-  const statusRef = ref(database, "users/AmIewDOW747kvqkfhNE2");
+    const url=import.meta.env.VITE_FIREBASE_URL
+    const collection=import.meta.env.VITE_FIREBASE_COLLECTION
+    const statusRef = ref(database, `${url}/${collection}`);
 
   // Listen for real-time updates
   const unsubscribe = onValue(statusRef, (snapshot) => {
@@ -33,6 +36,20 @@ useEffect(() => {
     }
   });
   console.log('isopen',isOpen)
+  return () => unsubscribe(); // Cleanup on unmount
+}, []);
+useEffect(() => {
+  const url = import.meta.env.VITE_FIREBASE_URL;
+  const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
+  const limitRef = ref(database, `${url}/${collection}`);
+
+  // Listen for real-time updates for `limit`
+  const unsubscribe = onValue(limitRef, (snapshot) => {
+    if (snapshot.exists()) {
+      setOrderLimit(snapshot.val().limit);
+    }
+  });
+
   return () => unsubscribe(); // Cleanup on unmount
 }, []);
   // const socket = io(url, {
@@ -108,21 +125,6 @@ useEffect(() => {
   //     console.error('Error fetching user data:', error);
   //   }
   // };
-
-  // useEffect(() => {
-  //   const statusRef = ref(database, "kartStatus");
-
-  //   // Listen for changes in Firebase
-  //   onValue(statusRef, (snapshot) => {
-  //     if (snapshot.exists()) {
-  //       setKart(snapshot.val());
-  //     }
-  //   });
-
-  //   return () => {
-  //     // Cleanup listener when component unmounts
-  //   };
-  // }, []);
   useEffect(() => {
     
     // handlelimit()
@@ -155,6 +157,7 @@ useEffect(() => {
 
   }, []);
   useEffect(() => {
+
     setTotal1(count * 4);
     setTotal2(count2 * 48 - 3);
     // console.log('order', count, count2);
@@ -171,7 +174,7 @@ useEffect(() => {
       <div className="orderm">
         <div className="oblock">
           <marquee behavior="" direction="">
-            <p>Hurry Up...! Only {limit - totalAvailable} pieces are available, Order Now!!!</p>
+            <p>Hurry Up...! Only {orderLimit-totalAvailable} pieces are available, Order Now!!!</p>
           </marquee>
           <div className="oblock1">
             <h1>Single Pieces</h1>

@@ -119,7 +119,7 @@ const Landingpage = () => {
         {/* Redirect to /auth if not authenticated or not an admin */}
         <Route
           path='/Dashboard'
-          element={admin? (
+          element={true? (
             <Dhome />
           ) : (
             <Navigate to="/auth" />

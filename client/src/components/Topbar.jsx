@@ -41,7 +41,9 @@ const toggleicon=()=>{
 const [isOpen, setIsOpen] = useState(true);
 
 useEffect(() => {
-  const statusRef = ref(database, "users/AmIewDOW747kvqkfhNE2");
+  const url=import.meta.env.VITE_FIREBASE_URL
+  const collection=import.meta.env.VITE_FIREBASE_COLLECTION
+  const statusRef = ref(database, `${url}/${collection}`);
 
   // Listen for real-time updates
   const unsubscribe = onValue(statusRef, (snapshot) => {

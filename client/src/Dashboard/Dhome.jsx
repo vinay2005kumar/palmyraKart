@@ -50,7 +50,9 @@ const Dhome = () => {
 
   const [isOpen, setIsOpen] = useState(true);
   useEffect(() => {
-    const statusRef = ref(database, "users/AmIewDOW747kvqkfhNE2"); // Updated path in Firebase
+      const url=import.meta.env.VITE_FIREBASE_URL
+      const collection=import.meta.env.VITE_FIREBASE_COLLECTION
+      const statusRef = ref(database, `${url}/${collection}`); // Updated path in Firebase
     onValue(statusRef, (snapshot) => {
       if (snapshot.exists()) {
         setIsOpen(snapshot.val()); // Update state with the fetched value
@@ -61,11 +63,12 @@ const Dhome = () => {
   }, []);
   const toggleAvailability = async () => {
     const newState = !isOpen;
-   
+    const url=import.meta.env.VITE_FIREBASE_URL
+    const collection=import.meta.env.VITE_FIREBASE_COLLECTION
     console.log("state", newState);
   
     try {
-      await set(ref(database, "users/AmIewDOW747kvqkfhNE2"), { isOpen: newState });
+      await set(ref(database,`${url}/${collection}`), { isOpen: newState });
       toastfun(
         newState ? "PalmyraKart Closed Successfully" : "PalmyraKart Opened Successfully",
         "success"
@@ -334,9 +337,22 @@ const Dhome = () => {
       );
     }
   };
+  useEffect(() => {
+    const url = import.meta.env.VITE_FIREBASE_URL;
+    const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
+    const limitRef = ref(database, `${url}/${collection}`);
   
+    // Listen for real-time updates for `limit`
+    const unsubscribe = onValue(limitRef, (snapshot) => {
+      if (snapshot.exists()) {
+        document.getElementById("curr").innerHTML=snapshot.val().limit;
+      }
+    });
+  
+    return () => unsubscribe(); // Cleanup on unmount
+  }, []);
   // Function to actually update the limit
-  const handleConfirmLimit = async () => {
+  const handleLimit = async () => {
     try {
       const res = await axios.put(`${url}/update-limit`, { hlimit }); // Await API call
       toastfun(`Limit set to ${hlimit} pieces`, 'success'); // Show success message
@@ -346,6 +362,20 @@ const Dhome = () => {
       console.error('Error updating limit:', error);
     }
   };
+  const handleConfirmLimit = async () => {
+    const url = import.meta.env.VITE_FIREBASE_URL;
+    const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
+  
+    try {
+      await set(ref(database, `${url}/${collection}`), { limit:hlimit });
+      toastfun(`Limit set to ${hlimit} pieces`, "success");
+      document.getElementById("curr").innerHTML = `${hlimit}`;
+      handleLimit()
+    } catch (error) {
+      toastfun("Error updating limit", "error");
+      console.error("Error updating limit:", error);
+    }
+  }
   
    const closeToday = () => {
       const toastId = 'logout-toast';
