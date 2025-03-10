@@ -94,7 +94,7 @@ useEffect(() => {
 
   const handleBuyClick = (c, src, type) => {
     const totalSelectedQuantity = type === 'single' ? count : count2;
-  if(!isKart){
+  if(!isOpen){
 
     if (c === count) {
       buy(count, total1, src, type);
