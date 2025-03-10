@@ -7,7 +7,7 @@ import AuthPage from '../components/AuthForm';
 import { useAuth } from '../components/AuthContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { database, ref, set, onValue,get } from "../firebase/firebase";
+import { database, ref, set, onValue,get,update } from "../firebase/firebase";
 
 // import { database, ref, set} from '../firebase/firebase'
 const Dhome = () => {
@@ -58,22 +58,21 @@ const Dhome = () => {
           setIsOpen(snapshot.val().isOpen);
         }
       });
-    onValue(statusRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setIsOpen(snapshot.val()); // Update state with the fetched value
-      } else {
-        setIsOpen(false); // Default value if not found
-      }
-    });
+    // onValue(statusRef, (snapshot) => {
+    //   if (snapshot.exists()) {
+    //     setIsOpen(snapshot.val()); // Update state with the fetched value
+    //   } else {
+    //     setIsOpen(false); // Default value if not found
+    //   }
+    // });
   }, []);
   const toggleAvailability = async () => {
     const newState = !isOpen;
-    const url=import.meta.env.VITE_FIREBASE_URL
-    const collection=import.meta.env.VITE_FIREBASE_COLLECTION
-    console.log("state", newState);
+    const url = import.meta.env.VITE_FIREBASE_URL;
+    const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
   
     try {
-      await set(ref(database,`${url}/${collection}`), { isOpen: newState });
+      await update(ref(database, `${url}/${collection}`), { isOpen: newState }); // ✅ Use update()
       toastfun(
         newState ? "PalmyraKart Closed Successfully" : "PalmyraKart Opened Successfully",
         "success"
@@ -84,6 +83,7 @@ const Dhome = () => {
       toastfun("Failed to update PalmyraKart status", "error");
     }
   };
+  
   
 
 // const handleKartStatus = async (status) => {
@@ -372,15 +372,16 @@ const Dhome = () => {
     const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
   
     try {
-      await set(ref(database, `${url}/${collection}`), { limit:hlimit });
-      toastfun(`Limit set to ${hlimit} pieces`, "success");
-      document.getElementById("curr").innerHTML = `${hlimit}`;
+      await update(ref(database, `${url}/${collection}`), { limit: hlimit }); // ✅ Use update()
+      toastfun(`Limit set to ${hlimit} pieces`, 'success');
+      document.getElementById("curr").innerHTML = hlimit;
       handleLimit()
     } catch (error) {
       toastfun("Error updating limit", "error");
       console.error("Error updating limit:", error);
     }
-  }
+  };
+  
   
    const closeToday = () => {
       const toastId = 'logout-toast';
