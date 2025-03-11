@@ -38,7 +38,7 @@ const Topbar = () => {
 const toggleicon=()=>{
   setistoggleicon(prev=>!prev)
 }
-const [isOpen, setIsOpen] = useState(true);
+const [isOpen, setIsOpen] = useState(null);
 
 useEffect(() => {
   const url=import.meta.env.VITE_FIREBASE_URL
@@ -323,9 +323,11 @@ useEffect(() => {
       )}
 
       {isOpen && (<div className='kart'>
+        {isOpen === null ? <h4>Loading...</h4> : 
         <marquee behavior="" direction="" >
-        "PalmyraKart is temporarily unavailable for placing orders. Please visit us again soon to check for updates!"</marquee>
+        "PalmyraKart is temporarily unavailable for placing orders. Please visit us again soon to check for updates!"</marquee>}
         </div>)}
+        
     </>
   );
 };
