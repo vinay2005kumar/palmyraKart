@@ -20,71 +20,47 @@ const Reviews = () => {
   //const url = 'http://localhost:4000/api/user';
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const response = await axios.get(`${url}/reviews`);
-        const reviews = response.data.reviews || [];
-        if (reviews.length > 0) {
-          const sortedReviews = reviews.sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
-          );
-          setAllReviews(sortedReviews);
-          setUserReviews(
-            sortedReviews.filter((review) => review.user.email === userEmail)
-          );
-        }
-      } catch (error) {
-        toastfun("Failed to fetch reviews.", "error");
-        console.log(error)
-      }
-    };
     const fetchUserReview = async () => {
       try {
         const response = await axios.get(`${url}/data`, { withCredentials: true });
-        const reviews = response.data.userData.reviews || [];
-        console.log(reviews);
-        
         const email = response.data.userData.email;
         setuserEmail(email);
-    
-        if (reviews.length > 0) {
-          // ✅ No need to call sortedReviews as a function, just pass it directly
-          const sortedReviews = reviews.sort(
-            (a, b) => new Date(b.date) - new Date(a.date)
-          );
-          setUserReviews(sortedReviews);  // ✅ Corrected this line
-        }
+  
+        const reviews = response.data.userData.reviews || [];
+        const sortedReviews = reviews.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setUserReviews(sortedReviews);
       } catch (error) {
-        toastfun("You Should Login,.. To See Your Reviews.", "info");
+        toastfun("You Should Login to See Your Reviews.", "info");
         console.log(error);
       }
     };
-    
-    fetchUserReview();    
-    fetchReviews();
-    console.log('reviews',allReviews,userReviews)
+  
+    const fetchReviews = async (email) => {
+      try {
+        const response = await axios.get(`${url}/reviews`);
+        const reviews = response.data.reviews || [];
+        const sortedReviews = reviews.sort((a, b) => new Date(b.date) - new Date(a.date));
+        setAllReviews(sortedReviews);
+  
+        if (email) {
+          setUserReviews(sortedReviews.filter((review) => review.user.email === email));
+        }
+      } catch (error) {
+        toastfun("Failed to fetch reviews.", "error");
+        console.log(error);
+      }
+    };
+  
+    // Fetch user data first, then fetch reviews
+    fetchUserReview().then(() => {
+      fetchReviews(userEmail); // Now userEmail is properly set
+    });
+  
     return () => {
       toast.dismiss();
     };
-   
   }, []);
-
-  const toastfun = (msg, type) => {
-    toast[type](msg, {
-      position: "top-right",
-      autoClose: 3000,
-      style: {
-        position: "absolute",
-        right: "0em",
-        top: isMobile ? "4em" : "70px",
-        width: isMobile ? "65vw" : "40vw",
-        height: isMobile ? "10vh" : "17vh",
-        fontSize: isMobile ? "1.1em" : "1.2em",
-        padding: "10px",
-      },
-      onClick: () => toast.dismiss(),
-    });
-  };
+  
 
   const handleSubmit = async () => {
     if (!rating || !highlight || !description) {
