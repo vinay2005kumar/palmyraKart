@@ -323,7 +323,12 @@ export const sendOrderOtp = async (req, res) => {
       return res.json({ success: false, message: 'Order not found' });
     }
    
-    order.date = new Date().toISOString();
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000; // Convert 5.5 hours to milliseconds
+    const istDate = new Date(now.getTime() + istOffset).toISOString();
+
+   order.date = istDate;
+
     order.otp = orderOtp;
     await userDetails.save();
 
@@ -334,6 +339,7 @@ export const sendOrderOtp = async (req, res) => {
     const date=order.date
 
     const formattedDate = new Date(date).toLocaleString('en-US', {
+      timeZone: 'Asia/Kolkata', 
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
