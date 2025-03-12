@@ -321,7 +321,8 @@ export const sendOrderOtp = async (req, res) => {
     if (!order) {
       return res.json({ success: false, message: 'Order not found' });
     }
-
+   
+     order.date=order.date = new Date();
     order.otp = orderOtp;
     await userDetails.save();
 
@@ -329,7 +330,7 @@ export const sendOrderOtp = async (req, res) => {
     const quantity = order.quantity;
     const price = order.price;
     const status = order.status;
-    const date = order.date;
+    const date=order.date
     const formattedDate = new Date(date).toLocaleString('en-US', {
       month: 'long',
       day: 'numeric',
@@ -337,7 +338,6 @@ export const sendOrderOtp = async (req, res) => {
       minute: '2-digit',
       hour12: true,
     });
-
     // Calculate the next day's date and day
     const pickupDeadline = new Date();
     pickupDeadline.setDate(pickupDeadline.getDate() + 1);
