@@ -547,7 +547,7 @@ export const sendOrderOtp = async (req, res) => {
         <h3>📍 Collection Information</h3>
         <ul>
           <li><strong>Ready for Collection:</strong> <span class="highlight">After 10:00 AM</span></li>
-          <li><strong>Collection Deadline:</strong> <span class="highlight">5:00 PM on ${formattedPickupDeadline}</span></li>
+          <li><strong>Collection Deadline:</strong> <span class="highlight">5:00 PM on ${formattedDeadline}</span></li>
           <li>If you're unable to collect your order, <span class="highlight">don't worry!</span> A refund may be available as per our Terms & Conditions.</li>
           <li>You can also <span class="highlight">place a fresh order for tomorrow.</span> We'd love to serve you again!</li>
         </ul>
