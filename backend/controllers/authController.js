@@ -4,15 +4,16 @@ import userModel from '../models/userModel.js';
 import transporter from '../config/nodeMailer.js';
 
 // Helper function to send emails
-const sendEmail = async (to, subject, text) => {
+const sendEmail = async (to, subject, content, isHtml = false) => {
     const mailOptions = {
-        from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
-        to,
-        subject,
-        text,
+      from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
+      to: to,
+      subject: subject,
+      ...(isHtml ? { html: content } : { text: content })
     };
+  
     await transporter.sendMail(mailOptions);
-};
+  };
 
 // Register a new user
 export const register = async (req, res) => {
@@ -49,12 +50,6 @@ export const register = async (req, res) => {
             sameSite: 'None',  // ✅ Required for cross-origin requests
             maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
-        
-        
-          
-
-        // Send welcome email
-        await sendEmail(email, 'Welcome To My Website', `Welcome to my website! Your account has been created with email id: ${email}`);
 
         return res.status(201).json({ success: true, message: 'Registration successful',name:user.name,userdetails:user });
     } catch (error) {
@@ -122,8 +117,9 @@ export const logout = async (req, res) => {
 
 
 // Send OTP for email verification
+// For email verification (sendVerifyOtp function)
 export const sendVerifyOtp = async (req, res) => {
-    const { email,msg } = req.body;
+    const { email, msg } = req.body;
 
     try {
         const user = await userModel.findOne({ email });
@@ -137,8 +133,93 @@ export const sendVerifyOtp = async (req, res) => {
         user.verifyOtpExpireAt = Date.now() + 10 * 60 * 1000; // 10 minutes expiry
         await user.save();
 
-        // Send OTP via email
-        await sendEmail(email,msg, `Your OTP is: ${otp}`);
+        // Create email template
+        const emailTemplate = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: 'Segoe UI', Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .container {
+              background-color: #ffffff;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+              padding: 30px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .logo {
+              font-size: 22px;
+              font-weight: bold;
+              color: #1a73e8;
+            }
+            .otp-box {
+              background-color: #f2f6ff;
+              border-radius: 6px;
+              padding: 15px;
+              text-align: center;
+              margin: 20px 0;
+            }
+            .otp-code {
+              font-size: 24px;
+              font-weight: bold;
+              color: #1a73e8;
+              letter-spacing: 3px;
+            }
+            .expiry-note {
+              font-size: 12px;
+              color: #666;
+              text-align: center;
+              margin-top: 5px;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">PalmyraKart</div>
+              <h2>Verify Your Email</h2>
+            </div>
+            
+            <p>Hello,</p>
+            <p>Thank you for registering with PalmyraKart. Please use the following OTP to verify your email address.</p>
+            
+            <div class="otp-box">
+              <p>Your Verification Code:</p>
+              <div class="otp-code">${otp}</div>
+              <p class="expiry-note">This code will expire in 10 minutes</p>
+            </div>
+            
+            <p>If you didn't request this verification, please ignore this email.</p>
+            
+            <div class="footer">
+              <p>&copy; 2025 PalmyraKart. All rights reserved.</p>
+              <p>If you need any assistance, please contact our support team.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `;
+
+        // Send OTP via email with HTML template
+        await sendEmail(email, msg || 'Email Verification', emailTemplate, true); // Add a parameter to indicate HTML content
 
         return res.json({ success: true, message: 'OTP sent successfully', email: user.email });
     } catch (error) {
@@ -185,6 +266,7 @@ export const verifyEmail = async (req, res) => {
 
 
 // Send OTP for password reset
+// Send OTP for password reset
 export const sendResetOtp = async (req, res) => {
     const { email } = req.body;
 
@@ -205,8 +287,101 @@ export const sendResetOtp = async (req, res) => {
         user.resetOtpExpireAt = Date.now() + 24 * 60 * 60 * 1000; // 24 hours
         await user.save();
 
-        // Send OTP via email
-        await sendEmail(user.email, 'Password Reset OTP', `Your OTP is: ${otp}. Use this OTP to reset your password.`);
+        // Create email template
+        const resetEmailTemplate = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body {
+              font-family: 'Segoe UI', Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .container {
+              background-color: #ffffff;
+              border-radius: 8px;
+              box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+              padding: 30px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .logo {
+              font-size: 22px;
+              font-weight: bold;
+              color: #1a73e8;
+            }
+            .otp-box {
+              background-color: #fff4e5;
+              border-radius: 6px;
+              border-left: 4px solid #fb8c00;
+              padding: 15px;
+              text-align: center;
+              margin: 20px 0;
+            }
+            .otp-code {
+              font-size: 24px;
+              font-weight: bold;
+              color: #fb8c00;
+              letter-spacing: 3px;
+            }
+            .expiry-note {
+              font-size: 12px;
+              color: #666;
+              text-align: center;
+              margin-top: 5px;
+            }
+            .warning {
+              font-size: 14px;
+              color: #d32f2f;
+              margin-top: 20px;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">PalmyraKart</div>
+              <h2>Password Reset Request</h2>
+            </div>
+            
+            <p>Hello,</p>
+            <p>We received a request to reset your password. Use the following code to complete the password reset process:</p>
+            
+            <div class="otp-box">
+              <p>Your Password Reset Code:</p>
+              <div class="otp-code">${otp}</div>
+              <p class="expiry-note">This code will expire in 24 hours</p>
+            </div>
+            
+            <p>If you didn't request a password reset, you can ignore this email or contact our support team if you have concerns.</p>
+            
+            <p class="warning">Never share this code with anyone. Our team will never ask for your code or password.</p>
+            
+            <div class="footer">
+              <p>&copy; 2025 PalmyraKart. All rights reserved.</p>
+              <p>If you need any assistance, please contact our support team.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `;
+
+        // Send OTP via email with HTML template
+        await sendEmail(user.email, 'Password Reset OTP', resetEmailTemplate, true);
 
         return res.json({ success: true, message: 'OTP sent successfully' });
     } catch (error) {
