@@ -331,7 +331,8 @@ export const sendOrderOtp = async (req, res) => {
     const price = order.price;
     const status = order.status;
     const date=order.date
-    const formattedDate = new Date(date).toLocaleString('en-US', {
+
+    const formattedDate = new Date().toLocaleString('en-US', {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
@@ -339,10 +340,22 @@ export const sendOrderOtp = async (req, res) => {
       hour12: true,
     });
     // Calculate the next day's date and day
-    const pickupDeadline = new Date();
-    pickupDeadline.setDate(pickupDeadline.getDate() + 1);
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    const formattedPickupDeadline = pickupDeadline.toLocaleDateString('en-US', options);
+    const orderTime = new Date(); // Current order time
+    const pickupDeadline = new Date(orderTime); // Initialize with order time
+    
+    // Check if order is placed before 10:00 AM
+    if (orderTime.getHours() < 10) {
+      // Pickup deadline remains the same day
+    } else {
+      // Pickup deadline moves to the next day
+      pickupDeadline.setDate(pickupDeadline.getDate() + 1);
+    }
+    
+    // Formatting pickup deadline as "Month Day" (e.g., "March 13")
+    const formattedDeadline = pickupDeadline.toLocaleString('en-US', {
+      month: 'long',
+      day: 'numeric',
+    });
 
     const email = userDetails.email;
     const subject = `Order Confirmation`;

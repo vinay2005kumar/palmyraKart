@@ -11,7 +11,7 @@ const orderSchema = new mongoose.Schema({
     price: Number,
     imagePath: String,
     status: { type: String },
-    date: { type: Date, default: Date.now },
+    date: { type: String, default: '' },
     otp: { type: String },
   });
 // Review Schema
