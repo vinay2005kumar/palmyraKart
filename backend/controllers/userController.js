@@ -1146,7 +1146,7 @@ export const closeOrder = async (req, res) => {
         <p><strong>Status:</strong> <span class="highlight">Cancelled</span></p>
         <p><strong>Order Purchasing Date:</strong> ${formattedDate}</p>
         <p><strong>Cancellation Time:</strong> ${new Date().toLocaleString('en-US', {
-          timeZone: 'Asia/Kolkata',
+           timeZone: 'Asia/Kolkata',
               month: 'long',
               day: 'numeric',
               year: 'numeric',
