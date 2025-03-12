@@ -24,7 +24,7 @@ const Landingpage = () => {
   const [llimit, setllimit] = useState();
   const [order, setorder] = useState(false);
   const[lmenu,setlmenu]=useState()
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
+ const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = 'http://localhost:4000/api/user';
  
   //----------------------------change next
