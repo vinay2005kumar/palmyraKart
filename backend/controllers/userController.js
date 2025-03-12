@@ -632,6 +632,7 @@ export const verifyOrder = async (req, res) => {
       const status = order.status;
       const date = order.date;
       const formattedDate = new Date(date).toLocaleString('en-US', {
+        timeZone: 'Asia/Kolkata',
         month: 'long',
         day: 'numeric',
         hour: '2-digit',
@@ -1145,6 +1146,7 @@ export const closeOrder = async (req, res) => {
         <p><strong>Status:</strong> <span class="highlight">Cancelled</span></p>
         <p><strong>Order Purchasing Date:</strong> ${formattedDate}</p>
         <p><strong>Cancellation Time:</strong> ${new Date().toLocaleString('en-US', {
+          timeZone: 'Asia/Kolkata',
               month: 'long',
               day: 'numeric',
               year: 'numeric',
