@@ -94,12 +94,14 @@ const Reviews = () => {
           )
         );
         toastfun("Review updated successfully.", "success");
+        setCompose(true)
       } else {
         const response = await axios.post(`${url}/add-reviews`, reviewData);
         const newReview = response.data.review;
         setAllReviews((prev) => [newReview, ...prev]);
         setUserReviews((prev) => [newReview, ...prev]);
         toastfun("Review added successfully.", "success");
+        setCompose(true)
       }
 
       setRating("");
@@ -129,6 +131,7 @@ const Reviews = () => {
               setUserReviews((prev) => prev.filter((r) => r._id !== reviewId));
               toast.dismiss();
               toastfun("Review deleted successfully.", "success");
+              
             } catch (error) {
               toastfun("Failed to delete review.", "error");
             }
