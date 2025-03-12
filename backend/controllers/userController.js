@@ -322,7 +322,7 @@ export const sendOrderOtp = async (req, res) => {
       return res.json({ success: false, message: 'Order not found' });
     }
    
-    order.date=new Date();
+    order.date = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
     order.otp = orderOtp;
     await userDetails.save();
 
@@ -332,7 +332,7 @@ export const sendOrderOtp = async (req, res) => {
     const status = order.status;
     const date=order.date
 
-    const formattedDate = new Date().toLocaleString('en-US', {
+    const formattedDate = new Date(date).toLocaleString('en-US', {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
@@ -352,10 +352,11 @@ export const sendOrderOtp = async (req, res) => {
     }
     
     // Formatting pickup deadline as "Month Day" (e.g., "March 13")
-    const formattedDeadline = pickupDeadline.toLocaleString('en-US', {
-      month: 'long',
-      day: 'numeric',
-    });
+    const formattedDeadline = new Date().toLocaleString('en-US', { 
+      timeZone: 'Asia/Kolkata',  // Adjust to your local timezone
+      month: 'long', 
+      day: 'numeric', 
+  });
 
     const email = userDetails.email;
     const subject = `Order Confirmation`;
