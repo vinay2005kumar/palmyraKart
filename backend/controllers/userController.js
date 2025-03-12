@@ -322,7 +322,7 @@ export const sendOrderOtp = async (req, res) => {
       return res.json({ success: false, message: 'Order not found' });
     }
    
-     order.date=order.date = new Date();
+    order.date=new Date();
     order.otp = orderOtp;
     await userDetails.save();
 
