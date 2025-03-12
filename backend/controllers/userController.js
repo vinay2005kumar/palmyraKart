@@ -149,6 +149,7 @@ export const deleteUserOrder = async (req, res) => {
         // Only send email if the order status is "pending"
         if (status === 'pending') {
           const formattedDate = new Date(date).toLocaleString('en-US', {
+            timeZone: 'Asia/Kolkata',
             month: 'long',
             day: 'numeric',
             hour: '2-digit',
@@ -322,7 +323,7 @@ export const sendOrderOtp = async (req, res) => {
       return res.json({ success: false, message: 'Order not found' });
     }
    
-    order.date = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+    order.date = new Date().toISOString();
     order.otp = orderOtp;
     await userDetails.save();
 
