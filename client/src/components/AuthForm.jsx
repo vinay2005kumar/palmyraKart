@@ -34,8 +34,8 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const passwordInputRef = useRef(null);
- const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
+ //const url = 'https://palmyra-fruit.onrender.com/api/user';
+  const url = 'http://localhost:4000/api/user';
 
   // Handle login form submission
   const handleSubmit = async (e) => {
@@ -47,7 +47,7 @@ const LoginForm = () => {
       const response = await axios.post(`${url}/login`, { email, password},{withCredentials:true});
       if (response.data.success) {
         const name=response.data.name
-        const isadmin=response.data.isadmin
+        const isadmin=response.data.isAdmin
         console.log('admin',isadmin)
         login({ name, isadmin });
         toast.success('Login successful!');
@@ -259,8 +259,8 @@ const SignupForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [eye, setEye] = useState(false);
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
+  //const url = 'https://palmyra-fruit.onrender.com/api/user';
+  const url = 'http://localhost:4000/api/user';
   const passwordInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const handleRegister = async (e) => {

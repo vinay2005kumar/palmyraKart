@@ -86,7 +86,7 @@ useEffect(() => {
       }
     };
   
-    fetchKartStatus();
+    // fetchKartStatus();
     // ------------------------------------------------------------
     // Listen for real-time updates
     // socket.on("kart-status-updated", (status) => {

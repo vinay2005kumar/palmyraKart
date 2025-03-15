@@ -1,25 +1,28 @@
 import express from 'express';
 import userAuth from '../middleware/userAuth.js';
-import {getUserData,getKartStatus,updateKartStatus,order,deleteUserOrder,sendNotification,closeOrder,limitUpdate,getReviews,isUserReviews,addReviews,updateReview,deleteReview,replyReview, getUser, verifyOrder, quantity, getAllUsers, sendOrderOtp
-} from '../controllers/userController.js';
+import { getUserData, getKartStatus, updateKartStatus, deleteUserOrder, sendNotification, closeOrder, limitUpdate, getReviews, isUserReviews, addReviews, updateReview, deleteReview, replyReview, getUser, verifyOrder, quantity, getAllUsers, sendOrderOtp, removeOrder } from '../controllers/userController2.js';
+import { createOrder, verifyPayment } from '../controllers/paymentController.js';
 
 const userRouter = express.Router();
 
-// User data route
+// User data routes
 userRouter.get('/data', userAuth, getUserData);
-userRouter.get('/get',getUser)
-userRouter.get('/getAllUsers', getAllUsers)
+userRouter.get('/get', getUser);
+userRouter.get('/getAllUsers',userAuth, getAllUsers);
+
 // Kart status routes
 userRouter.get('/kart-status', getKartStatus);
 userRouter.put('/kart-status', updateKartStatus);
 
 // Order routes
-userRouter.post('/order', userAuth,order);
+// userRouter.post('/order', userAuth, order);
+userRouter.post('/create-order', userAuth, createOrder);  // ✅ FIXED
+userRouter.post('/verify', verifyPayment);                // ✅ FIXED
 userRouter.post('/verifyOrder', verifyOrder);
-userRouter.post('/send-orderOtp', userAuth,sendOrderOtp)
+userRouter.post('/send-orderOtp', userAuth, sendOrderOtp);
 userRouter.get('/quantity', quantity);
 userRouter.delete('/order/:id', deleteUserOrder);
-
+userRouter.delete('/removeOrder/:orderId',removeOrder)
 // Notification routes
 userRouter.post('/send-notification', sendNotification);
 userRouter.post('/close-orders', closeOrder);

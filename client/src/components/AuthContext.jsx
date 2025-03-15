@@ -1,165 +1,131 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getAuth, signOut } from 'firebase/auth';
 import axios from 'axios';
-import Dhome from '../Dashboard/Dhome';
+
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
+
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState();
-  const [limit, setlimit] = useState(null); // New state for limit
+  const [user, setUser] = useState(null);
   const [admin, setAdmin] = useState(false);
-  const [alogout,setalogout]=useState(false)
-  const [dkart, setdkart] = useState(false);
-  const [dkart2,setdkart2]=useState()
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
-  // const[email,setemail]=useState(localStorage.getItem('email') ? localStorage.getItem('email'): null)
-    const handleKart = async () => {
-      try {
-        const res = await axios.get(`${url}/get`);
-        setlimit(res.data.user.limit);
-        setdkart(res.data.user.isKart);
-        
-      } catch (error) {
-        console.error('Error fetching user:', error);
-      }
-    };
-    useEffect(() => {
-      console.log("Updated limit in state:", limit);
-      console.log("Updated dkart in state:", dkart);
-    }, [limit, dkart]);  // Runs when limit or dkart changes
-    
-  useEffect(() => {
-    // Placeholder for any future use of limit
-    // console.log('auth', limit);
-    handleKart()
-  }, []);
-    // Function to check authentication from backend using cookies
-    const checkAuth = async () => {
-      try {
-        const res = await axios.get(`${url}/data`, { withCredentials: true });
-    
-        if (res.data.success) {
-          const resuser = res.data.userData;
-          const cadmin=resuser.isadmin;
-          setIsAuthenticated(true);
-          setUser(resuser.name);
-          setAdmin(cadmin);
-          localStorage.setItem("username", resuser.name);
-          console.log("User authenticated & admin :", resuser.name,resuser.isadmin); // Log the correct value directly
-        } else {
-          setIsAuthenticated(false);
-          setUser(null);
-          setAdmin(false);
-        }
-      } catch (error) {
+
+  const url = 'http://localhost:4000/api/user';
+
+  // Function to check authentication status
+  const checkAuth = async () => {
+    try {
+      const res = await axios.get(`${url}/data`, { withCredentials: true });
+
+      if (res.data.success) {
+        const resuser = res.data.userData;
+        setIsAuthenticated(true);
+        setUser(resuser.name);
+        setAdmin(resuser.isadmin);
+        localStorage.setItem('username', resuser.name);
+        console.log('User authenticated & admin:', resuser.name, resuser.isadmin);
+      } else {
         setIsAuthenticated(false);
         setUser(null);
         setAdmin(false);
-        console.error("Auth check failed:", error);
+        logout()
       }
-    };
-    
-    // Run checkAuth on mount
-    useEffect(() => {
-      checkAuth();
-    }, []);
-    
+    } catch (error) {
+      setIsAuthenticated(false);
+      setUser(null);
+      setAdmin(false);
+      logout()
+      console.error('Auth check failed:', error);
+    }
+  };
 
-  const login = (userData, lAdmin) => {
-    console.log('contextadmin', lAdmin,userData);
-    const tadmin=userData.isadmin;
-    setAdmin(tadmin);
-    // console.log(userData.isadmin)
+  // Function to refresh the access token
+  const refreshAccessToken = async () => {
+    try {
+      const res = await axios.post(`${url}/refresh-token`, {}, { withCredentials: true });
+
+      if (res.data.success) {
+        console.log('Access token refreshed');
+      } else {
+        throw new Error('No access token received');
+      }
+    } catch (error) {
+      console.error('Error refreshing token:', error);
+      logout();
+    }
+  };
+
+  // Function to check token expiration and refresh if needed
+  const checkTokenExpiry = () => {
+    const token = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('token='))
+      ?.split('=')[1];
+  
+    if (token) {
+      try {
+        const decodedToken = JSON.parse(atob(token.split('.')[1]));
+        const expiryTime = decodedToken.exp * 1000;
+        const currentTime = Date.now();
+  
+        // If the token is about to expire in 5 minutes, refresh it
+        if (expiryTime - currentTime < 300000) {
+          refreshAccessToken();
+        }
+      } catch (error) {
+        console.error('Error decoding token:', error);
+        logout();
+      }
+    }
+  };
+
+  // Periodically check token expiry
+  useEffect(() => {
+    const interval = setInterval(() => {
+      checkTokenExpiry();
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Function to log in the user (called from LoginForm)
+  const login = (userData) => {
     setIsAuthenticated(true);
     setUser(userData.name);
-    // console.log('auth',isAuthenticated)
+    setAdmin(userData.isadmin);
     localStorage.setItem('username', userData.name);
-    console.log(tadmin,admin)
+    console.log('User logged in:', userData.name, userData.isadmin);
   };
 
-  const logout = async() => {
-    // const auth = getAuth();
-    // setalogout(true)
-    // signOut(auth)
-    //   .then(() => {
-    //     setIsAuthenticated(false);
-    //     setUser(null);
-    //     localStorage.removeItem('name');
-    //   })
+  // Function to log out the user
+  const logout = async () => {
+    try {
+      await axios.post(`${url}/logout`, {}, { withCredentials: true });
 
-
-    //   .catch((error) => {
-    //     console.error('Sign out error:', error);
-    //   });
-
-        try {
-          // Send a POST request to the backend logout endpoint
-          const response = await axios.post(`${url}/logout`, {}, { withCredentials: true });
-      
-          // If the logout is successful
-          if (response.data.success) {
-            // Clear user data from the frontend
-            setIsAuthenticated(false);
-            setUser(null);
-            localStorage.removeItem('username'); // Remove any stored user data
-            console.log('Logout successful');
-          } else {
-            console.error('Logout failed:', response.data.message);
-          }
-        } catch (error) {
-          // Handle errors
-          console.error('Logout error:', error);
-          if (error.response) {
-            console.error('Server responded with:', error.response.data);
-          } else if (error.request) {
-            console.error('No response received:', error.request);
-          } else {
-            console.error('Error setting up the request:', error.message);
-          }
-        }
+      setIsAuthenticated(false);
+      setUser(null);
+      setAdmin(false);
+      localStorage.removeItem('username');
+      console.log('Logout successful');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
-  const dashboardkart=(kvalue)=>{
-    handleKart()
-    const v=kvalue
-    console.log('dkart open...vla',kvalue)
-  }
-  const dashboardlimit=()=>{
-  }
-  useEffect(()=>{
-    handleKart()
-    // console.log('context',dkart)
-  },[dkart])
-useEffect(()=>{
-  setalogout(false)
-},[alogout])
-  // Clear localStorage only when browser/tab is closed, not on page refresh
-  // useEffect(() => {
-  //   const handleUnload = (event) => {
-  //     if () {
-        
-      
-  //     }
-  //     sessionStorage.removeItem('isRefreshed');
-  //   };
 
-  //   const handleBeforeUnload = () => {
-    
-  //     sessionStorage.setItem('isRefreshed', 'true');
-  //   };
-
-  //   window.addEventListener('beforeunload', handleBeforeUnload);
-  //   window.addEventListener('unload', handleUnload);
-
-  //   return () => {
-  //     window.removeEventListener('beforeunload', handleBeforeUnload);
-  //     window.removeEventListener('unload', handleUnload);
-  //   };
-  // }, []);
+  // Fetch user data on mount
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout,admin,dashboardkart,dashboardlimit,dkart,limit,handleKart }}>
+    <AuthContext.Provider
+      value={{
+        isAuthenticated,
+        user,
+        login,
+        logout,
+        admin,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

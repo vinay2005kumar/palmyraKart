@@ -1,59 +1,95 @@
-import userModel from "../models/userModel.js";
+import  User  from '../models/userModel.js'; // Import the User model
+import { Order } from '../models/orderSchema.js'; // Import the Order model
 import transporter from "../config/nodeMailer.js";
-const sendEmail = async (to, subject, text) => {
-  const mailOptions = {
-    from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
-    to,
-    subject,
-    text,
-  };
-  await transporter.sendMail(mailOptions);
-};
-
+import { Review } from '../models/reviewShema.js'; // Import the Review model
+import mongoose from 'mongoose';
 export const getUserData = async (req, res) => {
   try {
-    const user = req.user; // user is already attached from middleware
-    if (user) {
-
-      const userDetails = await userModel.findById(user.id)
-      // console.log(userDetails)
-      res.json({ success: true, userData: userDetails });
+    const user = req.user;
+    // user is already attached from middleware
+    
+    if (!user || !user.id) {
+      return res.status(401).json({ success: false, message: "Unauthorized: User not authenticated" });
     }
+
+    // Fetch user details
+    const userDetails = await User.findById(user.id);
+    if (!userDetails) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    // Fetch orders for the user - using the ID directly instead of creating a new ObjectId
+    const orderDetails = await Order.find({ user:user.id });
+    
+    // If the above doesn't work, try this alternative:
+    // const orderDetails = await Order.find({ 
+    //   user: mongoose.Types.ObjectId.isValid(user.id) ? user.id : null 
+    // });
+
+    const reviewDetails = await Review.find({ user: user.id });
+
+    // Debug logging
+    console.log('User ID:', user.id);
+    console.log('Order count:', orderDetails.length);
+    console.log('Review count:', reviewDetails.length);
+
+    res.json({
+      success: true,
+      userData: userDetails,
+      orderData: orderDetails,
+      reviewData: reviewDetails,
+    });
   } catch (error) {
+    console.error("Error in getUserData:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
-export const getUser = async (req, res) => {
-  try {
-    const user = await userModel.findOne();
-
-    if (user) {
-      res.status(200).json({ user });
-    } else {
-      res.status(404).json({ message: 'User not found.' });
+  export const getUser = async (req, res) => {
+    try {
+      const user = await User.findOne();
+  
+      if (user) {
+        res.status(200).json({ user });
+      } else {
+        res.status(404).json({ message: 'User not found.' });
+      }
+    } catch (error) {
+      // console.error('Error fetching user:', error);
+      res.status(500).json({ message: 'Server error' });
     }
-  } catch (error) {
-    // console.error('Error fetching user:', error);
-    res.status(500).json({ message: 'Server error' });
   }
-}
-export const getAllUsers = async (req, res) => {
-  try {
-    const user = await userModel.find({});
-
-    if (user) {
-      res.status(200).json({ user });
-    } else {
-      res.status(404).json({ message: 'User not found.' });
+  export const getAllUsers = async (req, res) => {
+    try {
+      // Extract user ID from req.user
+      const userId = req.user.id;
+      console.log(userId,req.user)
+      // Fetch the user from the database
+      const user = await User.findById(userId);
+  
+      // Check if the user exists and is an admin
+      if (!user || !user.isAdmin) {
+        return res.status(403).json({ message: 'Forbidden: Only admins can access this data.' });
+      }
+  
+      // Fetch all users, orders, and reviews
+      const users = await User.find({});
+      const orders = await Order.find({});
+      const reviews = await Review.find({});
+  
+      // console.log('data', users, orders, reviews);
+  
+      // Return the data
+      res.status(200).json({ users, orders, reviews });
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
-  } catch (error) {
-    // console.error('Error fetching user:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-}
+  };
+
+
 export const getKartStatus = async (req, res) => {
   try {
-    const user = await userModel.findOne();
+    const user = await User.findOne();
     res.json(user.isKart);
   } catch (error) {
     res.status(500).json({ error: "Failed to get kart status" });
@@ -63,7 +99,7 @@ export const updateKartStatus = async (req, res) => {
   const { value } = req.body;
   // console.log('value', value);
   try {
-    const users = await userModel.find({});
+    const users = await User.find({});
     if (!users.length) {
       return res.status(404).json({ error: "No users found" });
     }
@@ -82,48 +118,77 @@ export const updateKartStatus = async (req, res) => {
   }
 };
 
-export const order = async (req, res) => {
-  try {
-    // if (!req.user) {
-    //   console.log('❌ Unauthorized access: No user found in req.user');
-    //   return res.status(401).json({ message: 'Unauthorized: Please log in to place an order.' });
-    // }
 
-    // console.log('📩 Order received from:', req.user.id);
-    // console.log('📦 Order details:', req.body.orders);
+// export const order = async (req, res) => {
+//   try {
+//     // Extract required fields from req.body
+//     const { address, phone, orders } = req.body;
 
-    const { address, phone, orders } = req.body;
-    if (!orders || orders.length === 0) {
-      console.log('❌ No orders provided');
-      return res.status(400).json({ message: 'No orders provided' });
-    }
+//     // Validate orders
+//     if (!orders || orders.length === 0) {
+//       console.log('❌ No orders provided');
+//       return res.status(400).json({ message: 'No orders provided' });
+//     }
 
-    // 🔍 Fetch the user from MongoDB
-    const user = await userModel.findById(req.user.id);
-    if (!user) {
-      console.log('❌ User not found in DB');
-      return res.status(404).json({ message: 'User not found' });
-    }
+//     // Fetch the user from MongoDB (assuming req.user._id is available)
+//     const user = await User.findById(req.user.id);
+//     if (!user) {
+//       console.log('❌ User not found in DB');
+//       return res.status(404).json({ message: 'User not found' });
+//     }
 
-    // Ensure fields exist before pushing
-    if (!user.phone) user.phone = [];
-    if (!user.address) user.address = [];
-    if (!user.orders) user.orders = [];
+//     // Create a new order
+//     const newOrder = new Order({
+//       orderId: orders[0].orderId || `ORD${Date.now()}`, // Use provided orderId or generate one
+//       user: user.id, // Reference to the user
+//       items: orders.map(order => ({
+//         itemType: order.itemType || 'General', // Default to 'General' if not provided
+//         itemName: order.item || 'Unnamed Item', // Use 'item' from orderDetails
+//         quantity: order.quantity || 1, // Default to 1 if not provided
+//         price: order.price || 0, // Default to 0 if not provided
+//         imagePath: order.imagePath || '' // Default to empty string if not provided
+//       })),
+//       totalAmount: orders.reduce((total, order) => total + (order.price || 0) * (order.quantity || 1), 0), // Calculate total amount
+//       tax: 0, // Default tax
+//       shippingCost: 0, // Default shipping cost
+//       discount: 0, // Default discount
+//       finalAmount: orders.reduce((total, order) => total + (order.price || 0) * (order.quantity || 1), 0), // Same as totalAmount for now
+//       paymentMethod: 'Cash on Delivery', // Default payment method
+//       paymentStatus: 'Pending', // Default status
+//       shippingAddress: {
+//         street: address.street || 'Address not provided', // Default to 'Address not provided'
+//         city: address.city || '',
+//         state: address.state || '',
+//         country: address.country || '',
+//         zipCode: address.zipCode || '',
+//         phoneNumber: phone || '' // Use the phone from req.body
+//       },
+//       status: orders[0].status || 'Pending', // Use provided status or default to 'Pending'
+//       date: orders[0].date || Date.now(), // Use provided date or default to current timestamp
+//       paymentId: orders[0].paymentId || '', // Use provided paymentId or default to empty string
+//       notes: '' // Default notes (empty)
+//     });
 
-    user.phone.push(phone);
-    user.address.push(address);
-    user.orders.push(...orders);
+//     // Save the order to the database
+//     await newOrder.save();
 
-    await user.save();
+//     // Add the order ID to the user's orders array
+//     user.orders.push(newOrder._id);
+//     await user.save();
 
-    // console.log('✅ Order successfully saved for', user.email);
+//     console.log('✅ Order successfully saved for', user.email);
 
-    res.status(200).json({ success: true, message: 'Order placed successfully.', email: user.email, user: user });
-  } catch (error) {
-    console.error('❌ Error placing order:', error.message);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       message: 'Order placed successfully.',
+//       email: user.email,
+//       order: newOrder
+//     });
+//   } catch (error) {
+//     console.error('❌ Error placing order:', error.message);
+//     res.status(500).json({ message: 'Server error', error: error.message });
+//   }
+// };
 
 export const deleteUserOrder = async (req, res) => {
   console.log('Incoming request to delete order');
@@ -132,17 +197,18 @@ export const deleteUserOrder = async (req, res) => {
   const { email, cancellationReason } = req.body;
 
   try {
-    const user = await userModel.findOne({ email });
-
+    // Find the user by email
+    const user = await User.findOne({ email });
+    
     if (user) {
-      const orderIndex = user.orders.findIndex(order => order.orderId.toString() === orderId);
+      // Find the order in the Order collection
+      const order = await Order.findOne({ orderId: orderId, user: user._id });
 
-      if (orderIndex !== -1) {
-        const details = user.orders[orderIndex];
-        const { item, price, quantity, date, status } = details;
+      if (order) {
+        const { items, finalAmount, date, status } = order;
 
         // Only send email if the order status is "pending"
-        if (status === 'pending') {
+        if (status === 'Pending') {
           const formattedDate = new Date(date).toLocaleString('en-US', {
             timeZone: 'Asia/Kolkata',
             month: 'long',
@@ -237,9 +303,10 @@ export const deleteUserOrder = async (req, res) => {
       
       <div class="order-details">
         <h3>🛍️ Order Details</h3>
-        <p><strong>Item Type:</strong> ${item}</p>
-        <p><strong>Quantity:</strong> ${quantity}</p>
-        <p><strong>Total Price:</strong> ₹${price}</p>
+        <p><strong>Item Type:</strong> ${items[0].itemType}</p>
+        <p><strong>Item Name:</strong> ${items[0].itemName}</p>
+        <p><strong>Quantity:</strong> ${items[0].quantity}</p>
+        <p><strong>Total Price:</strong> ₹${finalAmount}</p>
         <p><strong>Order Purchasing Date:</strong> ${formattedDate}</p>
         <p><strong>Status:</strong> <span style="color: #d32f2f; font-weight: bold;">Cancelled</span></p>
       </div>
@@ -273,14 +340,17 @@ export const deleteUserOrder = async (req, res) => {
           await transporter.sendMail(mailOptions);
         }
 
-        // Remove order details from user
-        user.address.splice(orderIndex, 1);
-        user.phone.splice(orderIndex, 1);
-        user.orders.splice(orderIndex, 1);
+        // Update the order status to "Cancelled"
+        order.status = 'Cancelled';
+        order.cancellationReason = cancellationReason || 'No reason provided';
+        order.cancelledBy = 'Customer'; // Assuming the customer initiated the cancellation
+        await order.save();
 
+        // Remove the order reference from the user's orders array
+        user.orders.pull(order._id);
         await user.save();
-        res.status(200).json({ message: 'Order deleted successfully' });
 
+        res.status(200).json({ message: 'Order deleted successfully' });
       } else {
         res.status(404).json({ message: 'Order not found' });
       }
@@ -289,19 +359,36 @@ export const deleteUserOrder = async (req, res) => {
     }
   } catch (error) {
     console.error('Error deleting order:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+export const removeOrder = async (req, res) => {
+  const { orderId } = req.params; // Get orderId from query parameters
+  console.log('Deleting order with ID:', orderId);
+
+  try {
+    // Find the order by orderId
+    const order = await Order.findOne({ orderId });
+
+    if (!order) {
+      console.log('Order not found');
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    // Delete the order
+    await Order.deleteOne({ orderId });
+
+    console.log('Order deleted successfully');
+    res.status(200).json({ success: true, message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete order' });
   }
 };
 
 export const sendOrderOtp = async (req, res) => {
-  const { 
-    oid,
-    orderOtp,
-    paymentDetails,
-    orderDetails: additionalOrderDetails,
-    customerDetails,
-    collectionDetails } = req.body;
-  console.log(req.body);
+  const { oid, orderOtp } = req.body;
 
   if (!oid || !orderOtp) {
     return res.json({ success: false, message: 'Order ID or OTP is missing' });
@@ -313,31 +400,34 @@ export const sendOrderOtp = async (req, res) => {
       return res.json({ success: false, message: 'User not found' });
     }
 
-    const userDetails = await userModel.findById(user.id);
+    // Fetch the user details
+    const userDetails = await User.findById(user.id);
     if (!userDetails) {
       return res.json({ success: false, message: 'User details not found' });
     }
 
-    const order = userDetails.orders.find(o => o.orderId === oid);
-
+    // Find the order in the Order collection
+    const order = await Order.findOne({ orderId: oid, user: user.id });
     if (!order) {
+      console.log('not order found')
       return res.json({ success: false, message: 'Order not found' });
     }
-
+    console.log('saved')
+    // Update the order with the OTP and current date
     const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000; // Convert 5.5 hours to milliseconds
     const istDate = new Date(now.getTime() + istOffset).toISOString();
 
     order.date = istDate;
-
     order.otp = orderOtp;
-    await userDetails.save();
+    await order.save();
 
-    const item = order.item;
-    const quantity = order.quantity;
-    const price = order.price;
+    // Prepare email content
+    const item = order.items[0].itemName; // Use the first item in the order
+    const quantity = order.items[0].quantity;
+    const price = order.finalAmount;
     const status = order.status;
-    const date = order.date
+    const date = order.date;
 
     const formattedDate = new Date(date).toLocaleString('en-US', {
       timeZone: 'Asia/Kolkata',
@@ -347,6 +437,7 @@ export const sendOrderOtp = async (req, res) => {
       minute: '2-digit',
       hour12: true,
     });
+
     // Calculate the next day's date and day
     const orderTime = new Date(); // Current order time
     const pickupDeadline = new Date(orderTime); // Initialize with order time
@@ -361,7 +452,7 @@ export const sendOrderOtp = async (req, res) => {
 
     // Formatting pickup deadline as "Month Day" (e.g., "March 13")
     const formattedDeadline = new Date().toLocaleString('en-US', {
-      timeZone: 'Asia/Kolkata',  // Adjust to your local timezone
+      timeZone: 'Asia/Kolkata', // Adjust to your local timezone
       month: 'long',
       day: 'numeric',
     });
@@ -369,7 +460,7 @@ export const sendOrderOtp = async (req, res) => {
     const email = userDetails.email;
     const subject = `Order Confirmation`;
 
-    // Fixed template string - removed backslashes before $ signs
+    // Email template
     const confirmationMessage = `
 <!DOCTYPE html>
 <html>
@@ -570,7 +661,7 @@ export const sendOrderOtp = async (req, res) => {
       <div class="payment-details">
         <h3>💳 Payment Information</h3>
         <p><strong>Payment ID:</strong> ${order.paymentId}</p>
-        <p><strong>Payment Method:</strong> Razorpay</p>
+        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
         <p><strong>Payment Date:</strong> ${formattedDate}</p>
         <p><strong>Payment Status:</strong> <span class="highlight">Successful</span></p>
       </div>
@@ -579,8 +670,8 @@ export const sendOrderOtp = async (req, res) => {
         <h3>👤 Customer Information</h3>
         <p><strong>Name:</strong> ${userDetails.name || 'Not provided'}</p>
         <p><strong>Email:</strong> ${userDetails.email}</p>
-        <p><strong>Phone:</strong> ${order.phone || userDetails.phone || 'Not provided'}</p>
-        <p><strong>Collection Address:</strong> ${order.address || 'Not provided'}</p>
+        <p><strong>Phone:</strong> ${order.shippingAddress.phoneNumber || userDetails.phone || 'Not provided'}</p>
+        <p><strong>Collection Address:</strong> ${order.shippingAddress.street || 'Not provided'}</p>
       </div>
 
       <div class="otp-container">
@@ -624,26 +715,12 @@ export const sendOrderOtp = async (req, res) => {
 </html>
 `;
 
-    // Make sure transporter is properly defined elsewhere in your code
-    // If not defined, here's how you should define it:
-    /*
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: true,
-      auth: {
-        user: process.env.SMTP_EMAIL,
-        pass: process.env.SMTP_PASSWORD
-      }
-    });
-    */
-
+    // Send email
     const mailOptions = {
       from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
       to: email,
-      subject: 'Order Confirmation..!',
-      html: confirmationMessage // Send as HTML
+      subject: subject,
+      html: confirmationMessage,
     };
 
     await transporter.sendMail(mailOptions);
@@ -654,33 +731,37 @@ export const sendOrderOtp = async (req, res) => {
     return res.json({ success: false, message: 'Failed to send OTP', error: error.message });
   }
 };
+
+
+
 export const verifyOrder = async (req, res) => {
   try {
     const { email, number, orderId } = req.body;
-    const user = await userModel.findOne({ email });
-    console.log(req.body, user.orders);
 
+    // Find the user by email
+    const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'User not found.' });
     }
 
-    // Find the specific order by orderId
-    const order = user.orders.find(order => order.orderId === orderId);
-    console.log('get', orderId, order.orderId);
-
+    // Find the order in the Order collection
+    const order = await Order.findOne({ orderId: orderId, user: user._id });
     if (!order) {
       return res.status(404).json({ message: 'Order not found.' });
     }
 
+    // Verify the OTP
     if (order.otp === number) {
-      order.status = 'delivered';
-      await user.save();
+      // Update the order status to "Delivered"
+      order.status = 'Delivered';
+      await order.save();
 
-      const item = order.item;
-      const quantity = order.quantity;
-      const price = order.price;
-      const status = order.status;
+      // Prepare email content
+      const item = order.items[0].itemName; // Use the first item in the order
+      const quantity = order.items[0].quantity;
+      const price = order.totalAmount;
       const date = order.date;
+
       const formattedDate = new Date(date).toLocaleString('en-US', {
         timeZone: 'Asia/Kolkata',
         month: 'long',
@@ -881,15 +962,15 @@ export const verifyOrder = async (req, res) => {
         <p><strong>Quantity:</strong> ${quantity}</p>
         <p><strong>Total Price:</strong> ₹${price}</p>
         <p><strong>Status:</strong> <span class="highlight">Delivered</span></p>
-         <p><strong>Order Purchasing Date:</strong> ₹${formattedDate}</p>
+        <p><strong>Order Purchasing Date:</strong> ${formattedDate}</p>
         <p><strong>Delivery Date:</strong> ${new Date().toLocaleString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      })}</p>
+          month: 'long',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })}</p>
       </div>
 
       <div class="feedback-section">
@@ -927,17 +1008,16 @@ export const verifyOrder = async (req, res) => {
   </div>
 </body>
 </html>
-
 `;
 
+      // Send email
       const mailOptions = {
         from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
         to: email,
         subject: 'Order Delivered Successfully!',
-        html: confirmationMessage
+        html: confirmationMessage,
       };
 
-      // Actually send the email - this line was missing!
       await transporter.sendMail(mailOptions);
 
       return res.status(200).json({ message: 'OTP verified and order status updated.' });
@@ -946,77 +1026,94 @@ export const verifyOrder = async (req, res) => {
     }
   } catch (error) {
     console.error('Error verifying OTP:', error);
-    return res.status(500).json({ message: 'Server error' });
+    return res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
 
 export const quantity = async (req, res) => {
   try {
-    const users = await userModel.find({});
+    // Fetch all orders with status 'Pending'
+    const orders = await Order.find({ status: 'Pending' });
+
     let totalPieces = 0;
     let totalSum = 0;
-    users.forEach(user => {
-      user.orders.forEach(order => {
-        // Only consider orders that are 'pending'
-        if (order.status === 'pending') {
-          const pieces = (order.item === 'dozen') ? order.quantity * 12 : order.quantity;
-          totalPieces += pieces;
-          totalSum += order.price * order.quantity;
-        }
+
+    // Calculate total pieces and total sum
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        const pieces = (item.itemType === 'dozen') ? item.quantity * 12 : item.quantity;
+        totalPieces += pieces;
+        totalSum += item.price * item.quantity;
       });
     });
 
     res.status(200).json({ totalPieces, totalSum });
   } catch (error) {
     console.error('Error fetching total pieces and sum:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
-}
+};
+
 
 export const sendNotification = async (req, res) => {
-  const { subject, message } = req.body;
-  try {
-    const users = await userModel.find({}, 'email');
-    if (users && users.length > 0) {
-      for (const user of users) {
-        const email = user.email;
-        const sub = subject;
-        const msg = message;
-        const mailOptions = {
-          from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
-          to: email,
-          subject: sub,
-          text: msg
+    const { subject, message } = req.body;
+  
+    try {
+      // Fetch all users with their email addresses
+      const users = await User.find({}, 'email');
+      if (users && users.length > 0) {
+        // Send email to each user
+        for (const user of users) {
+          const email = user.email;
+          const mailOptions = {
+            from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
+            to: email,
+            subject: subject,
+            text: message,
+          };
+  
+          await transporter.sendMail(mailOptions);
         }
-        await transporter.sendMail(mailOptions)
+  
+        res.status(200).json({ message: 'Emails sent to all users successfully.' });
+      } else {
+        res.status(404).json({ message: 'No users found.' });
       }
-
-      res.status(200).json({ message: 'Emails sent to all users successfully.' });
-    } else {
-      res.status(404).json({ message: 'No users found.' });
+    } catch (error) {
+      console.error('Error sending notification emails:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
-  } catch (error) {
-    console.error('Error sending notification emails:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-}
+  };
+
 
 export const closeOrder = async (req, res) => {
   try {
     const { subject } = req.body;
-    const users = await userModel.find({});
 
+    // Fetch all users
+    const users = await User.find({});
     if (users.length > 0) {
       let pendingOrdersFound = false;
 
       for (const user of users) {
         const email = user.email;
-        user.orders.forEach(order => {
-          if (order.status === 'pending') {
-            const item = order.item;
-            const quantity = order.quantity;
-            const price = order.price;
+
+        // Find all pending orders for the user
+        const pendingOrders = await Order.find({status: 'Pending' });
+
+        if (pendingOrders.length > 0) {
+          pendingOrdersFound = true;
+
+          for (const order of pendingOrders) {
+            // Update the order status to 'Expired'
+            order.status = 'Cancelled';
+            await order.save();
+
+            // Prepare email content
+            const item = order.items[0].itemName; // Use the first item in the order
+            const quantity = order.items[0].quantity;
+            const price = order.totalAmount;
 
             const formattedDate = new Date(order.date).toLocaleString('en-US', {
               month: 'long',
@@ -1026,11 +1123,7 @@ export const closeOrder = async (req, res) => {
               hour12: true,
             });
 
-            pendingOrdersFound = true;
-            order.status = 'expired';
-
             const htmlMessage = `
-                      
 <!DOCTYPE html>
 <html>
 <head>
@@ -1179,14 +1272,13 @@ export const closeOrder = async (req, res) => {
       </div>
       
       <h2>We're sorry! Your order has been cancelled.</h2>
-  <p>Unfortunately, you were unable to collect your order before <span class="highlight">5:00 PM on ${new Date().toLocaleString('en-US', {
+      <p>Unfortunately, you were unable to collect your order before <span class="highlight">5:00 PM on ${new Date().toLocaleString('en-US', {
               month: 'long',
               day: 'numeric'
             })}</span>, and our session has now closed.</p>
-<p>Don't worry! You can place a fresh order for tomorrow at your convenience. We’d love to serve you again!</p>
-<p>Your refund will be credited soon. Please allow some time for processing.</p>
-<p>For more details, kindly review our <a href="https://palmyrakart.onrender.com" style="color: #2e7d32; text-decoration: none; font-weight: 600;">Terms & Conditions</a>.</p>
-
+      <p>Don't worry! You can place a fresh order for tomorrow at your convenience. We’d love to serve you again!</p>
+      <p>Your refund will be credited soon. Please allow some time for processing.</p>
+      <p>For more details, kindly review our <a href="https://palmyrakart.onrender.com" style="color: #2e7d32; text-decoration: none; font-weight: 600;">Terms & Conditions</a>.</p>
 
       <div class="order-details">
         <h3>🛍️ Order Details</h3>
@@ -1230,10 +1322,9 @@ export const closeOrder = async (req, res) => {
   </div>
 </body>
 </html>
+`;
 
-
-                      `;
-
+            // Send email
             const mailOptions = {
               from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
               to: email,
@@ -1241,10 +1332,9 @@ export const closeOrder = async (req, res) => {
               html: htmlMessage,
             };
 
-            transporter.sendMail(mailOptions);
+            await transporter.sendMail(mailOptions);
           }
-        });
-        await user.save();
+        }
       }
 
       if (pendingOrdersFound) {
@@ -1257,150 +1347,175 @@ export const closeOrder = async (req, res) => {
     }
   } catch (error) {
     console.error('Error closing orders:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
+
 export const limitUpdate = async (req, res) => {
-  const { hlimit } = req.body;
-  console.log('limit', hlimit);
-
-  try {
-    // Find all users
-    const users = await userModel.find({});
-
-    // Update the limit for each user
-    users.forEach(async (user) => {
-      user.limit = hlimit;
-      await user.save(); // Save the updated user
-    });
-    //  io.emit("limit-status-updated",hlimit)
-    res.status(200).json('Limit updated for all users');
-  } catch (error) {
-    console.error('Error updating limit:', error);
-    res.status(500).json('Error updating limit');
-  }
-}
-
-export const getReviews = async (req, res) => {
-  try {
-    const users = await userModel.find({});
-
-    // Collect all reviews from all users
-    const allReviews = users.flatMap(user => user.reviews);
-    res.json({ reviews: allReviews });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-}
-
-export const isUserReviews = async (req, res) => {
-  try {
-    const userEmail = req.query.email;  // Assuming email is passed as query parameter
-    const user = await userModel.findOne({ email: userEmail });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const { hlimit } = req.body;
+    console.log('New limit:', hlimit);
+  
+    try {
+      // Use updateMany to update the limit for all users in a single query
+      const result = await User.updateMany({}, { $set: { limit: hlimit } });
+  
+      // Emit an event to notify clients (if using Socket.IO)
+      // io.emit("limit-status-updated", hlimit);
+  
+      res.status(200).json({ 
+        message: 'Limit updated for all users',
+        updatedCount: result.modifiedCount // Number of documents updated
+      });
+    } catch (error) {
+      console.error('Error updating limit:', error);
+      res.status(500).json({ message: 'Error updating limit', error: error.message });
     }
-    res.json({ reviews: user.reviews });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-}
-export const addReviews = async (req, res) => {
-  const { email, rating, highlight, comment } = req.body;
-  try {
-    const user = await userModel.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+  };
+
+  export const getReviews = async (req, res) => {
+    try {
+      // Fetch all reviews directly from the Review collection
+      const reviews = await Review.find({});
+  
+      res.status(200).json({ reviews });
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
-    const newReview = {
-      user: {
+  };
+
+  export const isUserReviews = async (req, res) => {
+    try {
+      const userEmail = req.query.email; // Assuming email is passed as a query parameter
+  
+      // Find the user by email to get their ID
+      const user = await User.findOne({ email: userEmail }, '_id');
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Fetch reviews for the user directly from the Review collection
+      const reviews = await Review.find({ user: user._id });
+  
+      res.status(200).json({ reviews });
+    } catch (error) {
+      console.error('Error fetching user reviews:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  };
+
+  export const addReviews = async (req, res) => {
+    const { email, rating, highlight, comment } = req.body;
+  
+    try {
+      // Find the user by email
+      const user = await User.findOne({ email });
+      const name=user.name
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Create a new review in the Review collection
+      const newReview = new Review({
+        user: user._id, // Reference to the user
+        rating,
+        name,
         email,
-        name: user.name,  // Assuming user's name is available
-      },
-      rating,
-      highlight,
-      comment,
-      date: new Date(),
-    };
+        highlight,
+        comment,
+        date: new Date(),
+      });
+  
+      // Save the review to the Review collection
+      await newReview.save();
+  
+      // Add the review ID to the user's reviews array (optional, if you want to maintain a reference)
+      user.reviews.push(newReview._id);
+      await user.save();
+  
+      res.status(201).json({ review: newReview });
+    } catch (error) {
+      console.error('Error adding review:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
+    }
+  };
 
-    // Add the review to the user's reviews array
-    user.reviews.push(newReview);
-    await user.save();
-
-    res.status(201).json({ review: newReview });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-}
-
+  
 export const updateReview = async (req, res) => {
-  const { comment, rating, highlight } = req.body;
-  console.log(req.body)
-  const reviewId = req.params.reviewId;
-
-  try {
-    const user = await userModel.findOne({ 'reviews._id': reviewId });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found or Review not found' });
+    const { comment, rating, highlight } = req.body;
+    const reviewId = req.params.reviewId;
+  
+    try {
+      // Find the review in the Review collection
+      const review = await Review.findById(reviewId);
+      if (!review) {
+        return res.status(404).json({ message: 'Review not found' });
+      }
+  
+      // Update the review fields
+      review.comment = comment;
+      review.rating = rating;
+      review.highlight = highlight;
+  
+      // Save the updated review
+      await review.save();
+  
+      res.status(200).json({ review });
+    } catch (error) {
+      console.error('Error updating review:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
+  };
 
-    // Find the review to update
-    const review = user.reviews.id(reviewId);
-    review.comment = comment;
-    review.rating = rating;
-    review.highlight = highlight;
-
-    await user.save();
-
-    res.json({ review });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-}
-
-export const deleteReview = async (req, res) => {
-  const reviewId = req.params.reviewId;
-
-  try {
-    const user = await userModel.findOne({ 'reviews._id': reviewId });
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found or Review not found' });
+  export const deleteReview = async (req, res) => {
+    const reviewId = req.params.reviewId;
+  
+    try {
+      // Find the review in the Review collection
+      const review = await Review.findById(reviewId);
+      if (!review) {
+        return res.status(404).json({ message: 'Review not found' });
+      }
+  
+      // Find the user who owns the review
+      const user = await User.findById(review.user);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+  
+      // Remove the review ID from the user's reviews array
+      user.reviews.pull(reviewId);
+      await user.save();
+  
+      // Delete the review from the Review collection
+      await Review.findByIdAndDelete(reviewId);
+  
+      res.status(200).json({ message: 'Review deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      res.status(500).json({ message: 'Server error', error: error.message });
     }
+  };
 
-    // Remove the review from the user's reviews array
-    user.reviews.pull(reviewId);
-    await user.save();
 
-    res.status(200).send('Review deleted');
-  } catch (error) {
-    console.error(error);
-    res.status(500).send('Server error');
-  }
-}
-export const replyReview = async (req, res) => {
-  const { email, sub, msg } = req.body;
-  // console.log('body',req.body)
-  try {
-    const mailOptions = {
-      from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
-      to: email,
-      subject: sub,
-      text: msg
+  export const replyReview = async (req, res) => {
+    const { email, sub, msg } = req.body;
+  
+    try {
+      const mailOptions = {
+        from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
+        to: email,
+        subject: sub,
+        text: msg,
+      };
+  
+      // Send the email
+      await transporter.sendMail(mailOptions);
+  
+      res.status(200).json({ message: 'Email sent successfully' });
+    } catch (error) {
+      console.error('Error sending email:', error);
+      res.status(500).json({ message: 'Error sending email', error: error.message });
     }
-    await transporter.sendMail(mailOptions)
-    res.status(200).json({ msg: 'sent successfully' })
-  }
-  catch {
-    res.status(500).json('error')
-  }
-}
-
-
+  };

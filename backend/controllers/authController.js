@@ -2,8 +2,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 import transporter from '../config/nodeMailer.js';
-
+import dotenv from 'dotenv';
+dotenv.config();
 // Helper function to send emails
+console.log('JWT_SECRET:', process.env.JWT_SECRET);
+console.log('REFRESH_SECRET:', process.env.JWT_REFRESH_SECRET);
 const sendEmail = async (to, subject, content, isHtml = false) => {
     const mailOptions = {
       from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
@@ -15,104 +18,158 @@ const sendEmail = async (to, subject, content, isHtml = false) => {
     await transporter.sendMail(mailOptions);
   };
 
+  export const refreshToken = async (req, res) => {
+    const refreshToken = req.cookies.refreshToken;
+  
+    if (!refreshToken) {
+      return res.status(401).json({ success: false, message: 'No refresh token provided' });
+    }
+  
+    try {
+      const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+      const user = await userModel.findById(decoded.id);
+  
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+  
+      // Generate a new access token
+      const accessToken = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
+  
+      // Set the new access token in an HTTP-only cookie
+      res.cookie('token', accessToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+        sameSite: 'strict',
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
+  
+      // Send the new access token in the response
+      return res.status(200).json({ success: true, accessToken });
+    } catch (error) {
+      console.error('Refresh token error:', error);
+      return res.status(403).json({ success: false, message: 'Invalid refresh token' });
+    }
+  };
 // Register a new user
 export const register = async (req, res) => {
-    const { name, email, password } = req.body;
-    console.log('hi')
-    // Validate input
-    if (!name || !email || !password) {
-        return res.status(400).json({ success: false, message: 'Missing data' });
+  const { name, email, password } = req.body;
+
+  // Validate input
+  if (!name || !email || !password) {
+    return res.status(400).json({ success: false, message: 'Missing data' });
+  }
+
+  try {
+    // Check if user already exists
+    const existingUser = await userModel.findOne({ email });
+    if (existingUser && existingUser.isAccountVerified) {
+      return res.status(409).json({ success: false, message: 'User already exists' });
     }
 
-    try {
-        // Check if user already exists
-        const existingUser = await userModel.findOne({ email });
-        // console.log(existingUser.isAccountVerified)
-        if (existingUser ) {
-            if(existingUser.isAccountVerified)
-            return res.status(409).json({ success: false, message: 'User already exists' });
-        }
+    // Hash password
+    const hashPassword = await bcrypt.hash(password, 10);
 
-        // Hash password
-        const hashPassword = await bcrypt.hash(password, 10);
+    // Create new user
+    const user = new userModel({ name, email, password: hashPassword });
+    await user.save();
 
-        // Create new user
-        const user = new userModel({ name, email, password: hashPassword });
-        await user.save();
-        
-        // Generate JWT token
-        const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '7d' });
+    // Generate tokens
+    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
-        // Set token in HTTP-only cookie
-        res.cookie('token', token, {
-            httpOnly: true,  // ✅ Prevents JavaScript access (secure)
-            secure: true,  // ✅ Ensures it only works in HTTPS
-            sameSite: 'None',  // ✅ Required for cross-origin requests
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
+    // Set tokens in HTTP-only cookies
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
 
-        return res.status(201).json({ success: true, message: 'Registration successful',name:user.name,userdetails:user });
-    } catch (error) {
-        console.error('Registration error:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.status(201).json({ success: true, message: 'Registration successful', name: user.name, userdetails: user });
+  } catch (error) {
+    console.error('Registration error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };
 
 export const login = async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ success: false, message: 'Missing email or password' });
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ success: false, message: 'Missing email or password' });
+  }
+
+  try {
+    const user = await userModel.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
-    try {
-        const user = await userModel.findOne({ email });
-
-        if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid email or password' });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid email or password' });
-        }
-
-        const token = jwt.sign({ id: user._id, isadmin: user.isadmin }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.cookie('token', token, {
-            httpOnly: true,  // ✅ Prevents JavaScript access (secure)
-            secure: true,  // ✅ Ensures it only works in HTTPS
-            sameSite: 'None',  // ✅ Required for cross-origin requests
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        });
-        
-      
-        if (user.isadmin) {
-            return res.json({ success: true, message: 'Admin login successful', isadmin: true, name: user.name });
-        }
-
-        return res.json({ success: true, message: 'User login successful', isadmin: user.isadmin, name: user.name });
-    } catch (error) {
-        console.error('Login error:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
+
+    // Generate tokens
+    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
+    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+    // Set tokens in HTTP-only cookies
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    if (user.isAdmin) {
+      return res.json({ success: true, message: 'Admin login successful', isAdmin: true, name: user.name });
+    }
+
+    return res.json({ success: true, message: 'User login successful', isAdmin: user.isAdmin, name: user.name });
+  } catch (error) {
+    console.error('Login error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };
-
 
 
 // Logout user
 export const logout = async (req, res) => {
-    try {
-        // ✅ Correctly clear the 'token' cookie
-        res.clearCookie('token', { 
-            httpOnly: true,
-            secure: true,  // ✅ Ensure it matches the login settings
-            sameSite: 'None', // ✅ Required for cross-origin requests
-        });
+  try {
+    // Clear both token and refreshToken cookies
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+      sameSite: 'strict',
+    });
 
-        return res.json({ success: true, message: 'Logout successful' });
-    } catch (error) {
-        console.error('Logout error:', error);
-        return res.status(500).json({ success: false, message: 'Internal server error' });
-    }
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    return res.json({ success: true, message: 'Logout successful' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
+  }
 };
 
 

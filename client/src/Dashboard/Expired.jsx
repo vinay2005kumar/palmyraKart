@@ -1,41 +1,57 @@
 import React, { useEffect, useState } from 'react';
-import './Expired.css'
+import './Expired.css';
 import Topbar from './Dtopbar';
 import axios from 'axios';
-import { RxCross2 } from "react-icons/rx";
-import { PiCurrencyInr } from "react-icons/pi";
+import { PiCurrencyInr } from 'react-icons/pi';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
 const Expired = () => {
-  const [ddata, setddata] = useState([]);
-  const [demail, setdemail] = useState('');
-  const [dquantity, setdquantity] = useState(0);
-  const [dprice, setdprice] = useState(0);
-  const [phoneFilter, setPhoneFilter] = useState('');
-  const [sno, setsno] = useState(0);
-  const [errorMessage, setErrorMessage] = useState('');
-  const isMobile=window.innerWidth<=760
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
+  const [orders, setOrders] = useState([]); // For expired orders
+  const [users, setUsers] = useState([]); // For storing user data
+  const [dquantity, setdquantity] = useState(0); // Total quantity
+  const [dprice, setdprice] = useState(0); // Total price
+  const [phoneFilter, setPhoneFilter] = useState(''); // For filtering by phone number
+  const [placeFilter, setPlaceFilter] = useState(''); // For filtering by place (street address)
+  const [sno, setsno] = useState(0); // Serial number counter
+  const [refundLoading, setRefundLoading] = useState({}); // For refund loading states
+  const isMobile = window.innerWidth <= 760; // Check if the device is mobile
+  const url = 'http://localhost:4000/api/user'; // Backend URL
+
+  // Fetch expired orders and user data from the backend
   const getdata = async () => {
     try {
- 
-      const { data } = await axios.get(`${url}/getAllUsers`);
-      setddata(data.user);
-      
+      console.log('Fetching data...');
+      const { data } = await axios.get(`${url}/getAllUsers`, {
+        withCredentials: true, // Include credentials (cookies) if needed
+      });
+
+      console.log('Data received:', data);
+
+      // Ensure the response contains the expected fields
+      if (!data.orders || !data.users) {
+        throw new Error('Invalid response structure from the server.');
+      }
+
+      // Filter orders with status 'Cancelled'
+      const expiredOrders = data.orders.filter((order) => order.status === 'Cancelled');
+      setOrders(expiredOrders);
+
+      // Set user data
+      setUsers(data.users);
+
+      // Calculate totals
       let totalPieces = 0;
       let totalCost = 0;
       let serialNumber = 0;
 
-      data.user.forEach((user) => {
-        user.orders
-          .filter((order) => order.status === 'expired')
-          .forEach((order) => {
-            const pieces = order.item === 'single' ? order.quantity : order.quantity * 12;
-            totalPieces += pieces;
-            totalCost += order.price;
-            serialNumber += 1;
-          });
+      expiredOrders.forEach((order) => {
+        order.items.forEach((item) => {
+          const pieces = item.itemType === 'single' ? item.quantity : item.quantity * 12;
+          totalPieces += pieces;
+          totalCost += item.price;
+        });
+        serialNumber += 1;
       });
 
       setdquantity(totalPieces);
@@ -43,38 +59,41 @@ const Expired = () => {
       setsno(serialNumber);
     } catch (error) {
       console.error('Error fetching orders:', error);
-      setErrorMessage('Failed to fetch data. Please try again later.');
+      toast.error('Failed to fetch orders. Please try again later.');
     }
   };
+
+  // Toast notification function
   const toastfun = (msg, type) => {
     toast[type](msg, {
       position: 'top-right',
       autoClose: 3000,
       style: {
         position: 'absolute',
-       top:isMobile?'6vh':'60px',
+        top: isMobile ? '6vh' : '60px',
         right: '0em',
-        width:isMobile?'60vw': "35vw", // Set width for mobile
-        height:isMobile?'8vh':'10vh',
-        fontSize: "1.2rem", // Adjust font size
-        padding: "10px", // Adjust padding
+        width: isMobile ? '60vw' : '35vw',
+        height: isMobile ? '8vh' : '10vh',
+        fontSize: '1.2rem',
+        padding: '10px',
       },
       onClick: () => {
-        toast.dismiss(); // Dismiss the toast when clicked
+        toast.dismiss();
       },
     });
   };
-  const handleDelete = (orderId, email) => {
-    const toastId = `delete-toast-${orderId}`;
-    const cancellationReason = 'normally';
-  
+
+  // Handle refund for an order
+  const handleRefund = async (paymentId, amount, orderId) => {
+    const toastId = `refund-toast-${paymentId}`;
+
     if (!toast.isActive(toastId)) {
       toast.info(
         <div>
-          <p style={{ padding: '1px' }}>Do you really want to delete this order?</p>
+          <p style={{ padding: '1px' }}>Do you really want to issue a refund for this order?</p>
           <button
             onClick={async () => {
-              await confirmDelete(orderId, email, cancellationReason);
+              await confirmRefund(paymentId, amount, orderId);
               toast.dismiss(toastId);
             }}
             style={{
@@ -118,26 +137,118 @@ const Expired = () => {
       );
     }
   };
-  
-  // Function to actually delete the order
-  const confirmDelete = async (orderId, email, cancellationReason) => {
+
+  // Confirm and process the refund
+  const confirmRefund = async (paymentId, amount, orderId) => {
     try {
+      setRefundLoading((prev) => ({ ...prev, [orderId]: true })); // Set loading state
+      const refundResponse = await axios.post(`${url}/refund`, {
+        paymentId,
+        amount,
+      });
+
+      if (refundResponse.data.success) {
+        toastfun('Refund initiated successfully', 'success');
+        getdata(); // Refresh order list
+      } else {
+        toastfun('Refund initiation failed', 'error');
+      }
+    } catch (error) {
+      console.error('Error initiating refund:', error);
+      toastfun('Refund initiation failed. Please try again.', 'error');
+    } finally {
+      setRefundLoading((prev) => ({ ...prev, [orderId]: false })); // Reset loading state
+    }
+  };
+
+  // Handle delete order with refund
+  const handleDelete = (orderId, paymentId, amount) => {
+    const toastId = `delete-toast-${orderId}`;
+    const cancellationReason = 'normally';
+
+    if (!toast.isActive(toastId)) {
+      toast.info(
+        <div>
+          <p style={{ padding: '1px' }}>Do you really want to delete this order and issue a refund?</p>
+          <button
+            onClick={async () => {
+              await confirmDelete(orderId, cancellationReason, paymentId, amount);
+              toast.dismiss(toastId);
+            }}
+            style={{
+              fontSize: '1.1em',
+              margin: '5px',
+              padding: '5px 15px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => toast.dismiss(toastId)}
+            style={{
+              fontSize: '1.1em',
+              margin: '5px',
+              padding: '5px 15px',
+              background: '#f44336',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            No
+          </button>
+        </div>,
+        {
+          position: 'top-center',
+          closeOnClick: true,
+          draggable: false,
+          autoClose: false,
+          onClick: () => toast.dismiss(toastId),
+          toastId,
+          style: { top: '6em', width: isMobile ? '70%' : '100%' },
+        }
+      );
+    }
+  };
+
+  // Confirm delete and issue refund
+  const confirmDelete = async (orderId, cancellationReason, paymentId, amount) => {
+    try {
+      // Step 1: Issue refund
+      await handleRefund(paymentId, amount, orderId);
+
+      // Step 2: Delete the order
       const deleteurl = `${url}/order/${orderId}`;
-      console.log('Deleting order:', deleteurl, orderId);
-      
       const response = await axios.delete(deleteurl, {
         headers: { 'Content-Type': 'application/json' },
-        data: { email, cancellationReason }, // ✅ Ensure request body is sent properly
+        data: { cancellationReason },
       });
-  
-      toastfun('Order deleted successfully', 'success');
+
+      toastfun('Order deleted and refund initiated successfully', 'success');
       getdata(); // Refresh order list
     } catch (error) {
       console.error('Error deleting order:', error);
-      toastfun('Failed to delete the order. Please try again.', 'error');
+      toastfun('Failed to delete the order or issue refund. Please try again.', 'error');
     }
   };
-  
+
+  // Delete all refunded orders
+  const deleteRefundedOrders = async () => {
+    try {
+      const response = await axios.delete(`${url}/delete-refunded-orders`);
+      toastfun('Refunded orders deleted successfully', 'success');
+      getdata(); // Refresh order list
+    } catch (error) {
+      console.error('Error deleting refunded orders:', error);
+      toastfun('Failed to delete refunded orders. Please try again.', 'error');
+    }
+  };
 
   useEffect(() => {
     getdata();
@@ -145,17 +256,28 @@ const Expired = () => {
 
   return (
     <div>
-      <ToastContainer></ToastContainer>
-      <Topbar />
-      <div className="dorder2">
+        <Topbar />
+      <ToastContainer />
+      <div className="order2">
         <h1 id='dall'>Expired Orders</h1>
         <div className="dnumber" id='fdnumber'>
-          <label htmlFor="dnumber2">Enter Number:</label>
-          <input 
-            type="number" 
-            id="dnumber2" 
-            value={phoneFilter} 
-            onChange={(e) => setPhoneFilter(e.target.value)} 
+          <label htmlFor="dnumber2">Enter Phone Number:</label>
+          <input
+            type="number"
+            id="dnumber2"
+            value={phoneFilter}
+            onChange={(e) => setPhoneFilter(e.target.value)}
+            placeholder="Enter Phone Number"
+          />
+        </div>
+        <div className="dnumber" id='fdnumber'>
+          <label htmlFor="dplace">Enter Place:</label>
+          <input
+            type="text"
+            id="dplace"
+            value={placeFilter}
+            onChange={(e) => setPlaceFilter(e.target.value)}
+            placeholder="Enter Street Address"
           />
         </div>
 
@@ -163,17 +285,17 @@ const Expired = () => {
           <p>Total Orders: {sno}</p>
           <p>Total Quantity: {dquantity} Pieces</p>
           <p id='mtcost'>Total Cost: <PiCurrencyInr />{dprice}</p>
+          <button onClick={deleteRefundedOrders} className="delete-refunds-btn">
+            Delete Refunds
+          </button>
         </div>
 
-        {/* {errorMessage && <p className="error-message">{errorMessage}</p>} */}
-
         <div className="dtable2 dtable3 detable1">
-          {ddata.length > 0 ? (
+          {orders.length > 0 ? (
             <table border="1px" className="dtable detable">
               <thead>
                 <tr>
                   <th>S.No</th>
-                  <th>Verification</th>
                   <th>Customer Name</th>
                   <th>Email</th>
                   <th>Phone No</th>
@@ -184,44 +306,64 @@ const Expired = () => {
                   <th>Status</th>
                   <th>Date</th>
                   <th>Time</th>
+                  <th>Delete</th>
+                  <th>Refund</th>
                 </tr>
               </thead>
               <tbody>
-                {ddata
-                  .filter((user,index) => 
-                    phoneFilter === '' || user.orders.some((order, index) => 
-                      order.status === 'expired' &&
-                      user.phone[index] && user.phone[index].includes(phoneFilter)
-                  )
-                  )
-                  .flatMap((user, userIndex) =>
-                    user.orders.filter((order) => order.status === 'expired').map((order,index) => {
-                      return (
-                        <tr key={order._id}>
-                          <td>{index + 1}</td>
-                          <td>
-                            Expired
-                          </td>
-                          <td>{user.name}</td>
-                          <td>{user.email}</td>
-                          <td>{user.phone[user.orders.indexOf(order)]}</td> {/* Consider if you want to show a specific phone */}
-                          <td>{user.address[user.orders.indexOf(order)]}</td> {/* Same for address */}
-                          <td>{order.item}</td>
-                          <td>{order.type === 'single' ? order.quantity : order.quantity * 12}</td>
-                          <td>
-                            <PiCurrencyInr />
-                            {order.price}
-                          </td>
-                          <td>{order.status}</td>
-                          <td>{new Date(order.date).toLocaleDateString()}</td>
-                          <td>{new Date(order.date).toLocaleTimeString()}</td>
-                          <td>
-                            <button onClick={() => handleDelete(order.orderId,user.email)} style={{cursor:'pointer'}} className='del' id='del'>Delete</button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
+                {orders
+                  .filter((order) => {
+                    // Filter by phone number
+                    const phoneMatch =
+                      phoneFilter === '' ||
+                      order.shippingAddress.phoneNumber.toString().includes(phoneFilter);
+
+                    // Filter by place (street address)
+                    const placeMatch =
+                      placeFilter === '' ||
+                      order.shippingAddress.street.toLowerCase().includes(placeFilter.toLowerCase());
+
+                    // Only include orders that match both filters
+                    return phoneMatch && placeMatch;
+                  })
+                  .map((order, index) => {
+                    // Find the user associated with the order
+                    const user = users.find((user) => user._id === order.user);
+                    return (
+                      <tr key={order._id}>
+                        <td>{index + 1}</td>
+                        <td>{user ? user.name : 'N/A'}</td>
+                        <td>{user ? user.email : 'N/A'}</td>
+                        <td>{order.shippingAddress.phoneNumber}</td>
+                        <td>{order.shippingAddress.street}</td>
+                        <td>{order.items[0].itemType}</td>
+                        <td>{order.items[0].itemType === 'single' ? order.items[0].quantity : order.items[0].quantity * 12}</td>
+                        <td><PiCurrencyInr />{order.items[0].price}</td>
+                        <td>{order.status}</td>
+                        <td>{new Date(order.date).toLocaleDateString()}</td>
+                        <td>{new Date(order.date).toLocaleTimeString()}</td>
+                        <td>
+                          <button
+                            onClick={() => handleDelete(order.orderId, order.paymentId, order.items[0].price)}
+                            style={{ cursor: 'pointer' }}
+                            className='del'
+                            id='del'
+                          >
+                            Delete
+                          </button>
+                        </td>
+                        <td>
+                          <button
+                            onClick={() => handleRefund(order.paymentId, order.items[0].price, order.orderId)}
+                            disabled={refundLoading[order.orderId]}
+                            className={`refund-btn ${refundLoading[order.orderId] ? 'loading' : ''}`}
+                          >
+                            {refundLoading[order.orderId] ? 'Loading...' : 'Refund'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           ) : (

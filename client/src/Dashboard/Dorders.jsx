@@ -2,70 +2,100 @@ import React, { useEffect, useState } from 'react';
 import './Dorders.css';
 import Topbar from './Dtopbar';
 import axios from 'axios';
-import { RxCross2 } from "react-icons/rx";
-import { PiCurrencyInr } from "react-icons/pi";
+import { RxCross2 } from 'react-icons/rx';
+import { PiCurrencyInr } from 'react-icons/pi';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const Dorder = ({ onOrderDetails }) => {
-  const [ddata, setddata] = useState([]);
-  const [verify, setverify] = useState(false);
-  const [otp, setotp] = useState('');
-  const [demail, setdemail] = useState('');
-  const [dquantity, setdquantity] = useState(0);
-  const [dprice, setdprice] = useState(0);
-  const [phoneFilter, setPhoneFilter] = useState('');
-  const [placeFilter, setPlaceFilter] = useState('');
-  const [sno, setsno] = useState(0);
-  const [vname, setvname] = useState();
-  const [vno, setvno] = useState();
-  const[orderid,setorderid]=useState()
-  const [sortByAddress, setSortByAddress] = useState(false);  // New state for sorting
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
-  const isMobile = window.innerWidth <= 760;
-  
+const Dorders = ({ onOrderDetails }) => {
+  const [ddata, setddata] = useState([]); // For users
+  const [orders, setOrders] = useState([]); // For orders
+  const [verify, setverify] = useState(false); // For verification modal
+  const [otp, setotp] = useState(''); // For OTP input
+  const [demail, setdemail] = useState(''); // For user email
+  const [dquantity, setdquantity] = useState(0); // Total quantity
+  const [dprice, setdprice] = useState(0); // Total price
+  const [phoneFilter, setPhoneFilter] = useState(''); // For filtering by phone number
+  const [placeFilter, setPlaceFilter] = useState(''); // For filtering by place (street address)
+  const [sno, setsno] = useState(0); // Serial number counter
+  const [vname, setvname] = useState(''); // For verification name
+  const [vno, setvno] = useState(''); // For verification phone number
+  const [orderid, setorderid] = useState(''); // For order ID
+  const [sortByAddress, setSortByAddress] = useState(false); // For sorting by address
+  const url = 'http://localhost:4000/api/user'; // Backend URL
+  const isMobile = window.innerWidth <= 760; // Check if the device is mobile
+
+  // Fetch data from the backend
   const getdata = async () => {
-    console.log("getdata() function is called ✅"); // Debugging log
     try {
-      console.log("Fetching data..."); // Debugging log before API call
-  
-      const { data } = await axios.get(`${url}/getAllUsers`);
-      console.log("Data received:", data); // Log the response data
-  
-      setddata(data.user);
-      
+      console.log('Fetching data...');
+      const { data } = await axios.get(`${url}/getAllUsers`, {
+        withCredentials: true, // Include credentials (cookies) if needed
+      });
+
+      console.log('Data received:', data);
+
+      // Ensure the response contains the expected fields
+      if (!data.users || !data.orders || !data.reviews) {
+        throw new Error('Invalid response structure from the server.');
+      }
+
+      const pendingOrders = data.orders.filter((order) => order.status === 'Pending');
+
+    // Set data in state
+    setddata(data.users); // Set users
+    setOrders(pendingOrders); 
+
+      // Calculate totals
       let totalPieces = 0;
       let totalCost = 0;
       let serialNumber = 0;
-  
-      data.user.forEach((user) => {
-        user.orders.forEach((order) => {
-          if (order.status === 'pending') {
-            console.log("Processing order:", order); // Log each order being processed
-  
-            const pieces = order.item === 'single' ? order.quantity : order.quantity * 12;
+
+      data.orders.forEach((order) => {
+        if (order.status === 'Pending') {
+          order.items.forEach((item) => {
+            const pieces = item.itemType === 'single' ? item.quantity : item.quantity * 12;
             totalPieces += pieces;
-            totalCost += order.price;
-            serialNumber += 1;
-          }
-        });
+            totalCost += item.price;
+          });
+          serialNumber += 1;
+        }
       });
-  
-      console.log(`Total Pieces: ${totalPieces}, Total Cost: ${totalCost}, Total Orders: ${serialNumber}`); // Debug final values
-  
+
       setdquantity(totalPieces);
       setdprice(totalCost);
       setsno(serialNumber);
     } catch (error) {
       console.error('Error fetching orders:', error);
+      toast.error('Failed to fetch orders. Please try again later.');
     }
   };
-  
+
+  // Toast notification function
+  const toastfun = (msg, type) => {
+    toast[type](msg, {
+      position: 'top-right',
+      autoClose: 3000,
+      style: {
+        position: 'absolute',
+        top: isMobile ? '6vh' : '70px',
+        right: '0em',
+        width: isMobile ? '60vw' : '35vw',
+        height: isMobile ? '8vh' : '10vh',
+        fontSize: '1.2rem',
+        padding: '10px',
+      },
+      onClick: () => {
+        toast.dismiss();
+      },
+    });
+  };
+
+  // Handle order deletion
   const handleDelete = (orderId, email) => {
     const toastId = `delete-toast-${orderId}`;
-    const cancellationReason = 'normally';
-  
+    const cancellationReason = 'Order deleted by admin';
+
     if (!toast.isActive(toastId)) {
       toast.info(
         <div>
@@ -116,18 +146,16 @@ const Dorder = ({ onOrderDetails }) => {
       );
     }
   };
-  
+
   // Function to actually delete the order
   const confirmDelete = async (orderId, email, cancellationReason) => {
     try {
       const deleteurl = `${url}/order/${orderId}`;
-      console.log('Deleting order:', deleteurl, orderId);
-      
-      const response = await axios.delete(deleteurl, {
+      await axios.delete(deleteurl, {
         headers: { 'Content-Type': 'application/json' },
-        data: { email, cancellationReason }, // ✅ Ensure request body is sent properly
+        data: { email, cancellationReason },
       });
-  
+
       toastfun('Order deleted successfully', 'success');
       getdata(); // Refresh order list
     } catch (error) {
@@ -135,41 +163,23 @@ const Dorder = ({ onOrderDetails }) => {
       toastfun('Failed to delete the order. Please try again.', 'error');
     }
   };
-  
 
-  const toastfun = (msg, type) => {
-    toast[type](msg, {
-      position: 'top-right',
-      autoClose: 3000,
-      style: {
-        position: 'absolute',
-        top: isMobile ? '6vh' : '60px',
-        right: '0em',
-        width: isMobile ? '60vw' : '35vw',
-        height: isMobile ? '8vh' : '10vh',
-        fontSize: '1.2rem',
-        padding: '10px',
-      },
-      onClick: () => {
-        toast.dismiss();
-      },
-    });
-  };
-
+  // Handle verification modal
   const handleverify = (order_id, email, name, no) => {
     setvno(no);
     setvname(name);
     setverify(!verify);
     setdemail(email);
-    setorderid(order_id)
-    const orderDetails = { orderId: orderid, email, name, phone: no };
+    setorderid(order_id);
+    const orderDetails = { orderId: order_id, email, name, phone: no };
     onOrderDetails(orderDetails);
   };
 
+  // Handle OTP submission
   const otpsubmit = async () => {
     const number = document.getElementById('dnumber').value;
     try {
-      const response = await axios.post(`${url}/verifyOrder`, { email: demail, number,orderId:orderid });
+      const response = await axios.post(`${url}/verifyOrder`, { email: demail, number, orderId: orderid });
       if (response.status === 200) {
         toastfun('Confirmed OTP', 'success');
         getdata();
@@ -184,32 +194,36 @@ const Dorder = ({ onOrderDetails }) => {
     }
   };
 
+  // Show/hide filters and totals
   const showdata = () => {
     document.getElementById('fdnumber').style.display = verify ? 'none' : 'block';
     document.getElementById('dtotal').style.display = verify ? 'none' : 'flex';
     document.getElementById('fdplace').style.display = verify ? 'none' : 'block';
   };
 
+  // Sort orders by address
   const sortOrdersByAddress = () => {
     setSortByAddress(!sortByAddress);
   };
-
+  // Fetch data on component mount
   useEffect(() => {
     getdata();
     showdata();
-  }, [verify]);
+  },[]);
+  // Fetch data on component mount
+  useEffect(() => {
+    getdata();
+    showdata();
+  },[verify]); // Only `verify` should be in the dependency array
 
+  // Sort orders by address if enabled
   const sortedData = sortByAddress
-    ? ddata
-        .map((user) => ({
-          ...user,
-          orders: user.orders.sort((a, b) => {
-            const addressA = a.address.toLowerCase();
-            const addressB = b.address.toLowerCase();
-            return addressA < addressB ? -1 : addressA > addressB ? 1 : 0;
-          }),
-        }))
-    : ddata;
+    ? [...orders].sort((a, b) => {
+        const addressA = a.shippingAddress.street.toLowerCase();
+        const addressB = b.shippingAddress.street.toLowerCase();
+        return addressA < addressB ? -1 : addressA > addressB ? 1 : 0;
+      })
+    : orders;
 
   return (
     <>
@@ -225,6 +239,7 @@ const Dorder = ({ onOrderDetails }) => {
             id="dnumber2"
             value={phoneFilter}
             onChange={(e) => setPhoneFilter(e.target.value)}
+            placeholder="Enter Phone Number"
           />
         </div>
 
@@ -234,7 +249,7 @@ const Dorder = ({ onOrderDetails }) => {
             id="place"
             value={placeFilter}
             onChange={(e) => setPlaceFilter(e.target.value)}
-            placeholder='Enter Place'
+            placeholder="Enter Place (Street Address)"
           />
         </div>
 
@@ -260,7 +275,7 @@ const Dorder = ({ onOrderDetails }) => {
                 Submit
               </button>
             </div>
-          ) : sortedData.length > 0 ? (
+          ) : orders.length > 0 ? (
             <table border="1px" className="dtable ddtable">
               <thead>
                 <tr>
@@ -279,60 +294,56 @@ const Dorder = ({ onOrderDetails }) => {
                 </tr>
               </thead>
               <tbody>
-                {(() => {
-                  let continuousOrderIndex = 0;
+                {sortedData
+                  .filter((order) => {
+                    // Filter by phone number
+                    const phoneMatch =
+                      phoneFilter === '' ||
+                      order.shippingAddress.phoneNumber.toString().includes(phoneFilter);
 
-                  return sortedData
-                    .filter((user) =>
-                      (phoneFilter === '' || user.orders.some(
-                        (order, index) => order.status === 'pending' && user.phone[index]?.includes(phoneFilter)
-                      )) &&
-                      (placeFilter === '' || user.orders.some(
-                        (order, index) => order.status === 'pending' && user.address[index]?.toLowerCase().includes(placeFilter.toLowerCase())
-                      ))
-                    )
-                    .flatMap((user, userIndex) =>
-                      user.orders
-                        .filter((order) => order.status === 'pending')
-                        .map((order) => {
-                          continuousOrderIndex++;
-                          return (
-                            <tr key={`${userIndex}-${continuousOrderIndex}`}>
-                              <td>{continuousOrderIndex}</td>
-                              <td>
-                                <button
-                                  onClick={() =>
-                                    handleverify(order.orderId, user.email, user.name, user.phone[user.orders.indexOf(order)])
-                                  }
-                                  className="do-button"
-                                  style={{ cursor: 'pointer' }}
-                                >
-                                  Verify
-                                </button>
-                              </td>
-                              <td>{user.name}</td>
-                              <td>{user.email}</td>
-                              <td>{user.phone[user.orders.indexOf(order)]}</td>
-                              <td>{user.address[user.orders.indexOf(order)]}</td>
-                              <td>{order.item}</td>
-                              <td>{order.item === 'single' ? order.quantity : order.quantity * 12}</td>
-                              <td>
-                                <PiCurrencyInr />
-                                {order.price}
-                              </td>
-                              <td>{order.status}</td>
-                              <td>{new Date(order.date).toLocaleDateString()}</td>
-                              <td>{new Date(order.date).toLocaleTimeString()}</td>
-                              <td>
-                                <button onClick={() => handleDelete(order.orderId, user.email)} className="del">
-                                  Delete
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
+                    // Filter by place (street address)
+                    const placeMatch =
+                      placeFilter === '' ||
+                      order.shippingAddress.street.toLowerCase().includes(placeFilter.toLowerCase());
+
+                    // Only include orders that match both filters
+                    return phoneMatch && placeMatch;
+                  })
+                  .map((order, index) => {
+                    const user = ddata.find((user) => user._id === order.user);
+                    return (
+                      <tr key={order._id}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <button
+                            onClick={() => handleverify(order.orderId, user.email, user.name,order.shippingAddress.phoneNumber)}
+                            className="do-button"
+                            style={{ cursor: 'pointer' }}
+                          >
+                            Verify
+                          </button>
+                        </td>
+                        <td>{user ? user.name : 'N/A'}</td>
+                        <td>{user ? user.email : 'N/A'}</td>
+                        <td>{order.shippingAddress.phoneNumber}</td>
+                        <td>{order.shippingAddress.street}</td>
+                        <td>{order.items[0].itemType}</td>
+                        <td>{order.items[0].itemType === 'single' ? order.items[0].quantity : order.items[0].quantity * 12}</td>
+                        <td>
+                          <PiCurrencyInr />
+                          {order.items[0].price}
+                        </td>
+                        <td>{order.status}</td>
+                        <td>{new Date(order.date).toLocaleDateString()}</td>
+                        <td>{new Date(order.date).toLocaleTimeString()}</td>
+                        <td>
+                          <button onClick={() => handleDelete(order.orderId, user.email)} className="del">
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
                     );
-                })()}
+                  })}
               </tbody>
             </table>
           ) : (
@@ -344,4 +355,4 @@ const Dorder = ({ onOrderDetails }) => {
   );
 };
 
-export default Dorder;
+export default Dorders

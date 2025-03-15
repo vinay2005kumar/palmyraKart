@@ -2,57 +2,78 @@ import React, { useEffect, useState } from 'react';
 import './Order.css';
 import Topbar from './Topbar';
 import axios from 'axios';
-import { PiCurrencyInr } from "react-icons/pi";
+import { PiCurrencyInr } from 'react-icons/pi';
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import TawkTo from './TawkTo';
-
+import { RxCross2 } from "react-icons/rx";
 const Order = ({ order2, resetOrder }) => {
-  const [odata, setOdata] = useState(null);
-  const [addressLookup, setAddressLookup] = useState({});
+  const [orderData, setOrderData] = useState([]);
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true);
   const [cancel, setCancel] = useState(false);
   const [orderId, setOrderId] = useState();
   const [item, setItem] = useState({});
   const [cancellationReason, setCancellationReason] = useState('order cancel');
   const isMobile = window.innerWidth <= 768;
-  const[email,setemail]=useState()
+  const [email, setEmail] = useState('');
   const navigate = useNavigate();
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
-  const getData = async () => {
+  const url = 'http://localhost:4000/api/user'; // Update with your backend URL
+
+  // Fetch user data and orders
+  const fetchData = async () => {
+    console.log('coming')
     try {
       const response = await axios.get(`${url}/data`, { withCredentials: true });
-  
-      // console.log("Fetched Data:", response.data.userData); // Debugging
-  
-      if (response.data.success && response.data.userData) {
-        const udata = response.data.userData;
-        setemail(udata.email)
-        // Ensure orders and address exist
-        const orders = udata.orders || [];
-        const addresses = udata.address || [];
-        
-        const lookup = {};
-        orders.forEach((order, index) => {
-          lookup[order._id] = addresses[index] || "No address available";
-        });
-  
-        setOdata({ ...udata, orders }); // ✅ Ensures orders is always an array
-        setAddressLookup(lookup);
+
+      if (response.data.success) {
+        const { userData, orderData } = response.data;
+
+        // Set user email
+        setEmail(userData.email);
+        console.log('orderdata', orderData, userData)
+        // Set order data
+        setOrderData(orderData || []);
       } else {
-        console.warn("User data not found in response.");
-        setOdata({ orders: [] }); // ✅ Prevents undefined errors
+        console.warn('User data not found in response.');
+        setOrderData([]);
       }
     } catch (error) {
-      console.error("Error fetching orders:", error);
-      setOdata({ orders: [] }); // ✅ Prevents UI crashes
+      console.error('Error fetching orders:', error);
+      setOrderData([]);
+      toast.error('Failed to fetch orders. Please try again later.');
     }
   };
-  
-  const cancelButton = (id, type, img, quantity, price, status, date) => {
-    console.log('id',id)
+
+  // Cancel order
+  const cancelOrder = async (orderId, status) => {
+    try {
+      const deleteUrl = `${url}/order/${orderId}`;
+      await axios.delete(deleteUrl, {
+        headers: { 'Content-Type': 'application/json' },
+        data: { email, cancellationReason },
+      });
+
+      // Refresh data after cancellation
+      fetchData();
+      setCancel(false);
+
+      // Show success toast
+      const message = status === 'Cancelled' ? 'Expired order cancelled successfully' : 'Order cancelled successfully';
+      toast.success(message);
+    } catch (error) {
+      toast.error('Failed to cancel the order. Please try again.');
+    }
+  };
+
+  // Check if the current time is before 10:00 AM
+  const checkIfBeforeTenAM = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinutes = now.getMinutes();
+    setIsBeforeTenAM(currentHour < 10 || (currentHour === 10 && currentMinutes === 0));
+  };
+  // Handle cancel button click
+  const handleCancelClick = (id, type, img, quantity, price, status, date) => {
     setCancel(true);
     setItem({
       itemtype: type,
@@ -60,57 +81,21 @@ const Order = ({ order2, resetOrder }) => {
       itemquantity: quantity,
       itemprice: price,
       itemdate: date,
-      itemstatus:status
+      itemstatus: status,
     });
     setOrderId(id);
-    console.log("Order cancellation initialized for:", id);
   };
-
-  const handleCancel = async (orderId,status) => {
-
-    const deleteurl=`${url}/order/${orderId}`
-    console.log('ordermenu orderid',orderId,deleteurl)
-    try {
-      const response = await axios.delete(`${deleteurl}`, {
-        headers: { 'Content-Type': 'application/json' },
-        data: { email, cancellationReason }, // ✅ Ensure the body is sent properly
-      });
-      getData();
-      goBack();
-      setCancellationReason('');
-     status==='expired'? toastfun(' Expired order Cancelled Successfully','success'):toastfun('Order Cancelled Successfully','success');
-    } catch (error) {
-      toastfun('Failed to cancel the order. Please try again.','error');
-    }
-  };
-
-  const checkIfBeforeTenAM = () => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinutes = now.getMinutes();
-    setIsBeforeTenAM(currentHour < 10 || (currentHour === 10 && currentMinutes === 0));
-  };
-
-  const goBack = () => {
-    setCancel(false);
-  };
-
-  useEffect(() => {
-    getData();
-    checkIfBeforeTenAM();
-    // console.log('data',odata)
-  }, []);
   const toastfun = (msg, type) => {
     toast[type](msg, {
-      position: 'top-right',
+      position: 'top-center',
       autoClose: 3000,
       style: {
-        position: 'absolute',
-        right: '0em',
-        top:isMobile?'4em':'70px',
-        width:isMobile?'70vw':'40vw', // Set width for mobile
-        height:isMobile?'10vh':'17vh',
-        fontSize:isMobile?'1em': "1.2em", // Adjust font size
+         position: 'absolute',
+        top:isMobile?'6vh':'60px',
+        left:isMobile && '13%',
+        width:isMobile?'80vw': "40vw", // Set width for mobile
+        height:isMobile?'10vh':'10vh',
+        fontSize: "1.2rem", // Adjust font size
         padding: "10px", // Adjust padding
       },
       onClick: () => {
@@ -118,24 +103,67 @@ const Order = ({ order2, resetOrder }) => {
       },
     });
   };
-  // Handle toast notification when order2 changes
-  useEffect(() => {
 
-    if (order2) {
-      toastfun('Payment Successful! Your order will be processed shortly.','success')
-     
-      resetOrder(); // Reset `order` state in Landingpage to false
+  const deleteOrder = async (orderId) => {
+    // Custom confirmation toast
+    toastfun(
+      <div>
+        <p>Do you want to delete this order history?</p>
+        <button
+          onClick={() => {
+            toast.dismiss(); // Dismiss the toast
+            confirmDelete(orderId); // Proceed with deletion
+          }}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => toast.dismiss()} // Dismiss the toast
+        >
+          No
+        </button>
+      </div>,
+      'info' // Use 'info' type for the toast
+    );
+  };
+  
+  // Function to handle the actual deletion
+  const confirmDelete = async (orderId) => {
+    try {
+      const deleteUrl = `${url}/removeOrder/${orderId}`; // Pass orderId as a query parameter
+      await axios.delete(deleteUrl, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+  
+      // Refresh data after deletion
+      fetchData();
+  
+      // Show success toast
+      toastfun('Order history deleted successfully', 'success');
+    } catch (error) {
+      toastfun('Failed to delete the order history. Please try again.', 'error');
     }
-
+  };
+  // Handle payment success toast
+  useEffect(() => {
+    if (order2) {
+      toast.success('Payment Successful! Your order will be processed shortly.');
+      resetOrder();
+    }
   }, [order2, resetOrder]);
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchData();
+    checkIfBeforeTenAM();
+  }, []);
 
   return (
     <div>
-     
       <Topbar />
       <div className="order">
         <h1>Your Orders</h1>
-        {odata && (
+        {orderData.length > 0 && (
           <div className="omsg">
             <marquee behavior="" direction="" className="time-message">
               Orders can only be canceled before 10:00 AM!
@@ -143,64 +171,69 @@ const Order = ({ order2, resetOrder }) => {
           </div>
         )}
         <div className="items" id="items" style={{ display: cancel ? 'none' : 'block' }}>
-          {
-            odata ? (
-              odata.orders.length > 0 ? (
-                odata.orders
-                  .slice()
-                  .sort((a, b) => new Date(b.date) - new Date(a.date))
-                  .map((order) => (
-                    <div key={order._id} className="box">
-                      <div className="image">
-                        <img src={order.imagePath} alt={order.item} />
-                      </div>
-                      <p id="itemname">Item Type: <span>{order.item}</span></p>
-                      <p id="quantity">Quantity: {order.quantity}</p>
-                      <p id="price">
-                        Price: <span className='ovalues'><PiCurrencyInr id="inr" />{order.price}</span>
-                      </p>
-                      <p id="date">Date & Time: {new Date(order.date).toLocaleString()}</p>
-                      <p id="oaddress">Delivery Address: {addressLookup[order._id]}</p>
-                      <p id="status">
-                        <strong>Status:</strong>{' '}
-                        <span style={{ color: 'orangered' }}>{order.status}</span>
-                      </p>
-                      {order.status !== 'cancelled' && (
-                        <div>
-                          <button
-                            id="cancel"
-                            onClick={() => cancelButton(order.orderId, order.item, order.imagePath, order.quantity, order.price, order.status, new Date(order.date).toLocaleString())}
-                            disabled={isBeforeTenAM || order.status === 'delivered'}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      )}
+          {orderData.length > 0 ? (
+            orderData
+              .slice()
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+              .map((order) => (
+                <div key={order.id} className="box">
+                  <div className="image">
+                    <img src={order.items[0]?.imagePath} alt={order.items[0]?.itemName} />
+                  </div>
+                  <p id="itemname">Item Type: <span>{order.items[0]?.itemType}</span></p>
+                  <p id="quantity">Quantity: {order.items[0]?.quantity}</p>
+                  <p id="price">
+                    Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
+                  </p>
+                  <p id="date">Date & Time: {new Date(order.date).toLocaleString()}</p>
+                  <p id="oaddress">
+                    Delivery Address: {`${order.shippingAddress.street}`}
+                  </p>
+                  <p id="status">
+                    <strong>Status:</strong>{' '}
+                    <span style={{ color: 'orangered' }}>{order.status}</span>
+                  </p>
+                  {/* <p id="paymentMethod">
+                    <strong>Payment Method:</strong>{' '}
+                    <span>{order.paymentMethod}</span>
+                  </p> */}
+                  {order.status !== 'Cancelled' ? (
+                    <div>
+                      <button
+                        id="cancel"
+                        onClick={() => handleCancelClick(order.orderId, order.items[0]?.itemType, order.items[0]?.imagePath, order.items[0]?.quantity, order.items[0]?.price, order.status, new Date(order.date).toLocaleString())}
+                        disabled={isBeforeTenAM || order.status === 'delivered'}
+                      >
+                        Cancel
+                      </button>
                     </div>
-                  ))
-              ) : (
-                <p style={{ textAlign: 'center', fontSize: '1.5em' }}>No orders found...</p>
-              )
-            ) : (
-              <p style={{ textAlign: 'center', fontSize: '1.5em' }}>Loading orders...</p>
-            )
-          
-          }
+                  ) : (
+                    <button id='cancel'
+                      onClick={() => deleteOrder(order.orderId)} // Add a function to handle deletion
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              ))
+          ) : (
+            <p style={{ textAlign: 'center', fontSize: '1.5em' }}>No orders found...</p>
+          )}
         </div>
         {cancel && (
           <div className="cancel-box">
             <img src={item.itemimg} alt="" id="itemimg" />
-            <p id='creason'>Do You Really Want To Cancel The Order...</p>
-            <p className='tcancel tc1' id='tc1'>Item Type: {item.itemtype}</p>
-            <p className="tacancel tc4"> <span id='dt'>Date&Time:</span> <p id='dvalue'>   {item.itemdate}</p></p>
-            <p className='tcancel tc2' id='tc2'> Quantity: {item.itemquantity}</p>
-            <p className='tcancel tc3' id='tc3'>Item Price: <PiCurrencyInr id="cinr" />{item.itemprice}</p>
-            <button onClick={goBack} id='cback'>Back</button>
-            <button onClick={() => handleCancel(orderId,item.itemstatus)} id='ccancel'>Confirm</button>
+            <p id="creason">Do You Really Want To Cancel The Order...</p>
+            <p className="tcancel tc1" id="tc1">Item Type: {item.itemtype}</p>
+            <p className="tacancel tc4"> <span id="dt">Date & Time:</span> <p id="dvalue">{item.itemdate}</p></p>
+            <p className="tcancel tc2" id="tc2">Quantity: {item.itemquantity}</p>
+            <p className="tcancel tc3" id="tc3">Item Price: <PiCurrencyInr id="cinr" />{item.itemprice}</p>
+            <button onClick={() => setCancel(false)} id="cback">Back</button>
+            <button onClick={() => cancelOrder(orderId, item.itemstatus)} id="ccancel">Confirm</button>
           </div>
         )}
       </div>
-     
+      <ToastContainer />
     </div>
   );
 };

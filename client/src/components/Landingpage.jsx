@@ -12,6 +12,7 @@ import Reviews from './Reviews';
 import './LandingPage.css';
 import Dhome from '../Dashboard/Dhome';
 import { useAuth } from './AuthContext'; // Assuming this provides authentication info
+import PaymentComponent from './PaymentComponent';
 
 
 const Landingpage = () => {
@@ -24,8 +25,8 @@ const Landingpage = () => {
   const [llimit, setllimit] = useState();
   const [order, setorder] = useState(false);
   const[lmenu,setlmenu]=useState()
- const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
+ //const url = 'https://palmyra-fruit.onrender.com/api/user';
+  const url = 'http://localhost:4000/api/user';
  
   //----------------------------change next
   const handlelimit = async () => {
@@ -111,7 +112,9 @@ const Landingpage = () => {
         quantity={handlequantity}
         llimit3={llimit}
         handlePaymentSuccess={handlePaymentSuccessfull}
-      />
+      >
+        {/* <PaymentComponent></PaymentComponent> */}
+      </Buy>
     )
   }
 />
@@ -119,7 +122,7 @@ const Landingpage = () => {
         {/* Redirect to /auth if not authenticated or not an admin */}
         <Route
           path='/Dashboard'
-          element={true? (
+          element={admin? (
             <Dhome />
           ) : (
             <Navigate to="/auth" />

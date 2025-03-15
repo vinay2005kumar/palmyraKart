@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 const userAuth = (req, res, next) => {
     const token = req.cookies.token;
 
-    // console.log('🍪 Cookies received:', req.cookies); // Debug: See if token is received
+    console.log('🍪 Cookies received:', req.cookies); // Debug: See if token is received
     // console.log('🔑 Extracted Token:', token); // Debug: See if token is extracted
 
     if (!token) {

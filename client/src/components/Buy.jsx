@@ -1,93 +1,79 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import './Buy.css';
+import React, { useEffect, useState, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import "./Buy.css";
 import { PiCurrencyInrBold } from "react-icons/pi";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import axios from 'axios';
-const Buy = ({ count, price, path, itemtype, totalcount, quantity ,llimit3,handlePaymentSuccess}) => {
-  const [bname, setbname] = useState(localStorage.getItem('username'));
-  const [bphone, setbphone] = useState('');
-  const [bphone2, setbphone2] = useState('');
-  const [selectedArea, setSelectedArea] = useState('');
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import PaymentComponent from "./PaymentComponent"; // Import the PaymentComponent
+import axios from "axios";
+
+const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, handlePaymentSuccess }) => {
+  const [bphone, setbphone] = useState("");
+  const [bname, setbname] = useState("");
+  const [selectedArea, setSelectedArea] = useState("");
   const [places, setPlaces] = useState([]);
-  const [selectedPlace, setSelectedPlace] = useState('');
-  const [baddress, setbaddress] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState("");
   const [save, setsave] = useState(false);
   const [itemprice, setitemprice] = useState(price);
   const [bcount, setbcount] = useState(count);
   const [bpath, setbpath] = useState(path);
   const [btype, setbtype] = useState(itemtype);
   const [tprice, settprice] = useState(0);
-  const [bemail, setbemail] = useState(localStorage.getItem('email'));
-  const [status, setstatus] = useState('pending');
-  const[order,setorder]=useState(false)
-  const [totalcount1, settotalcount1] = useState(totalcount);
-  const [totalcount2, settotalcount2] = useState(0);
-  const[limit,setlimit]=useState(llimit3)
-  // const[orderOtp,setOrderOtp]=useState()
+  const [limit, setlimit] = useState(llimit3);
+  const [customerEmail, setCustomerEmail] = useState("");
+  const url = "http://localhost:4000/api/user"; // Updated API base URL
+  const isMobile = window.innerWidth <= 765;
   const navigate = useNavigate();
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
-   const isMobile=window.innerWidth<=765
+  const paymentRef = useRef(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const areaPlaceMapping = {
-    Parvathipuram: ['Place 1', 'Place 2', 'Place 3'],
-    Bobbili: ['Place A', 'Place B', 'Place C'],
+    Parvathipuram: ["Place 1", "Place 2", "Place 3"],
+    Bobbili: ["Place A", "Place B", "Place C"],
   };
+
   const toastfun = (msg, type) => {
     toast[type](msg, {
-      position: 'top-center',
+      position: "top-center",
       autoClose: 3000,
       style: {
-        position: 'absolute',
-        right: '0em',
-        top:isMobile?'0em':'0px',
-        left:isMobile?'18%': '-2em',
-        width:isMobile?'70vw':'40vw', // Set width for mobile
-        height:isMobile?'10vh':'20vh',
-        fontSize:isMobile?'1.1em': "1.2em", // Adjust font size
-        padding: "10px", // Adjust padding
+        position: "absolute",
+        right: "0em",
+        top: isMobile ? "0em" : "0px",
+        left: isMobile ? "18%" : "-2em",
+        width: isMobile ? "70vw" : "40vw",
+        height: isMobile ? "10vh" : "20vh",
+        fontSize: isMobile ? "1.1em" : "1.2em",
+        padding: "10px",
       },
       onClick: () => {
-        toast.dismiss(); // Dismiss the toast when clicked
+        toast.dismiss();
       },
     });
   };
-  useEffect(() => {
-    const calculateTotal = () => {
-      const a = itemprice || 0;
-      const c = 3;  // Platform Fee
-      const d = 10;  // GST and Restaurant Charges
-      settprice(a + c + d);
-    };
-    
-    calculateTotal();
-  }, [itemprice],[totalcount2]);
 
-  useEffect(() => {
-    // Fetch available quantity when component mounts or `count` or `btype` changes
-  }, [count, btype,order]);
-
-  const handleSave = () => {
-    // console.log('hi')
-    if (!bname) {
-    
-      toastfun('Please login first ','warn')
-      // window.alert('You need to login');
-      setsave(false);
-    } else if (bphone === '') {
-      toastfun('Please enter mobile number ','warn')
-      setsave(false);
-    } else if (selectedArea === '' || selectedPlace === '') {
-      toastfun('Please enter your address', 'warn');
-      setsave(false);
-    } else {
-      setbphone2(bphone);
-      setbaddress(`${selectedArea}, ${selectedPlace}`);
-      setsave(true);
-      // console.log('details:',bphone2,baddress)
+  const fetchUser = async () => {
+    try {
+      const response = await axios.get(`${url}/data`, { withCredentials: true });
+      const email = response.data.userData.email;
+      const name = response.data.userData.name;
+      setbname(name);
+      setCustomerEmail(email);
+    } catch (error) {
+      toastfun("You Should Login to Make Order.", "info");
+      console.log(error);
     }
   };
+
+  useEffect(() => {
+    fetchUser();
+    const calculateTotal = () => {
+      const a = itemprice || 0;
+      const c = 3; // Platform Fee
+      const d = 10; // GST and Restaurant Charges
+      settprice(a + c + d);
+    };
+    calculateTotal();
+  }, [itemprice]);
 
   const generateOrderId = () => {
     const prefix = "ORD"; // Fixed prefix
@@ -95,134 +81,144 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity ,llimit3,handl
     const randomStr = Math.random().toString(36).slice(2, 6).toUpperCase(); // Random 4-letter string
     const middleText = "PALMYRA"; // Fixed text in between
     const randomNum = Math.floor(1000 + Math.random() * 9000); // Random 4-digit number
-  
+
     return `${prefix}-${timestamp}-${middleText}-${randomStr}${randomNum}`;
   };
-  
+
+  const handleSave = () => {
+    if (!bname) {
+      toastfun("Please login first", "warn");
+      setsave(false);
+    } else if (bphone === "") {
+      toastfun("Please enter mobile number", "warn");
+      setsave(false);
+    } else if (selectedArea === "" || selectedPlace === "") {
+      toastfun("Please enter your address", "warn");
+      setsave(false);
+    } else {
+      setsave(true);
+    }
+  };
 
   const handleAreaChange = (e) => {
     const selectedArea = e.target.value;
     setSelectedArea(selectedArea);
     setPlaces(areaPlaceMapping[selectedArea] || []);
-    setSelectedPlace('');
+    setSelectedPlace("");
   };
+
   const handlePay = async () => {
-    if(!save){
-      toastfun('please fill the details','warn')
+    if (!save) {
+      toastfun("Please fill and confirm details", "warn");
+      return;
     }
-    else{
-    const updatedTotalCount2 = await fetchAvailableQuantity(); // Return the updated value
-    if (updatedTotalCount2 < limit) {
-      if (save) {
 
-        // setOrderOtp(generateOTP)
-        const orderDetails = {
-          orderId:generateOrderId(),
-          item: btype,
-          quantity: bcount,
-          price: tprice,
-          imagePath: bpath,
-          status: status,
-          date: Date.now(),
-          // orderOtp: generatedOtp,
-        };
-       console.log(orderDetails.orderId)
-        try {
-          const response = await axios.post(`${url}/order`,{
-              address: baddress,
-              phone: bphone2,
-              orders: [orderDetails],
-            },{withCredentials:true}
-          );
-          const email=response.data.email
-          const msg='ORDER SUCCESSFUL'
-         if(response.data.success){
-          console.log('coming',response.data.user)
-          const oid=orderDetails.orderId
-          const orderOtp= Math.floor(100000 + Math.random() * 900000).toString();
-         console.log('buy',orderOtp,oid)
-          const sendotp = await axios.post(`${url}/send-orderOtp`,{oid,orderOtp}, { withCredentials: true });
-          console.log(sendotp.data.message)
-          if (sendotp.data.success) {
-            setorder(true)
-            // console.log('order',order)
-            // window.alert('success')
-            toastfun('Payment successful and Check your Email for OrderED OTP ','success');
-            handlePaymentSuccess(true)
-            navigate('/order');
-          } else {
-            setorder(false)
-            handlePaymentSuccess(order)
-            toastfun(`Error:Error in otp sending`,'error');
+    if (isProcessing) {
+      toastfun("Payment is already being processed", "info");
+      return;
+    }
 
-          }
-        }
-        } catch (error) {
-          toastfun('Error occurred during payment','error');
-          console.log(error)
-        }
-      } else {
-        toastfun('Please fill and confirm details','warn');
+    setIsProcessing(true); // Disable the button
+
+    try {
+      const updatedTotalCount2 = await fetchAvailableQuantity();
+      if (updatedTotalCount2 >= limit) {
+        toastfun(`Sorry, the orders have reached the limit, only ${updatedTotalCount2 - limit} are available`, "info");
+        return;
       }
-    } else {
-      toastfun(`Sorry, the orders have reached the limit ,only ${updatedTotalCount2-limit} are available`,'info');
+
+      // Prepare data for payment
+      const buyComponentData = {
+        bname,
+        btype,
+        bcount,
+        tprice,
+        bpath,
+        baddress: `${selectedArea}, ${selectedPlace}`,
+        bphone2: bphone,
+        generateOrderId,
+        toastfun,
+        navigate,
+        url,
+      };
+
+      // Call initiatePayment on PaymentComponent
+      if (paymentRef.current) {
+        await paymentRef.current.initiatePayment(buyComponentData);
+      }
+    } catch (error) {
+      console.error("Payment processing failed:", error);
+      toastfun("Payment processing failed. Please try again.", "error");
+    } finally {
+      setIsProcessing(false); // Re-enable the button
     }
-  }
   };
+
   const fetchAvailableQuantity = async () => {
     try {
       const availableQuantity = await quantity(count);
-      settotalcount1(availableQuantity);
       let updatedTotalCount2 = 0;
-      if (btype === 'single') {
+      if (btype === "single") {
         updatedTotalCount2 = availableQuantity + bcount;
-      } else if (btype === 'dozen') {
+      } else if (btype === "dozen") {
         updatedTotalCount2 = availableQuantity + bcount * 12;
       }
-
-      return updatedTotalCount2; // Return updated value directly
+      return updatedTotalCount2;
     } catch (error) {
-      console.error('Error fetching available quantity:', error);
-      return 0; // Fallback value in case of error
+      console.error("Error fetching available quantity:", error);
+      return 0;
     }
   };
-  
 
   return (
     <>
-    <ToastContainer></ToastContainer>
+      <ToastContainer />
       <div className="goback">
-        <Link to='/ordermenu'>Go Back</Link>
+        <Link to="/ordermenu">Go Back</Link>
       </div>
-      <div id='bmain'>
+      <div id="bmain">
         <div className="card1">
           <div className="blocation2">
             <div className="chooseloc">
               <p>Delivery Details</p>
-              <label htmlFor="phone" className='l1'>Your Mobile Number:</label>
+              <label htmlFor="phone" className="l1">
+                Your Mobile Number:
+              </label>
               <input type="tel" name="number" id="number" required onChange={(e) => setbphone(e.target.value)} />
               <div className="bblock">
-                <marquee behavior="" direction="" className='marquee'>Currently, the delivery location is available for some areas</marquee>
+                <marquee behavior="" direction="" className="marquee">
+                  Currently, the delivery location is available for some areas
+                </marquee>
                 <div className="area">
                   <div className="area1">
-                    <label htmlFor="area" className='label'>Select Area:</label>
+                    <label htmlFor="area" className="label">
+                      Select Area:
+                    </label>
                     <select name="area" id="area" value={selectedArea} onChange={handleAreaChange}>
                       <option value="">Select Area</option>
                       {Object.keys(areaPlaceMapping).map((area) => (
-                        <option key={area} value={area}>{area}</option>
+                        <option key={area} value={area}>
+                          {area}
+                        </option>
                       ))}
                     </select>
                   </div>
                   <div className="area2">
-                    <label htmlFor="place" className='label'>Select Place:</label>
+                    <label htmlFor="place" className="label">
+                      Select Place:
+                    </label>
                     <select name="place" id="place" value={selectedPlace} onChange={(e) => setSelectedPlace(e.target.value)}>
                       <option value="">Select Place</option>
                       {places.map((place) => (
-                        <option key={place} value={place}>{place}</option>
+                        <option key={place} value={place}>
+                          {place}
+                        </option>
                       ))}
                     </select>
                   </div>
-                  <button id='save' onClick={handleSave}>Save</button>
+                  <button id="save" onClick={handleSave}>
+                    Save
+                  </button>
                 </div>
               </div>
             </div>
@@ -240,39 +236,63 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity ,llimit3,handl
               <p>:</p>
               <p>:</p>
             </div>
-            <div className="dvalues">
-              <p id='bname'>{bname}</p>
-              <p id='bphone'>{bphone2}</p>
-              <p id='bloc'>{baddress}</p>
+            <div className="dvalues" style={{ display: save ? "flex" : "none" }}>
+              <p id="bname">{bname}</p>
+              <p id="bphone">{bphone}</p>
+              <p id="bloc">{`${selectedArea}, ${selectedPlace}`}</p>
             </div>
           </div>
         </div>
         <div className="card2">
           <div className="bitem">
-            <p id='btype'>You are buying <strong>{bcount} {btype}</strong> palmyra fruits</p>
+            <p id="btype">
+              You are buying <strong>{bcount} {btype}</strong> palmyra fruits
+            </p>
             <div className="bimg">
               <img src={bpath} alt="hi" />
             </div>
             <div className="bill">
-              <p id='tbill'>BILL DETAILS </p>
+              <p id="tbill">BILL DETAILS </p>
               <hr />
               <p>Item Total</p>
               <p>Platform Fee</p>
-              <p className='gst'>Transport Charges</p>
+              <p className="gst">Transport Charges</p>
               <hr />
               <p>TOTAL PAY</p>
               <div className="values">
-                <p id='itemcost'><PiCurrencyInrBold className='vicon' />{itemprice}</p>
-                <p id='platform'><PiCurrencyInrBold className='vicon' />3</p>
-                <p id='gst'><PiCurrencyInrBold className='vicon' />10</p>
-                <p id='totalcost'><PiCurrencyInrBold className='vicon' />{tprice}</p>
-                {/* <hr /> */}
+                <p id="itemcost">
+                  <PiCurrencyInrBold className="vicon" />
+                  {itemprice}
+                </p>
+                <p id="platform">
+                  <PiCurrencyInrBold className="vicon" />
+                  3
+                </p>
+                <p id="gst">
+                  <PiCurrencyInrBold className="vicon" />
+                  10
+                </p>
+                <p id="totalcost">
+                  <PiCurrencyInrBold className="vicon" />
+                  {tprice}
+                </p>
               </div>
             </div>
-            <button id='pay' onClick={handlePay}>PAY NOW</button>
+            <button id="pay" onClick={handlePay} disabled={isProcessing}>
+              {isProcessing ? "Processing..." : "PAY NOW"}
+            </button>
           </div>
         </div>
       </div>
+      <PaymentComponent
+        ref={paymentRef}
+        amount={tprice}
+        productName={btype}
+        description={`Purchase of ${bcount} ${btype}`}
+        customerEmail={customerEmail}
+        customerPhone={bphone}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </>
   );
 };

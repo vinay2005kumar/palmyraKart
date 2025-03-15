@@ -5,12 +5,13 @@ import { IoReorderThreeOutline } from 'react-icons/io5';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Dreviews from './Dreviews';
+import { useAuth } from '../components/AuthContext';
 const Dtopbar = () => {
   const [dicon, setdicon] = useState(false); // State for toggling the navbar
   const navigate = useNavigate();
   const navbarRef = useRef(null); // Ref for the navbar container
   const iconRef = useRef(null); // Ref for the menu icon
-
+  const {logout}=useAuth()
   // Toggle the menu when the icon is clicked
   const dtop = (e) => {
     if (e) e.stopPropagation(); // Ensure `e` exists before accessing it
@@ -28,6 +29,7 @@ const Dtopbar = () => {
           <button
             onClick={() => {
               toast.dismiss(toastId); // Dismiss the toast
+              logout()
               navigate('/components/AuthPage'); // Redirect to AuthPage
             }}
             style={{
