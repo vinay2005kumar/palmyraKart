@@ -131,7 +131,6 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
         baddress: `${selectedArea}, ${selectedPlace}`,
         bphone2: bphone,
         generateOrderId,
-        toastfun,
         navigate,
       };
 

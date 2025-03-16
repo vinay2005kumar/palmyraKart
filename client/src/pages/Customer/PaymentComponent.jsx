@@ -21,15 +21,32 @@ const PaymentComponent = forwardRef(({ amount, productName, description, custome
           baddress,
           bphone2,
           generateOrderId,
-          toastfun,
           navigate,
         } = buyComponentData;
-
+  const toastfun = (msg, type) => {
+    toast[type](msg, {
+      position: "top-center",
+      autoClose: 3000,
+      style: {
+        position: "absolute",
+        right: "0em",
+        top: isMobile ? "0em" : "0px",
+        left: isMobile ? "18%" : "-2em",
+        width: isMobile ? "70vw" : "40vw",
+        height: isMobile ? "10vh" : "20vh",
+        fontSize: isMobile ? "1.1em" : "1.2em",
+        padding: "10px",
+      },
+      onClick: () => {
+        toast.dismiss();
+      },
+    });
+  };
         // Load Razorpay SDK
         const res = await loadRazorpay();
         if (!res) {
           setError('Razorpay SDK failed to load. Check your internet connection.');
-          toastfun?.('Razorpay SDK failed to load. Check your internet connection.', 'error');
+          toastfun('Razorpay SDK failed to load. Check your internet connection.', 'error');
           setLoading(false);
           return;
         }
@@ -99,19 +116,19 @@ const PaymentComponent = forwardRef(({ amount, productName, description, custome
                 );
 
                 if (sendotp.data.success) {
-                  toastfun?.('Payment successful! Check your email for Order OTP', 'success');
+                  toastfun('Payment successful! Check your email for Order OTP', 'success');
                 } else {
-                  toastfun?.('Payment successful but error in OTP sending. Your order is confirmed.', 'info');
+                  toastfun('Payment successful but error in OTP sending. Your order is confirmed.', 'info');
                 }
                 onPaymentSuccess?.(true);
                 navigate?.('/order');
               } else {
                 setError('Payment verification failed');
-                toastfun?.('Payment verification failed', 'error');
+                toastfun('Payment verification failed', 'error');
               }
             } catch (err) {
               setError('Payment verification failed: ' + err.message);
-              toastfun?.('Payment verification failed: ' + err.message, 'error');
+              toastfun('Payment verification failed: ' + err.message, 'error');
             } finally {
               setLoading(false); // Hide loading spinner
             }
@@ -138,12 +155,12 @@ const PaymentComponent = forwardRef(({ amount, productName, description, custome
 
         paymentObject.on('payment.failed', function (response) {
           setError(`Payment failed: ${response.error.description}`);
-          toastfun?.(`Payment failed: ${response.error.description}`, 'error');
+          toastfun(`Payment failed: ${response.error.description}`, 'error');
           setLoading(false); // Hide loading spinner
         });
       } catch (error) {
         setError('Error initiating payment: ' + error.message);
-        toastfun?.('Error initiating payment: ' + error.message, 'error');
+        toastfun('Error initiating payment: ' + error.message, 'error');
         setLoading(false); // Hide loading spinner
       }
     },
