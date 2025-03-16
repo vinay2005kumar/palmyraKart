@@ -1,7 +1,8 @@
 import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import axios from 'axios';
 import LoadingSpinner from '../../components/LoadingSpinner'; // Import the LoadingSpinner
-
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 const PaymentComponent = forwardRef(({ amount, productName, description, customerEmail, customerPhone, onPaymentSuccess }, ref) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
