@@ -16,7 +16,8 @@ const Expired = () => {
   const [sno, setsno] = useState(0); // Serial number counter
   const [refundLoading, setRefundLoading] = useState({}); // For refund loading states
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
-  const url = 'http://localhost:4000/api/user'; // Backend URL
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  // const url = "http://localhost:4000/api/user";// Backend URL
 
   // Filter expired orders
   const expiredOrders = orders.filter((order) => order.status === 'Cancelled');

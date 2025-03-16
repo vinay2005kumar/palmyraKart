@@ -11,7 +11,8 @@ const Dreviews = () => {
   const [replyMessage, setReplyMessage] = useState(""); // Reply message
   const isMobile = window.innerWidth < 765;
   const [loading, setLoading] = useState(false);
-  const url = "http://localhost:4000/api/user"; // Update with your backend URL
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+ // const url = "http://localhost:4000/api/user"; // Update with your backend URL
 
   // Generate a consistent background color based on initials
   const generateColorFromInitials = (name) => {
