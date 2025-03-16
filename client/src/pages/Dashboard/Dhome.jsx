@@ -8,6 +8,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { database, ref, set, onValue, get, update } from '../../firebase/firebase';
 import { useAdmin } from '../../context/AdminContext'; 
+import FruitLoader from '../../components/FruitLoader';
 const Dhome = () => {
     const {
         users,
@@ -112,8 +113,8 @@ const Dhome = () => {
    // Fetch data from the backend
    const getdata = async () => {
     try {
-        console.log('Fetching data...');
-        await fetchAdminData(); // Use the getdata function from AdminContext
+        // console.log('Fetching data...');
+        // await fetchAdminData(); // Use the getdata function from AdminContext
          console.log('dh',orders)
         const today = new Date();
         const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
@@ -175,11 +176,14 @@ const Dhome = () => {
         console.error('Error fetching data:', error);
     }
 };
-    
 
-    useEffect(() => {
-        getdata();
-    }, []);
+useEffect(() => {
+    getdata();
+}, [getdata]);
+  if (loading) {
+    return <FruitLoader></FruitLoader>;
+  }    
+
     const closeToday = () => {
         const toastId = 'logout-toast';
         if (!toast.isActive(toastId)) {

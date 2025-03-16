@@ -17,6 +17,7 @@ const Ddelivered = () => {
     error,
     deleteOrder,
     getdata,
+    confirmDeleteOrder
   } = useAdmin(); // Use the AdminContext
 
   const [phoneFilter, setPhoneFilter] = useState(""); // For filtering by phone number
@@ -58,7 +59,7 @@ const Ddelivered = () => {
           <p style={{ padding: "1px" }}>Do you really want to delete this order?</p>
           <button
             onClick={async () => {
-              await deleteOrder(orderId, email, cancellationReason);
+              await confirmDeleteOrder(orderId);
               toast.dismiss(toastId);
             }}
             style={{
@@ -109,9 +110,9 @@ const Ddelivered = () => {
   };
 
   // Fetch data on component mount
-  useEffect(() => {
-    getdata(); // Fetch data from the context
-  }, []);
+  // useEffect(() => {
+  //   getdata(); // Fetch data from the context
+  // }, []);
 
   // Sort orders by address if enabled
   const sortedData = sortByAddress
@@ -122,9 +123,9 @@ const Ddelivered = () => {
       })
     : deliveredOrders;
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+  // if (loading) {
+  //   return <div>Loading...</div>;
+  // }
 
   if (error) {
     return <div>{error}</div>;
@@ -226,7 +227,7 @@ const Ddelivered = () => {
                         <td>{new Date(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
-                            onClick={() => handleDelete(order.orderId, user.email)}
+                            onClick={() => handleDelete(order._id, user.email)}
                             className="del"
                           >
                             Delete

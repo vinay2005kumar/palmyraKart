@@ -250,7 +250,7 @@ useEffect(() => {
   }, [ticon,dkart]);
   return (
     <>
-      <ToastContainer />
+      {/* <ToastContainer /> */}
       {/* Topbar Component */}
       <nav id="nav">
         <NavLink to="/">

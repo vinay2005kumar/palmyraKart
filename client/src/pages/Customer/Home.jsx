@@ -7,14 +7,16 @@ import 'react-toastify/dist/ReactToastify.css';
 import './Home.css';
 import b1 from '../../assets/b1.jpg';
 import mb1 from '../../assets/mb3.jpg';
+import FruitLoader from '../../components/FruitLoader';
 
 const Home = () => {
   const navigate = useNavigate();
   const { isAuthenticated, user, admin } = useAuth(); // Get auth values
   const [backgroundImage, setBackgroundImage] = useState(b1); // Default to desktop image
+  const [isLoading, setIsLoading] = useState(true); // Loading state
   const isMobile = window.innerWidth <= 765;
 
-  
+  // Toast functions
   const toastfun = (msg, type) => {
     toast[type](msg, {
       position: 'top-right',
@@ -53,19 +55,57 @@ const Home = () => {
       },
     });
   };
- 
+
+  // Load images
+  const loadImages = async () => {
+    const imageUrls = [
+      'tree3 (2).png',
+      'tree8.png',
+      'tree6.png',
+      'tree3 (1).png',
+      'tree4.png',
+      'tree9.png',
+      'tree7.png',
+      'tree10.png',
+      'p-name2.png',
+      'ap9.png',
+      's3.png',
+      's1.png',
+    ];
+
+    const imagePromises = imageUrls.map((url) => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.src = url;
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+    });
+
+    try {
+      await Promise.all(imagePromises); // Wait for all images to load
+      console.log("All images loaded!");
+    } catch (error) {
+      console.error("Failed to load images:", error);
+    } finally {
+      setIsLoading(false); // Hide loader once all images are loaded
+    }
+  };
+
   useEffect(() => {
-   
+    loadImages(); // Load images when the component mounts
+
+    // Handle background image based on screen size
     setBackgroundImage(isMobile ? mb1 : b1);
 
-    if (isAuthenticated && user && user!=='undefined') {
-      // User is authenticated and has a valid name
+    // Show welcome message if authenticated
+    if (isAuthenticated && user && user !== 'undefined') {
       toastfun(`Welcome ${user}`, 'success');
     } else if (!isAuthenticated) {
-      // User is not authenticated
       toastfun2('Authentication is required for ordering..!', 'info');
     }
 
+    // Handle window resize for background image
     const handleResize = () => {
       setBackgroundImage(window.innerWidth <= 765 ? mb1 : b1);
     };
@@ -79,46 +119,44 @@ const Home = () => {
   return (
     <div className="home-container" style={{ backgroundImage: `url(${backgroundImage})` }}>
       <Topbar />
-      {/* <ToastContainer /> */ }
-      <div className="home">
-        <img src="tree3 (2).png" alt="Palm Tree" className="tree7 tree3" />
-        <img src="tree8.png" alt="Palm Tree" className="tree7" />
-        <img src="tree6.png" alt="Palm Tree" className="tree1" />
-        <img src="tree3 (1).png" alt="Palm Tree" className="tree1 himg2" />
-        <img src="tree4.png" alt="Background Tree" className="himg3" />
-        <img src="tree9.png" alt="Palm Tree" className="himg4 himg2" />
-        <img src="tree7.png" alt="Palm Tree" className="tree8" />
-        <img src="tree10.png" alt="Palm Tree" className="tree8 tree4" />
-        <div className="hblock1">
-          <h2 className="mtext">Cool and Sweet </h2>
-          <div className="mtext-img">
-            <img src="p-name2.png" alt="" />
+      {isLoading ? ( // Show FruitLoader if isLoading is true
+          <FruitLoader></FruitLoader>
+      ) : (
+        <div className="home">
+          <img src="tree3 (2).png" alt="Palm Tree" className="tree7 tree3" />
+          <img src="tree8.png" alt="Palm Tree" className="tree7" />
+          <img src="tree6.png" alt="Palm Tree" className="tree1" />
+          <img src="tree3 (1).png" alt="Palm Tree" className="tree1 himg2" />
+          <img src="tree4.png" alt="Background Tree" className="himg3" />
+          <img src="tree9.png" alt="Palm Tree" className="himg4 himg2" />
+          <img src="tree7.png" alt="Palm Tree" className="tree8" />
+          <img src="tree10.png" alt="Palm Tree" className="tree8 tree4" />
+          <div className="hblock1">
+            <h2 className="mtext">Cool and Sweet </h2>
+            <div className="mtext-img">
+              <img src="p-name2.png" alt="" />
+            </div>
+            <h2 className="mtext2">(తాటి ముంజలు)</h2>
           </div>
-          <h2 className="mtext2">(తాటి ముంజలు)</h2>
+          <div className="hblock2">
+            <p className="htext">
+              Its naturally sweet, jelly-like flesh provides a cooling effect, making it perfect for hot summer days.
+              Palmyra fruit also supports digestion and helps detoxify the body. Rich in essential nutrients like vitamins
+              B and C, calcium, and iron, it boosts energy and promotes healthy skin.
+            </p>
+            <div className="wrapper hbutton horder">
+              <button onClick={() => navigate('/ordermenu')}>ORDER</button>
+            </div>
+            <div className="wrapper hbutton habout2">
+              <button onClick={() => navigate('/about')}>ABOUT</button>
+            </div>
+            <img src="ap9.png" alt="Palmyra" id="himg1" />
+            <img src="s3.png" alt="hi" id="s1" />
+            <img src="s1.png" alt="" id="s2" />
+          </div>
         </div>
-        <div className="hblock2">
-          <p className="htext">
-            Its naturally sweet, jelly-like flesh provides a cooling effect, making it perfect for hot summer days.
-            Palmyra fruit also supports digestion and helps detoxify the body. Rich in essential nutrients like vitamins
-            B and C, calcium, and iron, it boosts energy and promotes healthy skin.
-          </p>
-          <div className="wrapper hbutton horder">
-            <button onClick={() => navigate('/ordermenu')}>ORDER</button>
-          </div>
-          <div className="wrapper hbutton habout2">
-            <button onClick={() => navigate('/about')}>ABOUT</button>
-          </div>
-          <img src="ap9.png" alt="Palmyra" id="himg1" />
-          <img src="s3.png" alt="hi" id="s1" />
-          <img src="s1.png" alt="" id="s2" />
-        </div>
-        {/* {admin && (
-          <div className="admin-section">
-            <h2>Admin Panel</h2>
-            <p>Access to admin features and controls</p>
-          </div>
-        )} */}
-      </div>
+      )}
+      <ToastContainer />
     </div>
   );
 };

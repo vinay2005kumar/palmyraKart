@@ -190,11 +190,12 @@ export const updateKartStatus = async (req, res) => {
 //   }
 // };
 
-export const deleteUserOrder = async (req, res) => {
-  console.log('Incoming request to delete order');
+export const orderCancel = async (req, res) => {
+  console.log('Incoming request to delete order',req.params,req.body);
 
   const { id: orderId } = req.params;
   const { email, cancellationReason } = req.body;
+
 
   try {
     // Find the user by email
@@ -363,7 +364,7 @@ export const deleteUserOrder = async (req, res) => {
   }
 };
 
-export const removeOrder = async (req, res) => {
+export const deleteOrder = async (req, res) => {
   const { orderId } = req.params; // Get orderId from query parameters
   console.log('Deleting order with ID:', orderId);
 
@@ -386,6 +387,31 @@ export const removeOrder = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to delete order' });
   }
 };
+
+export const removeOrder=async(req,res)=>{
+  const { orderId } = req.params; // Get orderId from query parameters
+  console.log('Deleting order with ID:', orderId);
+
+  try {
+    // Find the order by orderId
+    const order = await Order.findOne({ orderId });
+
+    if (!order) {
+      console.log('Order not found');
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+
+    order.status="Expired"
+    await order.save()
+
+    console.log('Order deleted successfully');
+    res.status(200).json({ success: true, message: 'Order deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete order' });
+  }
+};
+
 
 export const sendOrderOtp = async (req, res) => {
   const { oid, orderOtp } = req.body;

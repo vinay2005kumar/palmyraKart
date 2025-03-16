@@ -13,8 +13,8 @@ const App = () => {
   return (
     <div>
       {isonline ? (
-        <AuthProvider>
           <BrowserRouter>
+            <AuthProvider>
             <Routes>
               {/* Customer routes */}
               <Route path="/*" element={<Landingpage />} />
@@ -29,8 +29,8 @@ const App = () => {
                 }
               />
             </Routes>
+            </AuthProvider>
           </BrowserRouter>
-        </AuthProvider>
       ) : (
         <div>
           <Error />

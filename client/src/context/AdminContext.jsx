@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import axios from "axios";
 import { toast } from "react-toastify";
+import { useAuth } from "./AuthContext";
+import { useNavigate } from "react-router-dom";
 
 const AdminContext = createContext();
 export const useAdmin = () => useContext(AdminContext);
@@ -14,9 +16,10 @@ export const AdminProvider = ({ children }) => {
   const [serialNumber, setSerialNumber] = useState(0); // Serial number for pending orders
   const [loading, setLoading] = useState(false); // Loading state
   const [error, setError] = useState(null); // Error state
-
+  const {logout}=useAuth()
   const url = "http://localhost:4000/api/user"; // Admin API base URL
-
+  const navigate=useNavigate()
+  const isMobile = window.innerWidth <= 768;
   // Fetch admin data (users, orders, etc.)
   const getdata = async () => {
     try {
@@ -29,7 +32,9 @@ export const AdminProvider = ({ children }) => {
       if (!data.users || !data.orders) {
         throw new Error("Invalid response structure from the server.");
       }
-
+      else{
+        // logout()
+      }
       // Filter pending orders
       const pendingOrders = data.orders.filter((order) => order.status === "Pending");
 
@@ -59,11 +64,32 @@ export const AdminProvider = ({ children }) => {
       console.log("Error fetching orders:", error);
       setError("Failed to fetch orders. Please try again later.");
       toast.error("Failed to fetch orders. Please try again later.");
+      logout()
+      // navigate('/auth')
+      
     } finally {
       setLoading(false);
     }
   };
-
+  
+  const toastfun = (msg, type) => {
+    toast[type](msg, {
+      position: 'top-center',
+      autoClose: 3000,
+      style: {
+        position: 'absolute',
+        top: isMobile ? '6vh' : '60px',
+        left: isMobile && '13%',
+        width: isMobile ? '80vw' : '40vw',
+        height: isMobile ? '10vh' : '10vh',
+        fontSize: '1.2rem',
+        padding: '10px',
+      },
+      onClick: () => {
+        toast.dismiss();
+      },
+    });
+  };
   // Delete an order
   const deleteOrder = async (orderId, email, cancellationReason) => {
     try {
@@ -80,7 +106,27 @@ export const AdminProvider = ({ children }) => {
       toast.error("Failed to delete the order. Please try again.");
     }
   };
+  const confirmDeleteOrder = async (orderId) => {
+    try {
+      const deleteUrl = `${url}/removeOrder/${orderId}`;
+      const res=  await axios.delete(deleteUrl, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+     if(res.status==200){
+     // Show success toast
+     toastfun('Order history deleted successfully', 'success');
+     }
+     else{
+      toastfun('Failed to delete the order history. Please try again.', 'error');
+     }
+ 
+    } catch (error) {
+      console.log(error)
+      toastfun('Failed to delete the order history. Please try again.', 'error');
+    }
+  };
 
+  
   // Fetch data on mount
   useEffect(() => {
     getdata();
@@ -99,6 +145,7 @@ export const AdminProvider = ({ children }) => {
         error,
         deleteOrder,
         getdata, // Expose the getdata function for manual refetching
+        confirmDeleteOrder
       }}
     >
       {children}

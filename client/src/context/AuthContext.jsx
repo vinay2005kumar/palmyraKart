@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
@@ -14,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const url = 'http://localhost:4000/api/user';
   const [allReviews, setAllReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const navigate=useNavigate()
   // Function to check authentication status
   const checkAuth = async () => {
     try {
@@ -37,14 +39,14 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         setAdmin(false);
         setIsLoading(false)
-        // logout()
+        logout()
+        navigate('/auth')
       }
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
       setIsLoading(false)
       setAdmin(false);
-      // logout()
       console.log('Auth check failed:', error);
     }
   };
@@ -129,8 +131,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
 
-  const removeOrder = (orderId) => {
-    setOrderDetails((prevOrders) => prevOrders.filter((order) => order.orderId !== orderId));
+  const deleteOrder = (orderId) => {
+    // setOrderDetails((prevOrders) => prevOrders.filter((order) => order.orderId !== orderId));
+    checkAuth()
   };
 
   const fetchReviews = async () => {
@@ -190,7 +193,7 @@ export const AuthProvider = ({ children }) => {
         userDetails,
         orderDetails,
         reviewDetails,
-        removeOrder,
+        deleteOrder,
         checkAuth,
         allReviews,
         fetchReviews,

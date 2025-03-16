@@ -8,7 +8,7 @@ import { useAdmin } from '../../context/AdminContext'; // Import the AdminContex
 import axios from 'axios';
 
 const Expired = () => {
-  const { orders, users, loading, error, deleteOrder } = useAdmin(); // Use the AdminContext
+  const { orders, users, loading, error, deleteOrder,confirmDeleteOrder } = useAdmin(); // Use the AdminContext
   const [dquantity, setdquantity] = useState(0); // Total quantity
   const [dprice, setdprice] = useState(0); // Total price
   const [phoneFilter, setPhoneFilter] = useState(''); // For filtering by phone number
@@ -149,7 +149,7 @@ const Expired = () => {
           <p style={{ padding: '1px' }}>Do you really want to delete this order and issue a refund?</p>
           <button
             onClick={async () => {
-              await confirmDelete(orderId, cancellationReason, paymentId, amount);
+              await confirmDeleteOrder(orderId);
               toast.dismiss(toastId);
             }}
             style={{
@@ -201,7 +201,6 @@ const Expired = () => {
       await handleRefund(paymentId, amount, orderId);
 
       // Step 2: Delete the order using the context function
-      await deleteOrder(orderId, cancellationReason);
 
       toastfun('Order deleted and refund initiated successfully', 'success');
     } catch (error) {
@@ -321,7 +320,7 @@ const Expired = () => {
                         <td>{new Date(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
-                            onClick={() => handleDelete(order._id, order.paymentId, order.items[0].price)}
+                            onClick={() => handleDelete(order.orderId, order.paymentId, order.items[0].price)}
                             style={{ cursor: 'pointer' }}
                             className="del"
                             id="del"

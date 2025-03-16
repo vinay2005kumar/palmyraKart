@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import './Order.css';
+import './Order2.css';
 import Topbar from '../../components/Topbar';
 import FruitLoader from '../../components/FruitLoader';
 import axios from 'axios';
@@ -9,7 +9,11 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { RxCross2 } from 'react-icons/rx';
 import { useAuth } from '../../context/AuthContext';// Import the context
-
+import { IoMdAlert } from "react-icons/io";
+import { FaBox } from "react-icons/fa";
+import { FaCalendarAlt } from "react-icons/fa";
+import { FaMapMarkerAlt } from "react-icons/fa";
+import { FaTruck } from "react-icons/fa";
 const Order = ({ order2, resetOrder }) => {
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true);
   const [cancel, setCancel] = useState(false);
@@ -18,7 +22,7 @@ const Order = ({ order2, resetOrder }) => {
   const [cancellationReason, setCancellationReason] = useState('order cancel');
   const isMobile = window.innerWidth <= 768;
   const [email, setEmail] = useState('');
-  const { orderDetails,userDetails, checkAuth, removeOrder,isLoading } = useAuth(); // Use context values
+  const { orderDetails,userDetails, checkAuth, deleteOrder,isLoading } = useAuth(); // Use context values
   const navigate = useNavigate();
   const url = 'http://localhost:4000/api/user';
 
@@ -156,6 +160,7 @@ const Order = ({ order2, resetOrder }) => {
       );
     }
   };
+
   // Handle payment success toast
   useEffect(() => {
     if (order2) {
@@ -175,13 +180,16 @@ const Order = ({ order2, resetOrder }) => {
     <div>
       <Topbar />
       <div className="order">
-        <h1>Your Orders</h1>
-        {isLoading ? ( // Show loader if isLoading is true
-         <FruitLoader></FruitLoader>
+        <h1 className="order-title">Your Orders</h1>
+        {isLoading ? (
+          <div className="loader-container">
+            <FruitLoader />
+          </div>
         ) : (
           <>
             {orderDetails.length > 0 && (
               <div className="omsg">
+                <div className="alert-icon"><IoMdAlert></IoMdAlert></div>
                 <marquee behavior="" direction="" className="time-message">
                   Orders can only be canceled before 10:00 AM!
                 </marquee>
@@ -194,53 +202,83 @@ const Order = ({ order2, resetOrder }) => {
                   .sort((a, b) => new Date(b.date) - new Date(a.date))
                   .map((order) => (
                     <div key={order.id} className="box">
+                      <div className="order-status-badge">{order.status}</div>
                       <div className="image">
                         <img src={order.items[0]?.imagePath} alt={order.items[0]?.itemName} />
                       </div>
-                      <p id="itemname">Item Type: <span>{order.items[0]?.itemType}</span></p>
-                      <p id="quantity">Quantity: {order.items[0]?.quantity}</p>
-                      <p id="price">
-                        Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
-                      </p>
-                      <p id="date">Date & Time: {new Date(order.date).toLocaleString()}</p>
-                      <p id="oaddress">
-                        Delivery Address: {`${order.shippingAddress.street}`}
-                      </p>
-                      <p id="status">
-                        <strong>Status:</strong>{' '}
-                        <span style={{ color: 'orangered' }}>{order.status}</span>
-                      </p>
-                      {order.status !== 'Cancelled' ? (
-                        <div>
-                          <button
-                            id="cancel"
-                            onClick={() => handleCancelClick(order.orderId, order.items[0]?.itemType, order.items[0]?.imagePath, order.items[0]?.quantity, order.items[0]?.price, order.status, new Date(order.date).toLocaleString())}
-                            disabled={isBeforeTenAM || order.status === 'delivered'}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <button id='cancel' onClick={() => confirmDelete(order.orderId)}>
-                          Delete
-                        </button>
-                      )}
+                      <div className="order-details">
+                        <p id="itemname">
+                          <span className="detail-icon"><FaBox /></span>
+                          Item Type: <span>{order.items[0]?.itemType}</span>
+                        </p>
+                        <p id="quantity">
+                          <span className="detail-icon">#</span>
+                          Quantity: <span className="ovalues">{order.items[0]?.quantity}</span>
+                        </p>
+                        <p id="price">
+                          <span className="detail-icon"><PiCurrencyInr /></span>
+                          Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
+                        </p>
+                        <p id="date">
+                          <span className="detail-icon"><FaCalendarAlt /></span>
+                          Date & Time: <span className="ovalues">{new Date(order.date).toLocaleString()}</span>
+                        </p>
+                        <p id="oaddress">
+                          <span className="detail-icon"><FaMapMarkerAlt /></span>
+                          Delivery Address: <span className="ovalues">{`${order.shippingAddress.street}`}</span>
+                        </p>
+                        <p id="status">
+                          <span className="detail-icon"><FaTruck /></span>
+                          <strong>Status:</strong>{' '}
+                          <span className="status-value">{order.status}</span>
+                        </p>
+                        {order.status !== 'Cancelled' ? (
+                          <div className="button-container">
+                            <button
+                              id="cancel"
+                              onClick={() => handleCancelClick(order.orderId, order.items[0]?.itemType, order.items[0]?.imagePath, order.items[0]?.quantity, order.items[0]?.price, order.status, new Date(order.date).toLocaleString())}
+                              disabled={isBeforeTenAM || order.status === 'delivered'}
+                              className={isBeforeTenAM || order.status === 'delivered' ? 'disabled' : ''}
+                            >
+                              Cancel Order
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="button-container">
+                            <button id='cancel' className="delete-btn" onClick={() => confirmDelete(order.orderId)}>
+                              Delete History
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))
               ) : (
-                <p style={{ textAlign: 'center', fontSize: '1.5em' }}>No orders found...</p>
+                <div className="no-orders">
+                  <div className="empty-icon">📦</div>
+                  <p>No orders found...</p>
+                  <button className="shop-now-btn" onClick={() => navigate('/ordermenu')}>Shop Now</button>
+                </div>
               )}
             </div>
             {cancel && (
               <div className="cancel-box">
+                <div className="cancel-header">
+                  <h2>Cancel Order</h2>
+                  <button className="close-btn" onClick={() => setCancel(false)}><RxCross2 /></button>
+                </div>
                 <img src={item.itemimg} alt="" id="itemimg" />
                 <p id="creason">Do You Really Want To Cancel The Order...</p>
-                <p className="tcancel tc1" id="tc1">Item Type: {item.itemtype}</p>
-                <p className="tacancel tc4"> <span id="dt">Date & Time:</span> <p id="dvalue">{item.itemdate}</p></p>
-                <p className="tcancel tc2" id="tc2">Quantity: {item.itemquantity}</p>
-                <p className="tcancel tc3" id="tc3">Item Price: <PiCurrencyInr id="cinr" />{item.itemprice}</p>
-                <button onClick={() => setCancel(false)} id="cback">Back</button>
-                <button onClick={() => cancelOrder(orderId,email)} id="ccancel">Confirm</button>
+                <div className="cancel-details">
+                  <p className="tcancel tc1" id="tc1">Item Type: <span>{item.itemtype}</span></p>
+                  <p className="tacancel tc4"> <span id="dt">Date & Time:</span> <span id="dvalue">{item.itemdate}</span></p>
+                  <p className="tcancel tc2" id="tc2">Quantity: <span>{item.itemquantity}</span></p>
+                  <p className="tcancel tc3" id="tc3">Item Price: <span><PiCurrencyInr id="cinr" />{item.itemprice}</span></p>
+                </div>
+                <div className="cancel-actions">
+                  <button onClick={() => setCancel(false)} id="cback">Back</button>
+                  <button onClick={() => cancelOrder(orderId,email)} id="ccancel">Confirm</button>
+                </div>
               </div>
             )}
           </>
