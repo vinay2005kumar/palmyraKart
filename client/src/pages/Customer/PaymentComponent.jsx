@@ -1,6 +1,6 @@
 import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
 import axios from 'axios';
-import LoadingSpinner from './LoadingSpinner'; // Import the LoadingSpinner
+import LoadingSpinner from '../../components/LoadingSpinner'; // Import the LoadingSpinner
 
 const PaymentComponent = forwardRef(({ amount, productName, description, customerEmail, customerPhone, onPaymentSuccess }, ref) => {
   const [loading, setLoading] = useState(false);

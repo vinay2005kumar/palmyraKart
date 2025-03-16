@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import './About.css';
-import Topbar from './Topbar';
+import Topbar from '../../components/Topbar';
 import { HiArrowSmallLeft, HiArrowSmallRight } from "react-icons/hi2";
-import bcorner from '../assets/bcorner.jpg';
-import lcorner from '../assets/lcorner.png';
-import tcorner from '../assets/tcorner.jpg';
-import rcorner from '../assets/rcorner.jpg';
-import TawkTo from './TawkTo';
+import bcorner from '../../assets/bcorner.jpg'; // Correct path
+import lcorner from '../../assets/lcorner.png'; // Correct path
+import tcorner from '../../assets/tcorner.jpg'; // Correct path
+import rcorner from '../../assets/rcorner.jpg'; // Correct path
+import TawkTo from '../../components/TawkTo';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 const About = () => {

@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import './OrderMenu.css';
-import Topbar from './Topbar';
+import Topbar from '../../components/Topbar';
 import { FaIndianRupeeSign } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
-import { database, ref, set, onValue,get } from "../firebase/firebase";
+import { database, ref, set, onValue,get } from "../../firebase/firebase";
 import { LiaMedkitSolid } from 'react-icons/lia';
 import Whatsapp from './Whatsapp';
 // import { database, ref, set} from '../firebase/firebase'

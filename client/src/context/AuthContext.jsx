@@ -8,15 +8,24 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [admin, setAdmin] = useState(false);
-
+  const [reviewDetails,setReviewDetails]=useState([])
+  const [userDetails,setUserDetails]=useState([])
+  const [orderDetails, setOrderDetails] = useState([]);
   const url = 'http://localhost:4000/api/user';
-
+  const [allReviews, setAllReviews] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   // Function to check authentication status
   const checkAuth = async () => {
     try {
+      setIsLoading(true)
       const res = await axios.get(`${url}/data`, { withCredentials: true });
-
+       
       if (res.data.success) {
+        const { userData, orderData,reviewData } = res.data;
+        setUserDetails(userData)
+        setOrderDetails(orderData)
+        setReviewDetails(reviewData)
+        setIsLoading(false)
         const resuser = res.data.userData;
         setIsAuthenticated(true);
         setUser(resuser.name);
@@ -27,14 +36,16 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(false);
         setUser(null);
         setAdmin(false);
-        logout()
+        setIsLoading(false)
+        // logout()
       }
     } catch (error) {
       setIsAuthenticated(false);
       setUser(null);
+      setIsLoading(false)
       setAdmin(false);
-      logout()
-      console.error('Auth check failed:', error);
+      // logout()
+      console.log('Auth check failed:', error);
     }
   };
 
@@ -114,7 +125,59 @@ export const AuthProvider = ({ children }) => {
   // Fetch user data on mount
   useEffect(() => {
     checkAuth();
+    console.log('context',userDetails,orderDetails,reviewDetails)
   }, []);
+
+
+  const removeOrder = (orderId) => {
+    setOrderDetails((prevOrders) => prevOrders.filter((order) => order.orderId !== orderId));
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const response = await axios.get(`${url}/reviews`);
+      setAllReviews(response.data.reviews || []); // Set all users' reviews
+    } catch (error) {
+      console.error("Error fetching all reviews:", error);
+    }
+  };
+
+  const addReview = async (reviewData) => {
+    try {
+      const response = await axios.post(`${url}/add-reviews`, reviewData, {
+        withCredentials: true,
+      });
+      setReviewDetails((prev) => [response.data.review, ...prev]); // Add to authenticated user's reviews
+      setAllReviews((prev) => [response.data.review, ...prev]); // Add to all users' reviews
+    } catch (error) {
+      console.error("Error adding review:", error);
+    }
+  };
+
+  const updateReview = async (reviewId, reviewData) => {
+    try {
+      await axios.put(`${url}/reviews/${reviewId}`, reviewData);
+      setReviewDetails((prev) =>
+        prev.map((r) => (r._id === reviewId ? { ...r, ...reviewData } : r))
+      );
+      setAllReviews((prev) =>
+        prev.map((r) => (r._id === reviewId ? { ...r, ...reviewData } : r))
+      );
+    } catch (error) {
+      console.error("Error updating review:", error);
+    }
+  };
+
+  const deleteReview = async (reviewId) => {
+    try {
+      await axios.delete(`${url}/reviews/${reviewId}`);
+      setReviewDetails((prev) => prev.filter((r) => r._id !== reviewId));
+      setAllReviews((prev) => prev.filter((r) => r._id !== reviewId));
+    } catch (error) {
+      console.error("Error deleting review:", error);
+    }
+  };
+
 
   return (
     <AuthContext.Provider
@@ -124,6 +187,17 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         admin,
+        userDetails,
+        orderDetails,
+        reviewDetails,
+        removeOrder,
+        checkAuth,
+        allReviews,
+        fetchReviews,
+        addReview,
+        updateReview,
+        deleteReview,
+        isLoading
       }}
     >
       {children}

@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import './Expired.css';
 import Topbar from './Dtopbar';
-import axios from 'axios';
 import { PiCurrencyInr } from 'react-icons/pi';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { useAdmin } from '../../context/AdminContext'; // Import the AdminContext
+import axios from 'axios';
 
 const Expired = () => {
-  const [orders, setOrders] = useState([]); // For expired orders
-  const [users, setUsers] = useState([]); // For storing user data
+  const { orders, users, loading, error, deleteOrder } = useAdmin(); // Use the AdminContext
   const [dquantity, setdquantity] = useState(0); // Total quantity
   const [dprice, setdprice] = useState(0); // Total price
   const [phoneFilter, setPhoneFilter] = useState(''); // For filtering by phone number
@@ -18,50 +18,28 @@ const Expired = () => {
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
   const url = 'http://localhost:4000/api/user'; // Backend URL
 
-  // Fetch expired orders and user data from the backend
-  const getdata = async () => {
-    try {
-      console.log('Fetching data...');
-      const { data } = await axios.get(`${url}/getAllUsers`, {
-        withCredentials: true, // Include credentials (cookies) if needed
+  // Filter expired orders
+  const expiredOrders = orders.filter((order) => order.status === 'Cancelled');
+
+  // Calculate totals for expired orders
+  useEffect(() => {
+    let totalPieces = 0;
+    let totalCost = 0;
+    let serialNumber = 0;
+
+    expiredOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        const pieces = item.itemType === 'single' ? item.quantity : item.quantity * 12;
+        totalPieces += pieces;
+        totalCost += item.price;
       });
+      serialNumber += 1;
+    });
 
-      console.log('Data received:', data);
-
-      // Ensure the response contains the expected fields
-      if (!data.orders || !data.users) {
-        throw new Error('Invalid response structure from the server.');
-      }
-
-      // Filter orders with status 'Cancelled'
-      const expiredOrders = data.orders.filter((order) => order.status === 'Cancelled');
-      setOrders(expiredOrders);
-
-      // Set user data
-      setUsers(data.users);
-
-      // Calculate totals
-      let totalPieces = 0;
-      let totalCost = 0;
-      let serialNumber = 0;
-
-      expiredOrders.forEach((order) => {
-        order.items.forEach((item) => {
-          const pieces = item.itemType === 'single' ? item.quantity : item.quantity * 12;
-          totalPieces += pieces;
-          totalCost += item.price;
-        });
-        serialNumber += 1;
-      });
-
-      setdquantity(totalPieces);
-      setdprice(totalCost);
-      setsno(serialNumber);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast.error('Failed to fetch orders. Please try again later.');
-    }
-  };
+    setdquantity(totalPieces);
+    setdprice(totalCost);
+    setsno(serialNumber);
+  }, [orders]);
 
   // Toast notification function
   const toastfun = (msg, type) => {
@@ -149,7 +127,6 @@ const Expired = () => {
 
       if (refundResponse.data.success) {
         toastfun('Refund initiated successfully', 'success');
-        getdata(); // Refresh order list
       } else {
         toastfun('Refund initiation failed', 'error');
       }
@@ -162,7 +139,7 @@ const Expired = () => {
   };
 
   // Handle delete order with refund
-  const handleDelete = (orderId, paymentId, amount) => {
+  const handleDelete = async (orderId, paymentId, amount) => {
     const toastId = `delete-toast-${orderId}`;
     const cancellationReason = 'normally';
 
@@ -223,15 +200,10 @@ const Expired = () => {
       // Step 1: Issue refund
       await handleRefund(paymentId, amount, orderId);
 
-      // Step 2: Delete the order
-      const deleteurl = `${url}/order/${orderId}`;
-      const response = await axios.delete(deleteurl, {
-        headers: { 'Content-Type': 'application/json' },
-        data: { cancellationReason },
-      });
+      // Step 2: Delete the order using the context function
+      await deleteOrder(orderId, cancellationReason);
 
       toastfun('Order deleted and refund initiated successfully', 'success');
-      getdata(); // Refresh order list
     } catch (error) {
       console.error('Error deleting order:', error);
       toastfun('Failed to delete the order or issue refund. Please try again.', 'error');
@@ -243,24 +215,19 @@ const Expired = () => {
     try {
       const response = await axios.delete(`${url}/delete-refunded-orders`);
       toastfun('Refunded orders deleted successfully', 'success');
-      getdata(); // Refresh order list
     } catch (error) {
       console.error('Error deleting refunded orders:', error);
       toastfun('Failed to delete refunded orders. Please try again.', 'error');
     }
   };
 
-  useEffect(() => {
-    getdata();
-  }, []);
-
   return (
     <div>
-        <Topbar />
+      <Topbar />
       <ToastContainer />
       <div className="order2">
-        <h1 id='dall'>Expired Orders</h1>
-        <div className="dnumber" id='fdnumber'>
+        <h1 id="dall">Expired Orders</h1>
+        <div className="dnumber" id="fdnumber">
           <label htmlFor="dnumber2">Enter Phone Number:</label>
           <input
             type="number"
@@ -270,7 +237,7 @@ const Expired = () => {
             placeholder="Enter Phone Number"
           />
         </div>
-        <div className="dnumber" id='fdnumber'>
+        <div className="dnumber" id="fdnumber">
           <label htmlFor="dplace">Enter Place:</label>
           <input
             type="text"
@@ -281,17 +248,20 @@ const Expired = () => {
           />
         </div>
 
-        <div className="dtotal" id='dtotal'>
+        <div className="dtotal" id="dtotal">
           <p>Total Orders: {sno}</p>
           <p>Total Quantity: {dquantity} Pieces</p>
-          <p id='mtcost'>Total Cost: <PiCurrencyInr />{dprice}</p>
+          <p id="mtcost">
+            Total Cost: <PiCurrencyInr />
+            {dprice}
+          </p>
           <button onClick={deleteRefundedOrders} className="delete-refunds-btn">
             Delete Refunds
           </button>
         </div>
 
         <div className="dtable2 dtable3 detable1">
-          {orders.length > 0 ? (
+          {expiredOrders.length > 0 ? (
             <table border="1px" className="dtable detable">
               <thead>
                 <tr>
@@ -311,7 +281,7 @@ const Expired = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders
+                {expiredOrders
                   .filter((order) => {
                     // Filter by phone number
                     const phoneMatch =
@@ -337,28 +307,35 @@ const Expired = () => {
                         <td>{order.shippingAddress.phoneNumber}</td>
                         <td>{order.shippingAddress.street}</td>
                         <td>{order.items[0].itemType}</td>
-                        <td>{order.items[0].itemType === 'single' ? order.items[0].quantity : order.items[0].quantity * 12}</td>
-                        <td><PiCurrencyInr />{order.items[0].price}</td>
+                        <td>
+                          {order.items[0].itemType === 'single'
+                            ? order.items[0].quantity
+                            : order.items[0].quantity * 12}
+                        </td>
+                        <td>
+                          <PiCurrencyInr />
+                          {order.items[0].price}
+                        </td>
                         <td>{order.status}</td>
                         <td>{new Date(order.date).toLocaleDateString()}</td>
                         <td>{new Date(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
-                            onClick={() => handleDelete(order.orderId, order.paymentId, order.items[0].price)}
+                            onClick={() => handleDelete(order._id, order.paymentId, order.items[0].price)}
                             style={{ cursor: 'pointer' }}
-                            className='del'
-                            id='del'
+                            className="del"
+                            id="del"
                           >
                             Delete
                           </button>
                         </td>
                         <td>
                           <button
-                            onClick={() => handleRefund(order.paymentId, order.items[0].price, order.orderId)}
-                            disabled={refundLoading[order.orderId]}
-                            className={`refund-btn ${refundLoading[order.orderId] ? 'loading' : ''}`}
+                            onClick={() => handleRefund(order.paymentId, order.items[0].price, order._id)}
+                            disabled={refundLoading[order._id]}
+                            className={`refund-btn ${refundLoading[order._id] ? 'loading' : ''}`}
                           >
-                            {refundLoading[order.orderId] ? 'Loading...' : 'Refund'}
+                            {refundLoading[order._id] ? 'Loading...' : 'Refund'}
                           </button>
                         </td>
                       </tr>
@@ -367,7 +344,7 @@ const Expired = () => {
               </tbody>
             </table>
           ) : (
-            <p className='domsg'>No orders available</p>
+            <p className="domsg">No orders available</p>
           )}
         </div>
       </div>

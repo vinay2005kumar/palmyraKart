@@ -3,12 +3,20 @@ import Dtopbar from './Dtopbar';
 import './Dhome.css';
 import axios from 'axios';
 import { PiCurrencyInrBold } from "react-icons/pi";
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../../context/AuthContext'; 
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { database, ref, set, onValue, get, update } from "../firebase/firebase";
-
+import { database, ref, set, onValue, get, update } from '../../firebase/firebase';
+import { useAdmin } from '../../context/AdminContext'; 
 const Dhome = () => {
+    const {
+        users,
+        orders,
+        loading,
+        error,
+        getdata: fetchAdminData,
+        deleteOrder,
+    } = useAdmin(); // Use AdminContext
     const [email, setEmail] = useState();
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
@@ -34,7 +42,7 @@ const Dhome = () => {
     const url = 'http://localhost:4000/api/user';
     const [currlimit, setcurrlimit] = useState();
     const { dashboardkart } = useAuth();
-    const [loading, setloading] = useState(false);
+    
 
     const [isOpen, setIsOpen] = useState(true);
 
@@ -101,104 +109,72 @@ const Dhome = () => {
         }
     };
 
-    const getdata = async () => {
-        try {
-            console.log('Fetching data...');
-        
-            // Fetch user data, orders, and reviews
-            const { data } = await axios.get(`${url}/getAllUsers`, {
-                withCredentials: true, // Include credentials (cookies) if needed
-            });
-    
-            console.log('Data received:', data);
-            const userDetails = data.users;
-            const orders = data.orders;
-            console.log('details', orders, userDetails);
-    
-            // Set user details
-            setcurrlimit(userDetails.limit);
-    
-            let todayOrders = 0;
-            let todayQuantity = 0;
-            let todayPrice = 0;
-            let deliveredOrders = 0;
-            let deliveredQuantity = 0;
-            let deliveredPrice = 0;
-            let totaldorders = 0;
-            let totaldquantity = 0;
-            let totaldcost = 0;
-    
-            // Get current date in UTC
-            const today = new Date();
-            const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-            console.log('Today (UTC, start of day):', todayUTC.toISOString());
-    
-            // Set 9:00 AM UTC as the start time
-            const startTime = new Date(todayUTC);
-            startTime.setUTCHours(9, 0, 0, 0); // 9:00 AM UTC
-    
-            // Set the closing time if provided, otherwise set to end of the day
-            const endTime = closeTime ? new Date(closeTime) : new Date(todayUTC);
-            endTime.setUTCHours(23, 59, 59, 999); // End of day in UTC
-    
-            console.log('Order filtering range:', startTime.toISOString(), 'to', endTime.toISOString());
-    
-            // Iterate through user's orders
-            orders.forEach((order) => {
-                const orderDate = new Date(order.date);
-                const orderUTC = new Date(Date.UTC(orderDate.getUTCFullYear(), orderDate.getUTCMonth(), orderDate.getUTCDate()));
-    
-                console.log('Order Date (UTC normalized):', orderUTC.toISOString());
-    
-                // Check if the order is from today and pending
-                if (order.status === 'Pending' && orderUTC.getTime() === todayUTC.getTime()) {
-                    todayOrders++;
-                    order.items.forEach((item) => {
-                        const pieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                        todayQuantity += pieces;
-                        todayPrice += item.price;
-                    });
-                }
-    
-                // Check if the order is delivered today within the correct time range
-                if (
-                    order.status === 'Delivered' &&
-                    orderDate >= startTime &&
-                    orderDate <= endTime
-                ) {
-                    deliveredOrders++;
-                    order.items.forEach((item) => {
-                        const deliveredPieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                        deliveredQuantity += deliveredPieces;
-                        deliveredPrice += item.price * item.quantity;
-                    });
-                }
-    
-                // Check if the order is delivered (regardless of date)
-                if (order.status === 'Delivered') {
-                    totaldorders++;
-                    order.items.forEach((item) => {
-                        const totaldcount = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                        totaldquantity += totaldcount;
-                        totaldcost += item.price * item.quantity;
-                    });
-                }
-            });
-    
-            // Set the state values
-            setTodayOrders(todayOrders);
-            setTodayQuantity(todayQuantity);
-            setTodayPrice(todayPrice);
-            setDeliveredOrders(deliveredOrders);
-            setDeliveredTodayQuantity(deliveredQuantity);
-            setDeliveredTodayPrice(deliveredPrice);
-            setTotalOrders(totaldorders);
-            setTotalQuantity(totaldquantity);
-            setTotalPrice(totaldcost);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-        }
-    };
+   // Fetch data from the backend
+   const getdata = async () => {
+    try {
+        console.log('Fetching data...');
+        await fetchAdminData(); // Use the getdata function from AdminContext
+         console.log('dh',orders)
+        const today = new Date();
+        const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+        const startTime = new Date(todayUTC);
+        startTime.setUTCHours(9, 0, 0, 0);
+
+        let todayOrders = 0;
+        let todayQuantity = 0;
+        let todayPrice = 0;
+        let deliveredOrders = 0;
+        let deliveredQuantity = 0;
+        let deliveredPrice = 0;
+        let totaldorders = 0;
+        let totaldquantity = 0;
+        let totaldcost = 0;
+
+        orders.forEach((order) => {
+            const orderDate = new Date(order.date);
+            const orderUTC = new Date(Date.UTC(orderDate.getUTCFullYear(), orderDate.getUTCMonth(), orderDate.getUTCDate()));
+
+            if (order.status === 'Pending' && orderUTC.getTime() === todayUTC.getTime()) {
+                todayOrders++;
+                order.items.forEach((item) => {
+                    const pieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
+                    todayQuantity += pieces;
+                    todayPrice += item.price;
+                });
+            }
+
+            if (order.status === 'Delivered' && orderDate >= startTime) {
+                deliveredOrders++;
+                order.items.forEach((item) => {
+                    const deliveredPieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
+                    deliveredQuantity += deliveredPieces;
+                    deliveredPrice += item.price * item.quantity;
+                });
+            }
+
+            if (order.status === 'Delivered') {
+                totaldorders++;
+                order.items.forEach((item) => {
+                    const totaldcount = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
+                    totaldquantity += totaldcount;
+                    totaldcost += item.price * item.quantity;
+                });
+            }
+        });
+
+        setTodayOrders(todayOrders);
+        setTodayQuantity(todayQuantity);
+        setTodayPrice(todayPrice);
+        setDeliveredOrders(deliveredOrders);
+        setDeliveredTodayQuantity(deliveredQuantity);
+        setDeliveredTodayPrice(deliveredPrice);
+        setTotalOrders(totaldorders);
+        setTotalQuantity(totaldquantity);
+        setTotalPrice(totaldcost);
+    } catch (error) {
+        console.error('Error fetching data:', error);
+    }
+};
     
 
     useEffect(() => {
@@ -356,7 +332,6 @@ const Dhome = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            setloading(true);
             const response = await axios.post(`${url}/send-notification`, { subject, message });
             if (response.status === 200) {
                 toastfun('Notification sent successfully!', 'success');
@@ -366,7 +341,7 @@ const Dhome = () => {
         } catch (error) {
             toastfun('Error sending notification.', 'error');
         } finally {
-            setloading(false);
+           
         }
     };
     const handlelimit = () => {
@@ -500,7 +475,7 @@ const Dhome = () => {
                     <h1 style={{ textAlign: 'center' }}>WELCOME VINAY</h1>
                     <div className="dbox1">
                         <label htmlFor="image">
-                            <img src='profile.jpg' alt="Profile" />
+                            <img src='/profile.jpg' alt="Profile" />
                         </label>
                         <p>Believe Yourself</p>
                         <div className="admin-details">
@@ -563,7 +538,7 @@ const Dhome = () => {
                                 onChange={(e) => setMessage(e.target.value)}
                                 required
                             ></textarea>
-                            <button type="submit" className="dhbutton" id='dhbutton'>{loading ? 'Sending...' : 'Send Notification'}</button>
+                            <button type="submit" className="dhbutton" id='dhbutton'>Send Notification</button>
                         </form>
                     </div>
                 </div>

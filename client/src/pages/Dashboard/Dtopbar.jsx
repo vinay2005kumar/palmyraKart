@@ -5,7 +5,7 @@ import { IoReorderThreeOutline } from 'react-icons/io5';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Dreviews from './Dreviews';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 const Dtopbar = () => {
   const [dicon, setdicon] = useState(false); // State for toggling the navbar
   const navigate = useNavigate();
@@ -30,7 +30,7 @@ const Dtopbar = () => {
             onClick={() => {
               toast.dismiss(toastId); // Dismiss the toast
               logout()
-              navigate('/components/AuthPage'); // Redirect to AuthPage
+              navigate('/auth'); // Redirect to AuthPage
             }}
             style={{
               fontSize: '1.1em',
@@ -114,19 +114,19 @@ const Dtopbar = () => {
           className={`dtop2 ${dicon ? 'show-menu' : ''}`} // Toggle menu visibility
           id="dtop2"
         >
-          <NavLink to="/dhome">
+          <NavLink to="/admin/dhome">
             <p className="dpara">Home</p>
           </NavLink>
-          <NavLink to="/dorders">
+          <NavLink to="/admin/dorders">
             <p className="dpara">Orders</p>
           </NavLink>
-          <NavLink to="/delivered">
+          <NavLink to="/admin/delivered">
             <p className="dpara">Delivered</p>
           </NavLink>
-          <NavLink to="/expired">
+          <NavLink to="/admin/expired">
             <p className="dpara">Expired</p>
           </NavLink>
-          <NavLink to="/dreviews">
+          <NavLink to="/admin/dreviews">
             <p className="dpara">Reviews</p>
           </NavLink>
           <p className="dpara" id="dlogout" onClick={handleLogout}>

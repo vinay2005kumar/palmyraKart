@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import Home from './Home';
 import About from './About';
-import Topbar from './Topbar';
+import Topbar from '../../components/Topbar';
 import Order from './Order';
 import AuthPage from './AuthForm';
 import OrderMenu from './OrderMenu';
@@ -11,7 +11,7 @@ import Buy from './Buy';
 import Reviews from './Reviews';
 import './LandingPage.css';
 import Dhome from '../Dashboard/Dhome';
-import { useAuth } from './AuthContext'; // Assuming this provides authentication info
+import { useAuth } from '../../context/AuthContext'; // Assuming this provides authentication info
 import PaymentComponent from './PaymentComponent';
 
 
@@ -121,8 +121,8 @@ const Landingpage = () => {
 
         {/* Redirect to /auth if not authenticated or not an admin */}
         <Route
-          path='/Dashboard'
-          element={admin? (
+          path='/admin/dhome'
+          element={true? (
             <Dhome />
           ) : (
             <Navigate to="/auth" />

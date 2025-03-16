@@ -5,11 +5,10 @@ import { PiCurrencyInrBold } from "react-icons/pi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PaymentComponent from "./PaymentComponent"; // Import the PaymentComponent
-import axios from "axios";
+import { useAuth } from '../../context/AuthContext'; // Import the context
 
 const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, handlePaymentSuccess }) => {
   const [bphone, setbphone] = useState("");
-  const [bname, setbname] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
   const [places, setPlaces] = useState([]);
   const [selectedPlace, setSelectedPlace] = useState("");
@@ -20,12 +19,15 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
   const [btype, setbtype] = useState(itemtype);
   const [tprice, settprice] = useState(0);
   const [limit, setlimit] = useState(llimit3);
-  const [customerEmail, setCustomerEmail] = useState("");
-  const url = "http://localhost:4000/api/user"; // Updated API base URL
+  const [isProcessing, setIsProcessing] = useState(false);
   const isMobile = window.innerWidth <= 765;
   const navigate = useNavigate();
   const paymentRef = useRef(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Use context values
+  const { userDetails, checkAuth } = useAuth();
+  const { name: bname, email: customerEmail } = userDetails;
+
   const areaPlaceMapping = {
     Parvathipuram: ["Place 1", "Place 2", "Place 3"],
     Bobbili: ["Place A", "Place B", "Place C"],
@@ -51,21 +53,8 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
     });
   };
 
-  const fetchUser = async () => {
-    try {
-      const response = await axios.get(`${url}/data`, { withCredentials: true });
-      const email = response.data.userData.email;
-      const name = response.data.userData.name;
-      setbname(name);
-      setCustomerEmail(email);
-    } catch (error) {
-      toastfun("You Should Login to Make Order.", "info");
-      console.log(error);
-    }
-  };
-
+  // Calculate total price
   useEffect(() => {
-    fetchUser();
     const calculateTotal = () => {
       const a = itemprice || 0;
       const c = 3; // Platform Fee
@@ -74,6 +63,11 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
     };
     calculateTotal();
   }, [itemprice]);
+
+  // Fetch user data on mount
+  useEffect(() => {
+    checkAuth(); // Fetch user data from context
+  }, []);
 
   const generateOrderId = () => {
     const prefix = "ORD"; // Fixed prefix
@@ -139,7 +133,6 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
         generateOrderId,
         toastfun,
         navigate,
-        url,
       };
 
       // Call initiatePayment on PaymentComponent

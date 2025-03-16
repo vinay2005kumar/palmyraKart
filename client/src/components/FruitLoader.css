@@ -1,0 +1,51 @@
+/* src/components/FruitLoader/FruitLoader.css */
+.palyra-loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+  }
+  
+  .palyra-spinner-wrapper {
+    margin-bottom: 20px;
+  }
+  
+  .palyra-spinner-circle {
+    width: 70px;
+    height: 70px;
+    border: 8px solid rgba(76, 175, 80, 0.2);
+    border-radius: 50%;
+    border-top-color: #4CAF50;
+    animation: palyra-spin 1s ease-in-out infinite;
+  }
+  
+  @keyframes palyra-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  
+  .palyra-loader-content {
+    text-align: center;
+    color: #333;
+  }
+  
+  .palyra-loader-message {
+    margin: 0 0 10px 0;
+    font-size: 22px;
+    font-weight: 500;
+  }
+  
+  .palyra-loader-tagline {
+    margin: 0;
+    font-size: 14px;
+    color: #4CAF50;
+    font-style: italic;
+  }

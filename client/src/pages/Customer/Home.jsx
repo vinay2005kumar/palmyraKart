@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from './AuthContext'; // Import AuthContext
-import Topbar from './Topbar';
+import { useAuth } from '../../context/AuthContext'; // Import AuthContext
+import Topbar from '../../components/Topbar'; 
 import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './Home.css';
-import b1 from '../assets/b1.jpg';
-import mb1 from '../assets/mb3.jpg';
+import b1 from '../../assets/b1.jpg';
+import mb1 from '../../assets/mb3.jpg';
 
 const Home = () => {
   const navigate = useNavigate();

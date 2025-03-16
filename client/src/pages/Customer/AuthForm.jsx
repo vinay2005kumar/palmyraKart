@@ -1,7 +1,7 @@
 import React, { useState, useEffect,useRef } from 'react';
 import axios from 'axios';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { FaRegEye } from 'react-icons/fa'; // Correct import for FaRegEye
 import { PiEyeClosedBold } from 'react-icons/pi'; // Correct import for PiEyeClosedBold
 import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, getRedirectResult } from 'firebase/auth';
@@ -52,7 +52,7 @@ const LoginForm = () => {
         login({ name, isadmin });
         toast.success('Login successful!');
         if(isadmin){
-          navigate('/Dashboard')
+          navigate('/admin/dhome')
         }
         else{
           navigate('/home')
