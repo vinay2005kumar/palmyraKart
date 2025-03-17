@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from 'react';
-import './Expired.css';
+import './Dorders.css';
 import Topbar from './Dtopbar';
 import { PiCurrencyInr } from 'react-icons/pi';
 import { ToastContainer, toast } from 'react-toastify';
@@ -226,32 +226,32 @@ const Expired = () => {
       <Topbar />
       <ToastContainer />
       <div className="order2">
-        <h1 id="dall">Expired Orders</h1>
-        <div className="dnumber" id="fdnumber">
+        <h1 className="dall">Expired Orders</h1>
+        <div className="dnumber fdnumber">
           <label htmlFor="dnumber2">Enter Phone Number:</label>
           <input
             type="number"
-            id="dnumber2"
+            className="dnumber2"
             value={phoneFilter}
             onChange={(e) => setPhoneFilter(e.target.value)}
             placeholder="Enter Phone Number"
           />
         </div>
-        <div className="dnumber" id="fdnumber">
+        <div className="dnumber fdnumber">
           <label htmlFor="dplace">Enter Place:</label>
           <input
             type="text"
-            id="dplace"
+            className="dplace"
             value={placeFilter}
             onChange={(e) => setPlaceFilter(e.target.value)}
             placeholder="Enter Street Address"
           />
         </div>
 
-        <div className="dtotal" id="dtotal">
+        <div className="dtotal dtotal">
           <p>Total Orders: {sno}</p>
           <p>Total Quantity: {dquantity} Pieces</p>
-          <p id="mtcost">
+          <p className="mtcost">
             Total Cost: <PiCurrencyInr />
             {dprice}
           </p>
@@ -324,7 +324,7 @@ const Expired = () => {
                             onClick={() => handleDelete(order.orderId, order.paymentId, order.items[0].price)}
                             style={{ cursor: 'pointer' }}
                             className="del"
-                            id="del"
+                            
                           >
                             Delete
                           </button>

@@ -11,7 +11,7 @@
 }
 
 /* Heading styles */
-#dall {
+.dall {
   font-size: 2rem;
   color: #333;
   margin-bottom: 20px;
@@ -51,7 +51,7 @@
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
-#fdnumber, #fdplace {
+.fdnumber, .fdplace {
   max-width: 400px;
 }
 
@@ -75,13 +75,13 @@
   font-weight: 500;
 }
 
-#mtquantity, #mtcost {
+.mtquantity, .mtcost {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-#mtcost {
+.mtcost {
   color: #2ecc71;
   font-weight: 600;
 }
@@ -195,7 +195,7 @@
   color: #555;
 }
 
-#vphone {
+.vphone {
   font-weight: 500;
   margin-bottom: 20px;
 }
@@ -222,7 +222,7 @@
   box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
 }
 
-#vicon {
+.vicon {
   position: absolute;
   top: 15px;
   right: 15px;
@@ -232,7 +232,7 @@
   transition: color 0.3s ease;
 }
 
-#vicon:hover {
+.vicon:hover {
   color: #e74c3c;
 }
 
@@ -264,7 +264,7 @@
 
   }
   
-  #dall {
+  .dall {
     margin-top: 15%;
     font-size: 1.5rem;
   }

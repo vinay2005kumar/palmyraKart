@@ -24,10 +24,29 @@ const Ddelivered = () => {
   const [placeFilter, setPlaceFilter] = useState(""); // For filtering by place (street address)
   const [sortByAddress, setSortByAddress] = useState(false); // For sorting by address
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
-
+  const [deliquantity,setDeleQuantity]=useState()
+  const [deliPrice,setDelePrice]=useState()
+  const [deliSno,setDeleSno]=useState()
   // Filter delivered orders
   const deliveredOrders = orders.filter((order) => order.status === "Delivered");
+  useEffect(() => {
+    let totalPieces = 0;
+    let totalCost = 0;
+    let serialNumber = 0;
 
+    deliveredOrders.forEach((order) => {
+      order.items.forEach((item) => {
+        const pieces = item.itemType === 'single' ? item.quantity : item.quantity * 12;
+        totalPieces += pieces;
+        totalCost += item.price;
+      });
+      serialNumber += 1;
+    });
+
+  setDeleQuantity(totalPieces);
+    setDelePrice(totalCost);
+    setDeleSno(serialNumber);
+  }, [orders]);
   // Toast notification function
   const toastfun = (msg, type) => {
     toast[type](msg, {
@@ -136,35 +155,36 @@ const Ddelivered = () => {
       <Topbar />
       <ToastContainer />
       <div className="order2">
-        <h1 id="dall">Delivered Orders</h1>
+        <h1 className="dall">Delivered Orders</h1>
 
-        <div className="dnumber" id="fdnumber">
+        <div className="dnumber fdnumber">
           <label htmlFor="dnumber2">Enter Number:</label>
           <input
             type="number"
-            id="dnumber2"
+            className="dnumber2"
             value={phoneFilter}
             onChange={(e) => setPhoneFilter(e.target.value)}
             placeholder="Enter Phone Number"
           />
         </div>
 
-        <div className="dnumber" id="fdplace">
+        <div className="dnumber fdplace">
+        <label htmlFor="dplace">Enter Place:</label>
           <input
             type="text"
-            id="place"
+            className="place"
             value={placeFilter}
             onChange={(e) => setPlaceFilter(e.target.value)}
             placeholder="Enter Place (Street Address)"
           />
         </div>
 
-        <div className="dtotal" id="dtotal">
-          <p>Total Orders: {serialNumber}</p>
-          <p id="mtquantity">Total Quantity: {totalPieces} Pieces</p>
-          <p id="mtcost">
+        <div className="dtotal">
+          <p>Total Orders: {deliSno}</p>
+          <p className="mtquantity">Total Quantity: {deliquantity} Pieces</p>
+          <p className="mtcost">
             Total Cost: <PiCurrencyInr />
-            {totalCost}
+            {deliPrice}
           </p>
         </div>
 

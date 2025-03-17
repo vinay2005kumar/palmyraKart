@@ -163,34 +163,35 @@ const Dorders = ({ onOrderDetails }) => {
       <Topbar />
       <ToastContainer />
       <div className="order2">
-        <h1 id="dall">Pending Orders</h1>
+        <h1 className="dall">Pending Orders</h1>
 
         {/* Filters and totals */}
-        <div className="dnumber" id="fdnumber">
+        <div className="dnumber fdnumber">
           <label htmlFor="dnumber2">Enter Number:</label>
           <input
             type="number"
-            id="dnumber2"
+            className="dnumber2"
             value={phoneFilter}
             onChange={(e) => setPhoneFilter(e.target.value)}
             placeholder="Enter Phone Number"
           />
         </div>
 
-        <div className="dnumber" id="fdplace">
+        <div className="dnumber fdplace">
+        <label htmlFor="dplace">Enter Place:</label>
           <input
             type="text"
-            id="place"
+            className="place"
             value={placeFilter}
             onChange={(e) => setPlaceFilter(e.target.value)}
             placeholder="Enter Place (Street Address)"
           />
         </div>
 
-        <div className="dtotal" id="dtotal">
+        <div className="dtotal">
           <p>Total Orders: {serialNumber}</p>
-          <p id="mtquantity">Total Quantity: {totalPieces} Pieces</p>
-          <p id="mtcost">
+          <p className="mtquantity">Total Quantity: {totalPieces} Pieces</p>
+          <p className="mtcost">
             Total Cost: <PiCurrencyInr />
             {totalCost}
           </p>
@@ -200,14 +201,14 @@ const Dorders = ({ onOrderDetails }) => {
         <div className="ditems">
           {verify ? (
             <div className="dverify">
-              <RxCross2 id="vicon" onClick={() => setVerify(false)} />
+              <RxCross2 className="vicon" onClick={() => setVerify(false)} />
               <h1>Verification</h1>
               <p>Name: {vname}</p>
-              <p id="vphone">Phone No: {vno}</p>
+              <p className="vphone">Phone No: {vno}</p>
               <label htmlFor="dnumber">Enter Code:</label>
               <input
                 type="number"
-                id="dnumber"
+                className="dnumber"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
                 required
