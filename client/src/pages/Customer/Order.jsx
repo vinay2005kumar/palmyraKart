@@ -20,8 +20,8 @@ const Order = ({ order2, resetOrder }) => {
   const [email, setEmail] = useState('');
   const { orderDetails,userDetails, checkAuth, removeOrder,isLoading } = useAuth(); // Use context values
   const navigate = useNavigate();
-  //const url = 'https://palmyra-fruit.onrender.com/api/user';
-  const url = "http://localhost:4000/api/user";
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = "http://localhost:4000/api/user";
 
   // Cancel order
   const cancelOrder = async (orderId,email) => {

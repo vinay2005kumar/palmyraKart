@@ -17,8 +17,8 @@ export const AdminProvider = ({ children }) => {
   const [loading, setLoading] = useState(false); // Loading state
   const [error, setError] = useState(null); // Error state
   const {logout}=useAuth()
-  //const url = 'https://palmyra-fruit.onrender.com/api/user';
-   const url = "http://localhost:4000/api/user"; // Admin API base URL
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = "http://localhost:4000/api/user";
   const navigate=useNavigate()
   const isMobile = window.innerWidth <= 768;
   // Fetch admin data (users, orders, etc.)

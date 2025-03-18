@@ -33,8 +33,8 @@ const Dorders = ({ onOrderDetails }) => {
   const [orderId, setOrderId] = useState(""); // For order ID
 
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
-  //const url = 'https://palmyra-fruit.onrender.com/api/user';
-   const url = "http://localhost:4000/api/user";
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = "http://localhost:4000/api/user";
   // Handle order deletion
   const handleDelete = (orderId, email) => {
     const toastId = `delete-toast-${orderId}`;
