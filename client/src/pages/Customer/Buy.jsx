@@ -271,7 +271,7 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
               </div>
             </div>
             <button id="pay" onClick={handlePay} disabled={isProcessing}>
-              {isProcessing ? "Processing..." : "PAY NOW"}
+              {isProcessing ? "Paying..." : "PAY NOW"}
             </button>
           </div>
         </div>

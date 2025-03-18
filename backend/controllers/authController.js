@@ -136,6 +136,8 @@ export const login = async (req, res) => {
       sameSite: 'None',  // ✅ Required for cross-origin request
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
+    // Set cookies
+
 
     if (user.isAdmin) {
       return res.json({ success: true, message: 'Admin login successful', isAdmin: true, name: user.name });

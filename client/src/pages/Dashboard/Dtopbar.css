@@ -7,7 +7,7 @@
     gap: 13em; 
     align-items: center;
     font-size: 1.2em;
-    z-index: 999;
+    z-index: 999999;
     position: relative; /* Ensure it's positioned properly */
     color:black;
     background-color: lightblue;

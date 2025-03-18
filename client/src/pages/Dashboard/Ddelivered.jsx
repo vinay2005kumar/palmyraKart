@@ -5,30 +5,33 @@ import { PiCurrencyInr } from "react-icons/pi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAdmin } from '../../context/AdminContext';  // Import the AdminContext
+import Dtopbar from "./Dtopbar";
+import FruitLoader from "../../components/FruitLoader"; // Ensure this is imported
 
 const Ddelivered = () => {
   const {
     users,
     orders,
-    totalPieces,
-    totalCost,
-    serialNumber,
     loading,
-    error,
     deleteOrder,
-    getdata,
-    confirmDeleteOrder
+    confirmDeleteOrder,
+    DeleteSelectedOrders
   } = useAdmin(); // Use the AdminContext
 
   const [phoneFilter, setPhoneFilter] = useState(""); // For filtering by phone number
   const [placeFilter, setPlaceFilter] = useState(""); // For filtering by place (street address)
   const [sortByAddress, setSortByAddress] = useState(false); // For sorting by address
+  const [selectedDateFilter, setSelectedDateFilter] = useState("all"); // Date filter
+  const [selectedOrders, setSelectedOrders] = useState([]); // Selected orders for deletion
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
-  const [deliquantity,setDeleQuantity]=useState()
-  const [deliPrice,setDelePrice]=useState()
-  const [deliSno,setDeleSno]=useState()
+  const [deliquantity, setDeleQuantity] = useState(0);
+  const [deliPrice, setDelePrice] = useState(0);
+  const [deliSno, setDeleSno] = useState(0);
+
   // Filter delivered orders
   const deliveredOrders = orders.filter((order) => order.status === "Delivered");
+
+  // Calculate totals for delivered orders
   useEffect(() => {
     let totalPieces = 0;
     let totalCost = 0;
@@ -43,84 +46,66 @@ const Ddelivered = () => {
       serialNumber += 1;
     });
 
-  setDeleQuantity(totalPieces);
+    setDeleQuantity(totalPieces);
     setDelePrice(totalCost);
     setDeleSno(serialNumber);
   }, [orders]);
-  // Toast notification function
-  const toastfun = (msg, type) => {
-    toast[type](msg, {
-      position: "top-right",
-      autoClose: 3000,
-      style: {
-        position: "absolute",
-        top: isMobile ? "6vh" : "60px",
-        right: "0em",
-        width: isMobile ? "60vw" : "35vw",
-        height: isMobile ? "8vh" : "10vh",
-        fontSize: "1.2rem",
-        padding: "10px",
-      },
-      onClick: () => {
-        toast.dismiss();
-      },
+
+  // Handle date filter change
+  const handleDateFilterChange = (filter) => {
+    setSelectedDateFilter(filter);
+
+    const today = new Date();
+    const filtered = deliveredOrders.filter((order) => {
+      const orderDate = new Date(order.date);
+      switch (filter) {
+        case 'today':
+          return orderDate.toDateString() === today.toDateString();
+        case 'yesterday':
+          const yesterday = new Date(today);
+          yesterday.setDate(today.getDate() - 1);
+          return orderDate.toDateString() === yesterday.toDateString();
+        case 'last3days':
+          const threeDaysAgo = new Date(today);
+          threeDaysAgo.setDate(today.getDate() - 3);
+          return orderDate >= threeDaysAgo;
+        case 'last7days':
+          const sevenDaysAgo = new Date(today);
+          sevenDaysAgo.setDate(today.getDate() - 7);
+          return orderDate >= sevenDaysAgo;
+        default:
+          return true; // Show all orders
+      }
     });
+
+    setSelectedOrders([]); // Clear selected orders when filter changes
   };
 
-  // Handle order deletion
-  const handleDelete = (orderId, email) => {
-    const toastId = `delete-toast-${orderId}`;
-    const cancellationReason = "Order deleted by admin";
-
-    if (!toast.isActive(toastId)) {
-      toast.info(
-        <div>
-          <p style={{ padding: "1px" }}>Do you really want to delete this order?</p>
-          <button
-            onClick={async () => {
-              await confirmDeleteOrder(orderId);
-              toast.dismiss(toastId);
-            }}
-            style={{
-              fontSize: "1.1em",
-              margin: "5px",
-              padding: "5px 15px",
-              background: "#4CAF50",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            Yes
-          </button>
-          <button
-            onClick={() => toast.dismiss(toastId)}
-            style={{
-              fontSize: "1.1em",
-              margin: "5px",
-              padding: "5px 15px",
-              background: "#f44336",
-              color: "white",
-              border: "none",
-              borderRadius: "4px",
-              cursor: "pointer",
-            }}
-          >
-            No
-          </button>
-        </div>,
-        {
-          position: "top-center",
-          closeOnClick: true,
-          draggable: false,
-          autoClose: false,
-          onClick: () => toast.dismiss(toastId),
-          toastId,
-          style: { top: "6em", width: isMobile ? "70%" : "100%" },
-        }
-      );
+  // Handle order selection for deletion
+  const handleOrderSelection = (orderId) => {
+    if (selectedOrders.includes(orderId)) {
+      setSelectedOrders(selectedOrders.filter((id) => id !== orderId));
+    } else {
+      setSelectedOrders([...selectedOrders, orderId]);
     }
+  };
+
+  // Handle "Select All" button click
+  const handleSelectAll = () => {
+    if (selectedOrders.length === filteredData.length) {
+      // If all orders are already selected, deselect all
+      setSelectedOrders([]);
+    } else {
+      // Select all filtered orders
+      setSelectedOrders(filteredData.map((order) => order.orderId));
+    }
+  };
+  const handleDelete=async(orderId)=>{
+    confirmDeleteOrder(orderId)
+  }
+  // Handle delete selected orders
+  const handleDeleteSelectedOrders = async () => {
+     DeleteSelectedOrders(selectedOrders)
   };
 
   // Sort orders by address
@@ -128,105 +113,139 @@ const Ddelivered = () => {
     setSortByAddress(!sortByAddress);
   };
 
-  // Fetch data on component mount
-  // useEffect(() => {
-  //   getdata(); // Fetch data from the context
-  // }, []);
+  // Filter and sort orders
+  const filteredData = deliveredOrders
+    .filter((order) => {
+      // Filter by phone number
+      const phoneMatch =
+        phoneFilter === "" ||
+        order.shippingAddress.phoneNumber.toString().includes(phoneFilter);
 
-  // Sort orders by address if enabled
-  const sortedData = sortByAddress
-    ? [...deliveredOrders].sort((a, b) => {
+      // Filter by place (street address)
+      const placeMatch =
+        placeFilter === "" ||
+        order.shippingAddress.street.toLowerCase().includes(placeFilter.toLowerCase());
+
+      return phoneMatch && placeMatch;
+    })
+    .sort((a, b) => {
+      if (sortByAddress) {
         const addressA = a.shippingAddress.street.toLowerCase();
         const addressB = b.shippingAddress.street.toLowerCase();
         return addressA < addressB ? -1 : addressA > addressB ? 1 : 0;
-      })
-    : deliveredOrders;
-
-  // if (loading) {
-  //   return <div>Loading...</div>;
-  // }
-
-  if (error) {
-    return <div>{error}</div>;
-  }
+      }
+      return 0;
+    });
 
   return (
     <>
-      <Topbar />
+      <Dtopbar />
       <ToastContainer />
-      <div className="order2">
-        <h1 className="dall">Delivered Orders</h1>
+      {loading ? (
+        <FruitLoader />
+      ) : (
+        <div className="order2">
+          <h1 className="dall">Delivered Orders</h1>
 
-        <div className="dnumber fdnumber">
-          <label htmlFor="dnumber2">Enter Number:</label>
-          <input
-            type="number"
-            className="dnumber2"
-            value={phoneFilter}
-            onChange={(e) => setPhoneFilter(e.target.value)}
-            placeholder="Enter Phone Number"
-          />
-        </div>
+          {/* Date filter dropdown */}
+          <div className="dnumber fdnumber">
+            <label htmlFor="dateFilter">Filter by Date: </label>
+            <select
+              id="dateFilter"
+              className="place"
+              value={selectedDateFilter}
+              onChange={(e) => handleDateFilterChange(e.target.value)}
+            >
+              <option value="all">All Orders</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="last3days">Last 3 Days</option>
+              <option value="last7days">Last 7 Days</option>
+            </select>
+          </div>
 
-        <div className="dnumber fdplace">
-        <label htmlFor="dplace">Enter Place:</label>
-          <input
-            type="text"
-            className="place"
-            value={placeFilter}
-            onChange={(e) => setPlaceFilter(e.target.value)}
-            placeholder="Enter Place (Street Address)"
-          />
-        </div>
+          {/* Filters for phone number and place */}
+          <div className="dnumber fdnumber">
+            <label htmlFor="dnumber2">Enter Number:</label>
+            <input
+              type="number"
+              className="dnumber2"
+              value={phoneFilter}
+              onChange={(e) => setPhoneFilter(e.target.value)}
+              placeholder="Enter Phone Number"
+            />
+          </div>
+          <div className="dnumber fdplace">
+            <label htmlFor="dplace">Enter Place:</label>
+            <input
+              type="text"
+              className="place"
+              value={placeFilter}
 
-        <div className="dtotal">
-          <p>Total Orders: {deliSno}</p>
-          <p className="mtquantity">Total Quantity: {deliquantity} Pieces</p>
-          <p className="mtcost">
-            Total Cost: <PiCurrencyInr />
-            {deliPrice}
-          </p>
-        </div>
+              onChange={(e) => setPlaceFilter(e.target.value)}
+              placeholder="Enter Place (Street Address)"
+            />
+          </div>
 
-        <div className="ditems">
-          {sortedData.length > 0 ? (
-            <table border="1px" className="dtable ddtable">
-              <thead>
-                <tr>
-                  <th>S.No</th>
-                  <th>Customer Name</th>
-                  <th>Email</th>
-                  <th>Phone No</th>
-                  <th>Address</th>
-                  <th>Type</th>
-                  <th>Quantity</th>
-                  <th>Cost</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedData
-                  .filter((order) => {
-                    // Filter by phone number
-                    const phoneMatch =
-                      phoneFilter === "" ||
-                      order.shippingAddress.phoneNumber.toString().includes(phoneFilter);
+          {/* Totals and Delete Selected Orders button */}
+          <div className="dtotal">
+            <p>Total Orders: {deliSno}</p>
+            <p className="mtquantity">Total Quantity: {deliquantity} Pieces</p>
+            <p className="mtcost">
+              Total Cost: <PiCurrencyInr />
+              {deliPrice}
+            </p>
+            <span>
+            <button
+              onClick={handleSelectAll}
+              className="select-all-btn"
+            >
+              {selectedOrders.length === filteredData.length ? "Deselect All" : "Select All"}
+            </button>
+            <button
+              onClick={handleDeleteSelectedOrders}
+              disabled={selectedOrders.length === 0}
+              className="delete-selected-btn"
+            >
+              Delete Selected Orders
+            </button>
+            </span>
+         
+          </div>
 
-                    // Filter by place (street address)
-                    const placeMatch =
-                      placeFilter === "" ||
-                      order.shippingAddress.street.toLowerCase().includes(placeFilter.toLowerCase());
-
-                    // Only include orders that match both filters
-                    return phoneMatch && placeMatch;
-                  })
-                  .map((order, index) => {
+          {/* Orders table */}
+          <div className="ditems">
+            {filteredData.length > 0 ? (
+              <table border="1px" className="dtable ddtable">
+                <thead>
+                  <tr>
+                    <th>Select</th>
+                    <th>S.No</th>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Phone No</th>
+                    <th>Address</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Cost</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((order, index) => {
                     const user = users.find((user) => user._id === order.user);
                     return (
-                      <tr key={order._id}>
+                      <tr key={order.orderId}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedOrders.includes(order.orderId)}
+                            onChange={() => handleOrderSelection(order.orderId)}
+                          />
+                        </td>
                         <td>{index + 1}</td>
                         <td>{user ? user.name : "N/A"}</td>
                         <td>{user ? user.email : "N/A"}</td>
@@ -247,7 +266,7 @@ const Ddelivered = () => {
                         <td>{new Date(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
-                            onClick={() => handleDelete(order._id, user.email)}
+                            onClick={() => handleDelete(order.orderId)}
                             className="del"
                           >
                             Delete
@@ -256,13 +275,14 @@ const Ddelivered = () => {
                       </tr>
                     );
                   })}
-              </tbody>
-            </table>
-          ) : (
-            <p className="domsg">No delivered orders available</p>
-          )}
+                </tbody>
+              </table>
+            ) : (
+              <p className="domsg">No delivered orders available</p>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </>
   );
 };

@@ -181,9 +181,9 @@ const Dhome = () => {
 useEffect(() => {
     getdata();
 }, [getdata]);
-  if (loading) {
-    return <FruitLoader></FruitLoader>;
-  }    
+//   if (loading) {
+//     return <FruitLoader></FruitLoader>;
+//   }    
 
     const closeToday = () => {
         const toastId = 'logout-toast';
@@ -426,6 +426,7 @@ useEffect(() => {
         <>
             <ToastContainer />
             <Dtopbar />
+            {loading?<FruitLoader></FruitLoader>:(
             <div className="dhome">
                 <div className="dhlimit dbox">
                     <div className="dlbox dlbox-s">
@@ -548,6 +549,7 @@ useEffect(() => {
                     </div>
                 </div>
             </div>
+           )}
         </>
     );
 };

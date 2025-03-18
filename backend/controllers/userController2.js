@@ -395,16 +395,17 @@ export const removeOrder=async(req,res)=>{
   try {
     // Find the order by orderId
     const order = await Order.findOne({ orderId });
-
+    const newstatus=order.status
     if (!order) {
       console.log('Order not found');
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    order.status="Expired"
+    order.status=`${newstatus}*`
+   
     await order.save()
 
-    console.log('Order deleted successfully');
+    console.log('Order deleted successfully',order.status);
     res.status(200).json({ success: true, message: 'Order deleted successfully' });
   } catch (error) {
     console.error('Error deleting order:', error);
@@ -762,8 +763,8 @@ export const sendOrderOtp = async (req, res) => {
 
 export const verifyOrder = async (req, res) => {
   try {
-    const { email, number, orderId } = req.body;
-
+    const { email, number, orderId,otp } = req.body;
+     console.log(req.body)
     // Find the user by email
     const user = await User.findOne({ email });
     if (!user) {
@@ -773,11 +774,12 @@ export const verifyOrder = async (req, res) => {
     // Find the order in the Order collection
     const order = await Order.findOne({ orderId: orderId, user: user._id });
     if (!order) {
+      console.log('ord not')
       return res.status(404).json({ message: 'Order not found.' });
     }
-
+     console.log(order.otp)
     // Verify the OTP
-    if (order.otp === number) {
+    if (String(order.otp) === String(otp)) {
       // Update the order status to "Delivered"
       order.status = 'Delivered';
       await order.save();

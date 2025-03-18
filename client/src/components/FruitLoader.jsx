@@ -10,7 +10,7 @@ const FruitLoader = ({ message = "Loading..." }) => {
       </div>
       <div className="palyra-loader-content">
         <h3 className="palyra-loader-message">{message}</h3>
-        <p className="palyra-loader-tagline">Palyra Fruits - Fresh From Nature</p>
+        <p className="palyra-loader-tagline">Palmyra Fruits - Fresh From Nature</p>
       </div>
     </div>
   );

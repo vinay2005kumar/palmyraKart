@@ -27,7 +27,7 @@ const orderSchema = new mongoose.Schema({
       phoneNumber:{type:Number,default:''}
     },
     deliveryDate: { type: Date },
-    status: { type: String, enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'], default: 'Pending' },
+    status: { type: String, default: 'Pending' },
     trackingId: { type: String },
     carrier: { type: String },
     date: { type: Date, default: Date.now },

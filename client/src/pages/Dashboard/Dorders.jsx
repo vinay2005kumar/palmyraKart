@@ -6,7 +6,9 @@ import { PiCurrencyInr } from "react-icons/pi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAdmin } from '../../context/AdminContext'; 
-
+import FruitLoader from "../../components/FruitLoader";
+import Dtopbar from "./Dtopbar";
+import axios from "axios";
 const Dorders = ({ onOrderDetails }) => {
   const {
     users,
@@ -31,8 +33,8 @@ const Dorders = ({ onOrderDetails }) => {
   const [orderId, setOrderId] = useState(""); // For order ID
 
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  // const url = "http://localhost:4000/api/user";
+  //const url = 'https://palmyra-fruit.onrender.com/api/user';
+   const url = "http://localhost:4000/api/user";
   // Handle order deletion
   const handleDelete = (orderId, email) => {
     const toastId = `delete-toast-${orderId}`;
@@ -150,144 +152,143 @@ const Dorders = ({ onOrderDetails }) => {
     console.log('hi')
   }, []);
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>{error}</div>;
-  }
-
   return (
     <>
-      <Topbar />
+      {/* Topbar and ToastContainer are always displayed */}
+      <Dtopbar/>
       <ToastContainer />
-      <div className="order2">
-        <h1 className="dall">Pending Orders</h1>
-
-        {/* Filters and totals */}
-        <div className="dnumber fdnumber">
-          <label htmlFor="dnumber2">Enter Number:</label>
-          <input
-            type="number"
-            className="dnumber2"
-            value={phoneFilter}
-            onChange={(e) => setPhoneFilter(e.target.value)}
-            placeholder="Enter Phone Number"
-          />
+  
+      {/* Conditional rendering based on loading state */}
+      {loading ? (
+        <FruitLoader />
+      ) : (
+        <div className="order2">
+          <h1 className="dall">Pending Orders</h1>
+  
+          {/* Filters and totals */}
+          <div className="dnumber fdnumber">
+            <label htmlFor="dnumber2">Enter Number:</label>
+            <input
+              type="number"
+              className="dnumber2"
+              value={phoneFilter}
+              onChange={(e) => setPhoneFilter(e.target.value)}
+              placeholder="Enter Phone Number"
+            />
+          </div>
+  
+          <div className="dnumber fdplace">
+            <label htmlFor="dplace">Enter Place:</label>
+            <input
+              type="text"
+              className="place"
+              value={placeFilter}
+              onChange={(e) => setPlaceFilter(e.target.value)}
+              placeholder="Enter Place (Street Address)"
+            />
+          </div>
+  
+          <div className="dtotal">
+            <p>Total Orders: {serialNumber}</p>
+            <p className="mtquantity">Total Quantity: {totalPieces} Pieces</p>
+            <p className="mtcost">
+              Total Cost: <PiCurrencyInr />
+              {totalCost}
+            </p>
+          </div>
+  
+          {/* Orders table */}
+          <div className="ditems">
+            {verify ? (
+              <div className="dverify">
+                <RxCross2 className="vicon" onClick={() => setVerify(false)} />
+                <h1>Verification</h1>
+                <p>Name: {vname}</p>
+                <p className="vphone">Phone No: {vno}</p>
+                <label htmlFor="dnumber">Enter Code:</label>
+                <input
+                  type="number"
+                  className="dnumber"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  required
+                />
+                <button className="vsubmit" onClick={handleOtpSubmit}>
+                  Submit
+                </button>
+              </div>
+            ) : filteredData.length > 0 ? (
+              <table border="1px" className="dtable ddtable">
+                <thead>
+                  <tr>
+                    <th>S.No</th>
+                    <th>Verification</th>
+                    <th>Customer Name</th>
+                    <th>Email</th>
+                    <th>Phone No</th>
+                    <th>Address</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Cost</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredData.map((order, index) => {
+                    const user = users.find((user) => user._id === order.user);
+                    return (
+                      <tr key={order._id}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <button
+                            onClick={() =>
+                              handleVerify(order.orderId, user.email, user.name, order.shippingAddress.phoneNumber)
+                            }
+                            className="do-button"
+                            style={{ cursor: "pointer" }}
+                          >
+                            Verify
+                          </button>
+                        </td>
+                        <td>{user ? user.name : "N/A"}</td>
+                        <td>{user ? user.email : "N/A"}</td>
+                        <td>{order.shippingAddress.phoneNumber}</td>
+                        <td>{order.shippingAddress.street}</td>
+                        <td>{order.items[0].itemType}</td>
+                        <td>
+                          {order.items[0].itemType === "single"
+                            ? order.items[0].quantity
+                            : order.items[0].quantity * 12}
+                        </td>
+                        <td>
+                          <PiCurrencyInr />
+                          {order.items[0].price}
+                        </td>
+                        <td>{order.status}</td>
+                        <td>{new Date(order.date).toLocaleDateString()}</td>
+                        <td>{new Date(order.date).toLocaleTimeString()}</td>
+                        <td>
+                          <button
+                            onClick={() => handleDelete(order.orderId, user.email)}
+                            className="del"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              <p className="domsg">No orders available</p>
+            )}
+          </div>
         </div>
-
-        <div className="dnumber fdplace">
-        <label htmlFor="dplace">Enter Place:</label>
-          <input
-            type="text"
-            className="place"
-            value={placeFilter}
-            onChange={(e) => setPlaceFilter(e.target.value)}
-            placeholder="Enter Place (Street Address)"
-          />
-        </div>
-
-        <div className="dtotal">
-          <p>Total Orders: {serialNumber}</p>
-          <p className="mtquantity">Total Quantity: {totalPieces} Pieces</p>
-          <p className="mtcost">
-            Total Cost: <PiCurrencyInr />
-            {totalCost}
-          </p>
-        </div>
-
-        {/* Orders table */}
-        <div className="ditems">
-          {verify ? (
-            <div className="dverify">
-              <RxCross2 className="vicon" onClick={() => setVerify(false)} />
-              <h1>Verification</h1>
-              <p>Name: {vname}</p>
-              <p className="vphone">Phone No: {vno}</p>
-              <label htmlFor="dnumber">Enter Code:</label>
-              <input
-                type="number"
-                className="dnumber"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                required
-              />
-              <button className="vsubmit" onClick={handleOtpSubmit}>
-                Submit
-              </button>
-            </div>
-          ) : filteredData.length > 0 ? (
-            <table border="1px" className="dtable ddtable">
-              <thead>
-                <tr>
-                  <th>S.No</th>
-                  <th>Verification</th>
-                  <th>Customer Name</th>
-                  <th>Email</th>
-                  <th>Phone No</th>
-                  <th>Address</th>
-                  <th>Type</th>
-                  <th>Quantity</th>
-                  <th>Cost</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredData.map((order, index) => {
-                  const user = users.find((user) => user._id === order.user);
-                  return (
-                    <tr key={order._id}>
-                      <td>{index + 1}</td>
-                      <td>
-                        <button
-                          onClick={() =>
-                            handleVerify(order.orderId, user.email, user.name, order.shippingAddress.phoneNumber)
-                          }
-                          className="do-button"
-                          style={{ cursor: "pointer" }}
-                        >
-                          Verify
-                        </button>
-                      </td>
-                      <td>{user ? user.name : "N/A"}</td>
-                      <td>{user ? user.email : "N/A"}</td>
-                      <td>{order.shippingAddress.phoneNumber}</td>
-                      <td>{order.shippingAddress.street}</td>
-                      <td>{order.items[0].itemType}</td>
-                      <td>
-                        {order.items[0].itemType === "single"
-                          ? order.items[0].quantity
-                          : order.items[0].quantity * 12}
-                      </td>
-                      <td>
-                        <PiCurrencyInr />
-                        {order.items[0].price}
-                      </td>
-                      <td>{order.status}</td>
-                      <td>{new Date(order.date).toLocaleDateString()}</td>
-                      <td>{new Date(order.date).toLocaleTimeString()}</td>
-                      <td>
-                        <button
-                          onClick={() => handleDelete(order.orderId, user.email)}
-                          className="del"
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <p className="domsg">No orders available</p>
-          )}
-        </div>
-      </div>
+      )}
     </>
   );
 };

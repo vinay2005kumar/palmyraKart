@@ -6,8 +6,8 @@ import 'react-toastify/dist/ReactToastify.css';
 const PaymentComponent = forwardRef(({ amount, productName, description, customerEmail, customerPhone, onPaymentSuccess }, ref) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
- // const url = "http://localhost:4000/api/user";
+  //const url = 'https://palmyra-fruit.onrender.com/api/user';
+  const url = "http://localhost:4000/api/user";
  const isMobile = window.innerWidth <= 765;
   useImperativeHandle(ref, () => ({
     initiatePayment: async (buyComponentData) => {

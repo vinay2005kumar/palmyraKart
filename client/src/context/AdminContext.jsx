@@ -17,8 +17,8 @@ export const AdminProvider = ({ children }) => {
   const [loading, setLoading] = useState(false); // Loading state
   const [error, setError] = useState(null); // Error state
   const {logout}=useAuth()
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
-  // const url = "http://localhost:4000/api/user"; // Admin API base URL
+  //const url = 'https://palmyra-fruit.onrender.com/api/user';
+   const url = "http://localhost:4000/api/user"; // Admin API base URL
   const navigate=useNavigate()
   const isMobile = window.innerWidth <= 768;
   // Fetch admin data (users, orders, etc.)
@@ -66,7 +66,7 @@ export const AdminProvider = ({ children }) => {
       setError("Failed to fetch orders. Please try again later.");
       toast.error("Failed to fetch orders. Please try again later.");
       logout()
-      // navigate('/auth')
+      navigate('/auth')
       
     } finally {
       setLoading(false);
@@ -95,38 +95,178 @@ export const AdminProvider = ({ children }) => {
   const deleteOrder = async (orderId, email, cancellationReason) => {
     try {
       const deleteurl = `${url}/order/${orderId}`;
-      await axios.delete(deleteurl, {
+     const res= await axios.delete(deleteurl, {
         headers: { "Content-Type": "application/json" },
         data: { email, cancellationReason },
       });
-
-      toast.success("Order deleted successfully");
-      getdata(); // Refresh order list
+      if(res.status==200){
+        // Show success toast
+        toastfun('Order history deleted successfully', 'success');
+        getdata()
+        }
+        else{
+         toastfun('Failed to delete the order history. Please try again.', 'error');
+        }
     } catch (error) {
       console.log("Error deleting order:", error);
       toast.error("Failed to delete the order. Please try again.");
     }
   };
-  const confirmDeleteOrder = async (orderId) => {
-    try {
-      const deleteUrl = `${url}/removeOrder/${orderId}`;
-      const res=  await axios.delete(deleteUrl, {
-        headers: { 'Content-Type': 'application/json' },
-      });
-     if(res.status==200){
-     // Show success toast
-     toastfun('Order history deleted successfully', 'success');
-     }
-     else{
-      toastfun('Failed to delete the order history. Please try again.', 'error');
-     }
- 
-    } catch (error) {
-      console.log(error)
-      toastfun('Failed to delete the order history. Please try again.', 'error');
+  const confirmDeleteOrder = (orderId) => {
+    const toastId = `delete-toast-${orderId}`;
+  
+    if (!toast.isActive(toastId)) {
+      toast.info(
+        <div>
+          <p style={{ padding: '1px' }}>Do you really want to delete this order?</p>
+          <button
+            onClick={async () => {
+              try {
+                const deleteUrl = `${url}/removeOrder/${orderId}`;
+                const res = await axios.delete(deleteUrl, {
+                  headers: { 'Content-Type': 'application/json' },
+                });
+  
+                if (res.status === 200) {
+                  // Show success toast
+                  toastfun('Order history deleted successfully', 'success');
+                  getdata(); // Refresh the data after deletion
+                } else {
+                  toastfun('Failed to delete the order history. Please try again.', 'error');
+                }
+              } catch (error) {
+                console.error(error);
+                toastfun('Failed to delete the order history. Please try again.', 'error');
+              } finally {
+                toast.dismiss(toastId);
+              }
+            }}
+            style={{
+              fontSize: '1.1em',
+              margin: '5px',
+              padding: '5px 15px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => toast.dismiss(toastId)}
+            style={{
+              fontSize: '1.1em',
+              margin: '5px',
+              padding: '5px 15px',
+              background: '#f44336',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            No
+          </button>
+        </div>,
+        {
+          position: 'top-center',
+          closeOnClick: true,
+          draggable: false,
+          autoClose: false,
+          onClick: () => {
+            toast.dismiss(toastId);
+          },
+          toastId,
+          style: {
+            top: '6em',
+            width: isMobile ? '70%' : '100%',
+          },
+        }
+      );
     }
   };
-
+  const DeleteSelectedOrders = (selectedOrders) => {
+    const toastId = 'delete-selected-toast';
+     console.log('sele',selectedOrders)
+    if (!toast.isActive(toastId)) {
+      toast.info(
+        <div>
+          <p style={{ padding: '1px' }}>
+            Do you really want to delete {selectedOrders.length} selected orders?
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                // Loop through selected orders and delete each one
+                for (const orderId of selectedOrders) {
+                  const deleteUrl = `${url}/removeOrder/${orderId}`;
+                  const res = await axios.delete(deleteUrl, {
+                    headers: { 'Content-Type': 'application/json' },
+                  });
+  
+                  if (res.status !== 200) {
+                    throw new Error(`Failed to delete order ${orderId}`);
+                  }
+                }
+  
+                // Show success toast
+                toastfun('Selected orders removed from delivered list successfully', 'success');
+                getdata(); // Refresh the data after deletion
+              } catch (error) {
+                console.error('Error deleting selected orders:', error);
+                toastfun('Failed to delete selected orders. Please try again.', 'error');
+              } finally {
+                toast.dismiss(toastId);
+              }
+            }}
+            style={{
+              fontSize: '1.1em',
+              margin: '5px',
+              padding: '5px 15px',
+              background: '#4CAF50',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            Yes
+          </button>
+          <button
+            onClick={() => toast.dismiss(toastId)}
+            style={{
+              fontSize: '1.1em',
+              margin: '5px',
+              padding: '5px 15px',
+              background: '#f44336',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
+          >
+            No
+          </button>
+        </div>,
+        {
+          position: 'top-center',
+          closeOnClick: true,
+          draggable: false,
+          autoClose: false,
+          onClick: () => {
+            toast.dismiss(toastId);
+          },
+          toastId,
+          style: {
+            top: '6em',
+            width: isMobile ? '70%' : '100%',
+          },
+        }
+      );
+    }
+  };
   
   // Fetch data on mount
   useEffect(() => {
@@ -146,7 +286,8 @@ export const AdminProvider = ({ children }) => {
         error,
         deleteOrder,
         getdata, // Expose the getdata function for manual refetching
-        confirmDeleteOrder
+        confirmDeleteOrder,
+        DeleteSelectedOrders
       }}
     >
       {children}
