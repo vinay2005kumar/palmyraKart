@@ -145,7 +145,7 @@ const Dhome = () => {
                 });
             }
 
-            if (order.status === 'Delivered' && orderDate >= startTime) {
+            if (order.status === 'Delivered'||'Delivered*' && orderDate >= startTime) {
                 deliveredOrders++;
                 order.items.forEach((item) => {
                     const deliveredPieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
