@@ -13,7 +13,7 @@ export const AuthProvider = ({ children }) => {
   const [userDetails,setUserDetails]=useState([])
   const [orderDetails, setOrderDetails] = useState([]);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user";
+ // const url = "http://localhost:4000/api/user";
   const [allReviews, setAllReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate=useNavigate()

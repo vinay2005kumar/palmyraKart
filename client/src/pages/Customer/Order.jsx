@@ -20,7 +20,7 @@ const Order = ({ order2, resetOrder }) => {
   const [email, setEmail] = useState('');
   const { orderDetails, userDetails, checkAuth, removeOrder, isLoading } = useAuth(); // Use context values
   const navigate = useNavigate();
-  const [date,setDate]=useState()
+  const [date, setDate] = useState()
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
 
@@ -168,6 +168,7 @@ const Order = ({ order2, resetOrder }) => {
 
   // Fetch data on component mount
   useEffect(() => {
+    checkAuth()
     checkIfBeforeTenAM();
     console.log('odetails', orderDetails, userDetails)
     setEmail(userDetails.email)
@@ -192,10 +193,55 @@ const Order = ({ order2, resetOrder }) => {
             <div className="items" id="items" style={{ display: cancel ? 'none' : 'block' }}>
               {orderDetails.length > 0 ? (
                 orderDetails
-                  .slice()
-                  .sort((a, b) => new Date(b.date) - new Date(a.date))
+                  .slice() // Create a shallow copy to avoid mutating the original array
+                  .sort((a, b) => {
+                    // Parse custom date format "March 19 at 09:25:19 AM"
+                    const parseDate = (dateString) => {
+                      const months = {
+                        January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
+                        July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
+                      };
+
+                      // Split the date string into parts
+                      const [month, day, at, time, modifier] = dateString.split(' ');
+                      const [hours, minutes, seconds] = time.split(':');
+
+                      // Convert to 24-hour format
+                      let hours24 = parseInt(hours, 10);
+                      if (modifier === 'PM' && hours24 !== 12) {
+                        hours24 += 12;
+                      }
+                      if (modifier === 'AM' && hours24 === 12) {
+                        hours24 = 0;
+                      }
+
+                      // Create a valid Date object
+                      return new Date(
+                        new Date().getFullYear(), // Use current year (or adjust as needed)
+                        months[month], // Month index
+                        parseInt(day, 10), // Day
+                        hours24, // Hours (24-hour format)
+                        parseInt(minutes, 10), // Minutes
+                        parseInt(seconds, 10) // Seconds
+                      );
+                    };
+
+                    // Parse dates for comparison
+                    const dateA = parseDate(a.date);
+                    const dateB = parseDate(b.date);
+
+                    console.log('date', dateA, dateB);
+
+                    // Handle invalid dates (fallback to 0 if invalid)
+                    if (isNaN(dateA) || isNaN(dateB)) {
+                      return 0; // Keep the order unchanged if dates are invalid
+                    }
+
+                    // Sort in descending order (most recent first)
+                    return dateB - dateA;
+                  })
                   .map((order) => (
-                    <div key={order.id} className="box">
+                    <div key={order._id} className="box">
                       <div className="image">
                         <img src={order.items[0]?.imagePath} alt={order.items[0]?.itemName} />
                       </div>
@@ -204,7 +250,7 @@ const Order = ({ order2, resetOrder }) => {
                       <p id="price">
                         Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
                       </p>
-                      <p id="date">Date & Time:{order.date}</p>
+                      <p id="date">Date & Time: {order.date}</p>
                       <p id="oaddress">
                         Delivery Address: {`${order.shippingAddress.street}`}
                       </p>
