@@ -87,7 +87,7 @@ const Order = ({ order2, resetOrder }) => {
   };
 
   // Function to handle the actual deletion
-  const confirmDelete = async (orderId) => {
+  const confirmDelete = async (orderId,status) => {
     const toastId = `delete-toast-${orderId}`;
 
     if (!toast.isActive(toastId)) {
@@ -98,6 +98,10 @@ const Order = ({ order2, resetOrder }) => {
             onClick={async () => {
               toast.dismiss(toastId);
               try {
+                if(status=="Cancelled"){
+                  toast.error('Order can not be delete until Refund..')
+                }
+                else{
                 const deleteUrl = `${url}/deleteOrder/${orderId}`;
                 await axios.delete(deleteUrl, {
                   headers: { 'Content-Type': 'application/json' },
@@ -108,10 +112,13 @@ const Order = ({ order2, resetOrder }) => {
 
                 // Show success toast
                 toastfun('Order history deleted successfully', 'success');
+              }
               } catch (error) {
                 toastfun('Failed to delete the order history. Please try again.', 'error');
               }
+            
             }}
+        
             style={{
               fontSize: '1.1em',
               margin: '5px',
@@ -269,7 +276,7 @@ const Order = ({ order2, resetOrder }) => {
                           </button>
                         </div>
                       ) : (
-                        <button id='cancel' onClick={() => confirmDelete(order.orderId)}>
+                        <button id='cancel' onClick={() => confirmDelete(order.orderId,order.status)}>
                           Delete
                         </button>
                       )}
