@@ -56,6 +56,34 @@ const LoginForm = () => {
     checkRedirectResult();
   }, []);
 
+  // Handle login form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await axios.post(`${url}/login`, { email, password }, { withCredentials: true });
+      if (response.data.success) {
+        const name = response.data.name;
+        const isadmin = response.data.isAdmin;
+        login({ name, isadmin });
+        toast.success('Login successful!');
+        if (isadmin) {
+          navigate('/admin/dhome');
+        } else {
+          navigate('/home');
+        }
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'An error occurred. Please try again.';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle Google Sign-In success
   const handleGoogleSignInSuccess = async (user) => {
     try {
@@ -94,7 +122,7 @@ const LoginForm = () => {
     try {
       setLoading(true);
       
-      // Add persistance to local storage to help with redirects
+      // Add persistence to local storage to help with redirects
       localStorage.setItem('googleAuthPending', 'true');
       
       if (isMobile) {
@@ -133,7 +161,73 @@ const LoginForm = () => {
     }
   };
 
-  // Rest of your component code...
+  // Toggle password visibility
+  const toggleEye = () => {
+    setEye(!eye);
+    if (passwordInputRef.current) {
+      passwordInputRef.current.type = eye ? 'password' : 'text';
+    }
+  };
+
+  // Toggle forgot password section
+  const toggleForgot = () => {
+    setForgot(!forgot);
+    setOtpSent(false);
+  };
+
+  // Handle sending OTP for password reset
+  const handleSendOtp = async () => {
+    setLoading(true);
+    if (!forgotEmail) {
+      toast.warn('Please enter your email.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${url}/send-reset-otp`, { email: forgotEmail });
+      if (response.data.success) {
+        toast.success(`OTP sent to ${forgotEmail}`);
+        setOtpSent(true);
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'An error occurred. Please try again.';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle password reset submission
+  const handleResetPassword = async () => {
+    setLoading(true);
+    if (!otp || !newPassword) {
+      toast.warn('Please enter all details.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await axios.post(`${url}/reset-password`, {
+        email: forgotEmail,
+        otp,
+        newPassword,
+      }, { withCredentials: true });
+
+      if (response.data.success) {
+        toast.success('Password reset successful!');
+        setForgot(false);
+        if (response.data.username) {
+          localStorage.setItem('username', response.data.username);
+        }
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'An error occurred. Please try again.';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -249,6 +343,7 @@ const LoginForm = () => {
     </>
   );
 };
+
 const SignupForm = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
