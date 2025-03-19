@@ -29,12 +29,11 @@ const LoginForm = () => {
   const [otpSent, setOtpSent] = useState(false); // Track if OTP has been sent
   const [otp, setOtp] = useState(''); // OTP input
   const [newPassword, setNewPassword] = useState(''); // New password input
-  const [showSetPassword, setShowSetPassword] = useState(false); // Toggle set password section
+  const [isRedirecting, setIsRedirecting] = useState(false); // Track if user is being redirected
   const navigate = useNavigate();
   const { login } = useAuth();
   const passwordInputRef = useRef(null);
-    const url = 'https://palmyra-fruit.onrender.com/api/user';
-   //const url = "http://localhost:4000/api/user";// Backend API URL
+  const url = 'https://palmyra-fruit.onrender.com/api/user'; // Backend API URL
 
   // Handle login form submission
   const handleSubmit = async (e) => {
@@ -69,6 +68,7 @@ const LoginForm = () => {
     try {
       if (isMobileDevice()) {
         // Use redirect for mobile devices
+        setIsRedirecting(true);
         await signInWithRedirect(auth, provider);
       } else {
         // Use popup for desktop devices
@@ -77,7 +77,13 @@ const LoginForm = () => {
       }
     } catch (error) {
       console.error('Error during Google Sign-In:', error);
-      toast.error('Failed to sign in with Google. Please try again.');
+      if (error.code === 'auth/popup-blocked') {
+        toast.error('Popup blocked. Please allow popups for this site.');
+      } else if (error.code === 'auth/network-request-failed') {
+        toast.error('Network error. Please check your internet connection.');
+      } else {
+        toast.error('Failed to sign in with Google. Please try again.');
+      }
     }
   };
 
@@ -119,11 +125,15 @@ const LoginForm = () => {
       } catch (error) {
         console.error('Error handling redirect result:', error);
         toast.error('Failed to sign in with Google. Please try again.');
+      } finally {
+        setIsRedirecting(false);
       }
     };
 
-    handleRedirectResult();
-  }, []);
+    if (isRedirecting) {
+      handleRedirectResult();
+    }
+  }, [isRedirecting]);
 
   // Toggle password visibility
   const toggleEye = () => {
