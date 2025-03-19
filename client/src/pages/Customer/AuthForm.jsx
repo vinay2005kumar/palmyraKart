@@ -36,18 +36,33 @@ const LoginForm = () => {
   const passwordInputRef = useRef(null);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
+
   // Check for redirect results from Google Auth on component mount
   useEffect(() => {
     const checkRedirectResult = async () => {
       try {
         setProcessingRedirect(true);
         const result = await getRedirectResult(auth);
+        
         if (result && result.user) {
+          console.log("Redirect result received:", result.user.email);
           await handleGoogleSignInSuccess(result.user);
+        } else {
+          // Check if we were expecting a redirect result
+          const pendingAuth = localStorage.getItem('googleAuthPending');
+          if (pendingAuth === 'true') {
+            // Clear the pending flag as we've now processed the redirect
+            localStorage.removeItem('googleAuthPending');
+            
+            // If we were expecting a result but didn't get one, something went wrong
+            console.log("No redirect result but was expecting one");
+            // We don't want to show an error because it might just be a regular page load
+          }
         }
       } catch (error) {
         console.error('Error handling redirect result:', error);
         toast.error('Failed to sign in with Google. Please try again.');
+        localStorage.removeItem('googleAuthPending');
       } finally {
         setProcessingRedirect(false);
       }
@@ -88,6 +103,8 @@ const LoginForm = () => {
   const handleGoogleSignInSuccess = async (user) => {
     try {
       setLoading(true);
+      console.log("Processing Google sign-in for:", user.email);
+      
       // Send user data to backend
       const response = await axios.post(`${url}/google-login`, {
         email: user.email,
@@ -95,20 +112,31 @@ const LoginForm = () => {
         uid: user.uid,
       }, { withCredentials: true });
 
+      console.log("Backend response:", response.data);
+
       if (response.data.success) {
         const name = response.data.name;
         const isadmin = response.data.isAdmin;
+        
+        // Store authentication state
         login({ name, isadmin });
+        
         toast.success('Google Sign-In successful!');
-        if (isadmin) {
-          navigate('/admin/dhome');
-        } else {
-          navigate('/home');
-        }
+        
+        // Navigate after a short delay to ensure state is updated
+        setTimeout(() => {
+          if (isadmin) {
+            navigate('/admin/dhome');
+          } else {
+            navigate('/home');
+          }
+        }, 300);
+      } else {
+        throw new Error(response.data.message || "Authentication failed");
       }
     } catch (error) {
       console.error('Error during Google Sign-In:', error);
-      toast.error('Failed to sign in with Google. Please try again.');
+      toast.error('Failed to complete Google sign-in process. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -122,33 +150,52 @@ const LoginForm = () => {
     try {
       setLoading(true);
       
-      // Add persistance to local storage to help with redirects
+      // Mark that we're expecting a redirect result
       localStorage.setItem('googleAuthPending', 'true');
       
       if (isMobile) {
-        // Better approach for mobile: always use redirect
+        // For mobile: always use redirect
+        console.log("Using redirect flow for mobile");
+        // Add additional scopes if needed
+        provider.addScope('profile');
+        provider.addScope('email');
+        
+        // Set custom parameters for better UX
+        provider.setCustomParameters({
+          prompt: 'select_account'
+        });
+        
         await signInWithRedirect(auth, provider);
-        // The redirect will navigate away, so we won't reach this point until the user returns
+        // Code execution stops here until redirect completes
       } else {
-        // For desktop, try popup first, fallback to redirect if popup fails
+        // For desktop: try popup first, fallback to redirect
         try {
+          console.log("Using popup flow for desktop");
           const result = await signInWithPopup(auth, provider);
+          
           if (result && result.user) {
+            // No need for localStorage handling in popup flow
+            localStorage.removeItem('googleAuthPending');
             await handleGoogleSignInSuccess(result.user);
           }
         } catch (popupError) {
           console.error('Popup error:', popupError);
+          
           // If popup is blocked or fails, fall back to redirect
           if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
             toast.info('Popup was blocked. Redirecting for authentication...');
             await signInWithRedirect(auth, provider);
+            // Code execution stops here until redirect completes
           } else {
             throw popupError; // Re-throw other errors
           }
         }
       }
     } catch (error) {
-      console.error('Error during Google Sign-In:', error);
+      console.error('Error initiating Google Sign-In:', error);
+      
+      // Clear pending flag since we encountered an error
+      localStorage.removeItem('googleAuthPending');
       
       if (error.code === 'auth/network-request-failed') {
         toast.error('Network error. Please check your internet connection.');
@@ -157,7 +204,6 @@ const LoginForm = () => {
       }
     } finally {
       setLoading(false);
-      localStorage.removeItem('googleAuthPending');
     }
   };
 
