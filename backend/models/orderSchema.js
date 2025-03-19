@@ -30,7 +30,7 @@ const orderSchema = new mongoose.Schema({
     status: { type: String, default: 'Pending' },
     trackingId: { type: String },
     carrier: { type: String },
-    date: { type: Date, default: Date.now },
+    date: { type:String},
     otp: { type: String },
     notes: { type: String },
     refundId: { type: String },

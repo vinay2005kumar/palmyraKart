@@ -18,13 +18,14 @@ const Order = ({ order2, resetOrder }) => {
   const [cancellationReason, setCancellationReason] = useState('order cancel');
   const isMobile = window.innerWidth <= 768;
   const [email, setEmail] = useState('');
-  const { orderDetails,userDetails, checkAuth, removeOrder,isLoading } = useAuth(); // Use context values
+  const { orderDetails, userDetails, checkAuth, removeOrder, isLoading } = useAuth(); // Use context values
   const navigate = useNavigate();
+  const [date,setDate]=useState()
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
 
   // Cancel order
-  const cancelOrder = async (orderId,email) => {
+  const cancelOrder = async (orderId, email) => {
     try {
       const deleteUrl = `${url}/order/${orderId}`;
       await axios.delete(deleteUrl, {
@@ -88,7 +89,7 @@ const Order = ({ order2, resetOrder }) => {
   // Function to handle the actual deletion
   const confirmDelete = async (orderId) => {
     const toastId = `delete-toast-${orderId}`;
-  
+
     if (!toast.isActive(toastId)) {
       toast.info(
         <div>
@@ -101,10 +102,10 @@ const Order = ({ order2, resetOrder }) => {
                 await axios.delete(deleteUrl, {
                   headers: { 'Content-Type': 'application/json' },
                 });
-  
+
                 // Update the context state
                 deleteOrder(orderId);
-  
+
                 // Show success toast
                 toastfun('Order history deleted successfully', 'success');
               } catch (error) {
@@ -168,7 +169,7 @@ const Order = ({ order2, resetOrder }) => {
   // Fetch data on component mount
   useEffect(() => {
     checkIfBeforeTenAM();
-    console.log('odetails',orderDetails,userDetails)
+    console.log('odetails', orderDetails, userDetails)
     setEmail(userDetails.email)
   }, []);
 
@@ -178,7 +179,7 @@ const Order = ({ order2, resetOrder }) => {
       <div className="order">
         <h1>Your Orders</h1>
         {isLoading ? ( // Show loader if isLoading is true
-         <FruitLoader></FruitLoader>
+          <FruitLoader></FruitLoader>
         ) : (
           <>
             {orderDetails.length > 0 && (
@@ -203,7 +204,7 @@ const Order = ({ order2, resetOrder }) => {
                       <p id="price">
                         Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
                       </p>
-                      <p id="date">Date & Time: {new Date(order.date).toLocaleString()}</p>
+                      <p id="date">Date & Time:{order.date}</p>
                       <p id="oaddress">
                         Delivery Address: {`${order.shippingAddress.street}`}
                       </p>
@@ -241,7 +242,7 @@ const Order = ({ order2, resetOrder }) => {
                 <p className="tcancel tc2" id="tc2">Quantity: {item.itemquantity}</p>
                 <p className="tcancel tc3" id="tc3">Item Price: <PiCurrencyInr id="cinr" />{item.itemprice}</p>
                 <button onClick={() => setCancel(false)} id="cback">Back</button>
-                <button onClick={() => cancelOrder(orderId,email)} id="ccancel">Confirm</button>
+                <button onClick={() => cancelOrder(orderId, email)} id="ccancel">Confirm</button>
               </div>
             )}
           </>

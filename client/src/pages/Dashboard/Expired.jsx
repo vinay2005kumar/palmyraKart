@@ -255,19 +255,27 @@ const Expired = () => {
 
   const handleRefundAll = async () => {
     const toastId = 'refund-all-toast'; // Unique ID for the toast
-    
+  
+    // Filter the expired orders to include only those that are cancelled
+    const cancelledOrders = expiredOrders.filter(order => order.status === 'Cancelled');
+  
+    if (cancelledOrders.length === 0) {
+      toastfun('No cancelled orders found to refund.', 'error');
+      return; // If no cancelled orders are found, exit the function
+    }
+  
     // Show a confirmation toast with "Yes" and "No" buttons
     if (!toast.isActive(toastId)) {
       toast.info(
         <div>
-          <p style={{ padding: '1px' }}>Do you really want to refund all selected orders?</p>
+          <p style={{ padding: '1px' }}>Do you really want to refund all selected cancelled orders?</p>
           <button
             onClick={async () => {
               // User clicked "Yes," proceed with the refund
               try {
-                setRefundAll(true)
+                setRefundAll(true);
                 const refundAllResponse = await axios.post(`${url}/refund-all`, {
-                  orders: expiredOrders.map((order) => ({
+                  orders: cancelledOrders.map((order) => ({
                     paymentId: order.paymentId,
                     amount: order.items[0].price,
                     orderId: order.orderId,
@@ -288,15 +296,15 @@ const Expired = () => {
   
                   // Refresh the orders data
                   await getdata();
-                  setRefundAll(false)
+                  setRefundAll(false);
                 } else if (refundAllResponse.status === 400) {
-                  setRefundAll(false)
+                  setRefundAll(false);
                   toastfun('The payment has already been fully refunded', 'error');
                 }
               } catch (error) {
                 console.log('Error initiating refunds for all orders:', error);
                 toastfun('Failed to initiate refunds for all orders. Please try again.', 'error');
-                setRefundAll(false)
+                setRefundAll(false);
               }
   
               // Dismiss the confirmation toast
@@ -342,6 +350,7 @@ const Expired = () => {
       );
     }
   };
+  
 
   // Toast notification function
   const toastfun = (msg, type) => {

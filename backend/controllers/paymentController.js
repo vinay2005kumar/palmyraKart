@@ -61,7 +61,7 @@ export const createOrder = async (req, res) => {
     }
 
     // Check if user is available
-    console.log('user',user,user._id)
+    console.log('user', user, user._id)
     if (!user || !user.id) {
       return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
     }
@@ -189,9 +189,9 @@ export const refundPayment = async (req, res) => {
 
     // Input validation
     if (!paymentId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid payment ID' 
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid payment ID'
       });
     }
 
@@ -202,18 +202,18 @@ export const refundPayment = async (req, res) => {
       console.log('Payment details:', payment);
     } catch (razorpayError) {
       console.error('Error fetching payment from Razorpay:', razorpayError);
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Invalid payment ID or payment not found' 
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid payment ID or payment not found'
       });
     }
 
     // Check if payment is already refunded
     if (payment.status === 'refunded') {
       console.log('Payment already refunded');
-      return res.status(400).json({ 
-        success: false, 
-        error: 'The payment has already been refunded' 
+      return res.status(400).json({
+        success: false,
+        error: 'The payment has already been refunded'
       });
     }
 
@@ -223,23 +223,23 @@ export const refundPayment = async (req, res) => {
     // Check if the payment has already been fully refunded
     if (refundedAmount >= totalAmount) {
       console.log('Payment already fully refunded');
-      return res.status(400).json({ 
-        success: false, 
-        error: 'The payment has already been fully refunded' 
+      return res.status(400).json({
+        success: false,
+        error: 'The payment has already been fully refunded'
       });
     }
 
     // Calculate 90% of the payment amount
     const refundAmount = Math.floor(totalAmount * 0.9); // 90% of the total amount in paise
- 
+
     // Check if the remaining amount is sufficient for the refund
     const remainingAmount = totalAmount - refundedAmount;
-    console.log('amount',refundAmount,totalAmount,remainingAmount)
+    console.log('amount', refundAmount, totalAmount, remainingAmount)
     if (refundAmount > remainingAmount) {
       console.log('Refund amount exceeds remaining amount');
-      return res.status(400).json({ 
-        success: false, 
-        error: `Refund amount exceeds the remaining amount of ${(remainingAmount / 100).toFixed(2)} ${currency}` 
+      return res.status(400).json({
+        success: false,
+        error: `Refund amount exceeds the remaining amount of ${(remainingAmount / 100).toFixed(2)} ${currency}`
       });
     }
 
@@ -257,9 +257,9 @@ export const refundPayment = async (req, res) => {
       console.log('Refund processed:', refund);
     } catch (refundError) {
       console.error('Error processing refund with Razorpay:', refundError);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to process refund with payment gateway' 
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to process refund with payment gateway'
       });
     }
 
@@ -268,9 +268,9 @@ export const refundPayment = async (req, res) => {
       const order = await Order.findOne({ orderId: orderNumber });
       if (!order) {
         console.log('Order not found:', orderNumber);
-        return res.status(404).json({ 
-          success: false, 
-          error: 'Order not found' 
+        return res.status(404).json({
+          success: false,
+          error: 'Order not found'
         });
       }
 
@@ -287,64 +287,235 @@ export const refundPayment = async (req, res) => {
     // Send confirmation email
     try {
       const formattedDate = new Date().toLocaleDateString('en-US', {
-        year: 'numeric', 
-        month: 'long', 
+        year: 'numeric',
+        month: 'long',
         day: 'numeric'
       });
 
-      const confirmationMessage = `<!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { text-align: center; padding: 20px 0; }
-          .logo { max-height: 60px; }
-          .content { padding: 20px 0; }
-          .amount { font-size: 24px; font-weight: bold; text-align: center; padding: 15px; margin: 20px 0; background-color: #f8f8f8; border-radius: 5px; }
-          .details { background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 20px 0; }
-          .footer { text-align: center; font-size: 12px; color: #666; padding: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h2>Refund Confirmation</h2>
-          </div>
-          <div class="content">
-            <p>Dear ${customerName},</p>
-            ${cancellationReason === 'customer' ? 
-              `<p>Your order #${orderNumber} has been successfully canceled as per your request, and a partial refund has been issued.</p>` : 
-              `<p>Your order #${orderNumber} was automatically canceled as it was not collected/delivered within the scheduled timeframe. A partial refund has been processed.</p>`
-            }
-            <div class="amount">${(refundAmount / 100).toFixed(2)} ${currency}</div>
-            <div class="details">
-              <h3>Refund Details</h3>
-              <p><strong>Order Number:</strong> #${orderNumber}</p>
-              <p><strong>Refund Amount:</strong> ${(refundAmount / 100).toFixed(2)} ${currency}</p>
-              <p><strong>Refund ID:</strong> ${refund.id}</p>
-              <p><strong>Refund Date:</strong> ${formattedDate}</p>
-            </div>
-            <p>Thank you for choosing us. We hope to serve you again soon.</p>
-          </div>
-          <div class="footer">
-            <p>If you have any questions, please contact our customer support.</p>
-          </div>
+      const confirmationMessage =
+        `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refund Confirmation</title>
+  <style>
+    /* Base styles */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Header styles */
+    .header {
+      background-color: #4CAF50;
+      color: white;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    
+    /* Content styles */
+    .content {
+      padding: 30px;
+    }
+    
+    .greeting {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    
+    /* Amount box styles */
+    .amount-box {
+      background-color: #f8f8f8;
+      border-left: 4px solid #4CAF50;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      border-radius: 4px;
+    }
+    
+    .amount-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .amount {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    
+    /* Details styles */
+    .details {
+      background-color: #f8f8f8;
+      border-radius: 4px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    
+    .details h3 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    
+    .detail-label {
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .detail-value {
+      color: #333;
+    }
+    
+    /* Message styles */
+    .message {
+      line-height: 1.7;
+      margin-bottom: 25px;
+    }
+    
+    /* Footer styles */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      background-color: #f1f1f1;
+      color: #666;
+      font-size: 13px;
+    }
+    
+    .contact-support {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f8f8;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    .support-button {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+    
+    /* Responsive styles */
+    @media only screen and (max-width: 600px) {
+      .container {
+        width: 100%;
+        border-radius: 0;
+      }
+      
+      .content {
+        padding: 20px;
+      }
+      
+      .header {
+        padding: 20px 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Refund Confirmation</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Dear ${customerName},</p>
+      
+      <div class="message">
+        ${cancellationReason === 'customer' ?
+          `<p>Your order #${orderNumber} has been successfully canceled as per your request, and a partial refund has been issued.</p>` :
+          `<p>Your order #${orderNumber} was automatically canceled as it was not collected/delivered within the scheduled timeframe. A partial refund has been processed.</p>`
+        }
+      </div>
+      
+      <div class="amount-box">
+        <div class="amount-label">REFUND AMOUNT</div>
+        <div class="amount">${(refundAmount / 100).toFixed(2)} ${currency}</div>
+      </div>
+      
+      <div class="details">
+        <h3>Refund Details</h3>
+        <div class="detail-row">
+          <span class="detail-label">Order Number:</span>
+          <span class="detail-value">#${orderNumber}</span>
         </div>
-      </body>
-      </html>`;
+        <div class="detail-row">
+          <span class="detail-label">Refund Amount:</span>
+          <span class="detail-value">${(refundAmount / 100).toFixed(2)} ${currency}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Refund ID:</span>
+          <span class="detail-value">${refund.id}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Refund Date:</span>
+          <span class="detail-value">${formattedDate}</span>
+        </div>
+      </div>
+      
+      <p>We value your business and appreciate your understanding in this matter.</p>
+      <p>Thank you for choosing us. We hope to serve you again soon.</p>
+      
+      <div class="contact-support">
+        <p>Need help with anything else?</p>
+        <a href="mailto:support@yourcompany.com" class="support-button">Contact Support</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>This is an automated message. Please do not reply to this email.</p>
+      <p>© ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`
 
-      const subject = cancellationReason === 'customer' 
+      const subject = cancellationReason === 'customer'
         ? `Your Order #${orderNumber} Has Been Cancelled - Partial Refund Processed`
-        : `Order #${orderNumber} Cancellation Due to Timeout - Partial Refund Processed`;
+        : `Order #${orderNumber} Cancellation Due to Timeout - Partial Refund Processed
+        `;
 
       const mailOptions = {
-        from: process.env.SMTP_EMAIL || 'your-email@example.com',
+        from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
         to: email,
         subject: subject,
         html: confirmationMessage,
       };
-
+      console.log(mailOptions)
       await transporter.sendMail(mailOptions);
       console.log('Refund confirmation email sent to:', email);
     } catch (emailError) {
@@ -364,9 +535,9 @@ export const refundPayment = async (req, res) => {
     });
   } catch (error) {
     console.error('Error processing refund:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Refund processing failed. Please try again or contact support.' 
+    res.status(500).json({
+      success: false,
+      error: 'Refund processing failed. Please try again or contact support.'
     });
   }
 };
@@ -407,6 +578,18 @@ export const refundAll = async (req, res) => {
   try {
     const { orders } = req.body;
 
+    // Import necessary modules at the top of your file (if not already imported)
+    // const nodemailer = require('nodemailer');
+    // const transporter = nodemailer.createTransport({
+    //   host: process.env.SMTP_HOST,
+    //   port: process.env.SMTP_PORT,
+    //   secure: process.env.SMTP_SECURE === 'true',
+    //   auth: {
+    //     user: process.env.SMTP_EMAIL,
+    //     pass: process.env.SMTP_PASSWORD
+    //   }
+    // });
+
     if (!orders || !Array.isArray(orders)) {
       return res.status(400).json({
         success: false,
@@ -416,7 +599,13 @@ export const refundAll = async (req, res) => {
 
     const results = [];
     for (const order of orders) {
-      const { paymentId, amount, orderId, email, name } = order;
+      const {
+        paymentId,
+        orderId,
+        email,
+        name: customerName,
+        currency = "INR"  // Default to INR if not provided
+      } = order;
 
       try {
         // Fetch payment details from Razorpay
@@ -453,7 +642,7 @@ export const refundAll = async (req, res) => {
           results.push({
             orderId,
             success: false,
-            error: `Refund amount exceeds the remaining amount of ${(remainingAmount / 100).toFixed(2)} INR`,
+            error: `Refund amount exceeds the remaining amount of ${(remainingAmount / 100).toFixed(2)} ${currency}`,
           });
           continue;
         }
@@ -484,60 +673,241 @@ export const refundAll = async (req, res) => {
           continue;
         }
 
-        // Send confirmation email (optional)
-        const formattedDate = new Date().toLocaleDateString('en-US', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric',
-        });
+        // Send confirmation email
+        try {
+          const formattedDate = new Date().toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
 
-        const confirmationMessage = `<!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { text-align: center; padding: 20px 0; }
-            .logo { max-height: 60px; }
-            .content { padding: 20px 0; }
-            .amount { font-size: 24px; font-weight: bold; text-align: center; padding: 15px; margin: 20px 0; background-color: #f8f8f8; border-radius: 5px; }
-            .details { background-color: #f8f8f8; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; font-size: 12px; color: #666; padding: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h2>Refund Confirmation</h2>
-            </div>
-            <div class="content">
-              <p>Dear ${name},</p>
-              <p>Your order #${orderId} has been successfully refunded.</p>
-              <div class="amount">${(refundAmount / 100).toFixed(2)} INR</div>
-              <div class="details">
-                <h3>Refund Details</h3>
-                <p><strong>Order Number:</strong> #${orderId}</p>
-                <p><strong>Refund Amount:</strong> ${(refundAmount / 100).toFixed(2)} INR</p>
-                <p><strong>Refund ID:</strong> ${refund.id}</p>
-                <p><strong>Refund Date:</strong> ${formattedDate}</p>
-              </div>
-              <p>Thank you for choosing us. We hope to serve you again soon.</p>
-            </div>
-            <div class="footer">
-              <p>If you have any questions, please contact our customer support.</p>
-            </div>
-          </div>
-        </body>
-        </html>`;
+          // Define cancellationReason and orderNumber for the email template
+          const cancellationReason = 'timeout'; // Default reason for bulk refunds
+          const orderNumber = orderId; // Using orderId as orderNumber for email template
 
-        const mailOptions = {
-          from: process.env.SMTP_EMAIL || 'your-email@example.com',
-          to: email,
-          subject: `Your Order #${orderId} Has Been Refunded`,
-          html: confirmationMessage,
-        };
+          const confirmationMessage = ` 
+          <!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refund Confirmation</title>
+  <style>
+    /* Base styles */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f9f9f9;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Header styles */
+    .header {
+      background-color: #4CAF50;
+      color: white;
+      text-align: center;
+      padding: 30px 20px;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    
+    /* Content styles */
+    .content {
+      padding: 30px;
+    }
+    
+    .greeting {
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 20px;
+    }
+    
+    /* Amount box styles */
+    .amount-box {
+      background-color: #f8f8f8;
+      border-left: 4px solid #4CAF50;
+      padding: 20px;
+      margin: 25px 0;
+      text-align: center;
+      border-radius: 4px;
+    }
+    
+    .amount-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .amount {
+      font-size: 32px;
+      font-weight: bold;
+      color: #4CAF50;
+    }
+    
+    /* Details styles */
+    .details {
+      background-color: #f8f8f8;
+      border-radius: 4px;
+      padding: 20px;
+      margin: 25px 0;
+    }
+    
+    .details h3 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #333;
+      border-bottom: 1px solid #ddd;
+      padding-bottom: 10px;
+    }
+    
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+    }
+    
+    .detail-label {
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .detail-value {
+      color: #333;
+    }
+    
+    /* Message styles */
+    .message {
+      line-height: 1.7;
+      margin-bottom: 25px;
+    }
+    
+    /* Footer styles */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      background-color: #f1f1f1;
+      color: #666;
+      font-size: 13px;
+    }
+    
+    .contact-support {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f8f8f8;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    .support-button {
+      display: inline-block;
+      background-color: #4CAF50;
+      color: white;
+      text-decoration: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: 500;
+      margin-top: 10px;
+    }
+    
+    /* Responsive styles */
+    @media only screen and (max-width: 600px) {
+      .container {
+        width: 100%;
+        border-radius: 0;
+      }
+      
+      .content {
+        padding: 20px;
+      }
+      
+      .header {
+        padding: 20px 15px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Refund Confirmation</h1>
+    </div>
+    <div class="content">
+      <p class="greeting">Dear ${customerName || 'Valued Customer'},</p>
+      
+      <div class="message">
+        <p>Your order #${orderNumber} was automatically canceled as it was not collected/delivered within the scheduled timeframe. A partial refund has been processed.</p>
+      </div>
+      
+      <div class="amount-box">
+        <div class="amount-label">REFUND AMOUNT</div>
+        <div class="amount">${(refundAmount / 100).toFixed(2)} ${currency}</div>
+      </div>
+      
+      <div class="details">
+        <h3>Refund Details</h3>
+        <div class="detail-row">
+          <span class="detail-label">Order Number:</span>
+          <span class="detail-value">#${orderNumber}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Refund Amount:</span>
+          <span class="detail-value">${(refundAmount / 100).toFixed(2)} ${currency}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Refund ID:</span>
+          <span class="detail-value">${refund.id}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Refund Date:</span>
+          <span class="detail-value">${formattedDate}</span>
+        </div>
+      </div>
+      
+      <p>We value your business and appreciate your understanding in this matter.</p>
+      <p>Thank you for choosing us. We hope to serve you again soon.</p>
+      
+      <div class="contact-support">
+        <p>Need help with anything else?</p>
+        <a href="mailto:support@yourcompany.com" class="support-button">Contact Support</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>This is an automated message. Please do not reply to this email.</p>
+      <p>© ${new Date().getFullYear()} Your Company Name. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html> `;
 
-        await transporter.sendMail(mailOptions);
+          const mailOptions = {
+            from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
+            to: email,
+            subject: `Your Order #${orderId} Has Been Refunded`,
+            html: confirmationMessage,
+          };
+
+          console.log('Attempting to send email for order:', orderId);
+          await transporter.sendMail(mailOptions);
+          console.log('Email sent successfully for order:', orderId);
+        } catch (emailError) {
+          console.error(`Error sending email for order ${orderId}:`, emailError);
+          // Continue processing despite email error
+        }
 
         results.push({
           orderId,

@@ -441,13 +441,21 @@ export const sendOrderOtp = async (req, res) => {
     }
     console.log('saved')
     // Update the order with the OTP and current date
-    const now = new Date();
-    const istOffset = 5.5 * 60 * 60 * 1000; // Convert 5.5 hours to milliseconds
-    const istDate = new Date(now.getTime() + istOffset).toISOString();
+
+    const istDate= new Date().toLocaleString('en-US', {
+      timeZone: 'Asia/Kolkata', // Set the time zone to IST
+      month: 'long', // Full month name (e.g., "October")
+      day: 'numeric', // Day of the month (e.g., "25")
+      hour: '2-digit', // Hour in 12-hour format (e.g., "02" or "11")
+      minute: '2-digit', // Minutes (e.g., "30")
+      second: '2-digit', // Seconds (e.g., "45")
+      hour12: true, // Use 12-hour format (e.g., "2:30 PM")
+    });
 
     order.date = istDate;
     order.otp = orderOtp;
     await order.save();
+    console.log(order.date)
 
     // Prepare email content
     const item = order.items[0].itemName; // Use the first item in the order
