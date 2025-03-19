@@ -1,25 +1,23 @@
-import React, { useState, useEffect,useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaRegEye } from 'react-icons/fa'; // Correct import for FaRegEye
-import { PiEyeClosedBold } from 'react-icons/pi'; // Correct import for PiEyeClosedBold
+import { FaRegEye } from 'react-icons/fa'; // For eye icon
+import { PiEyeClosedBold } from 'react-icons/pi'; // For closed eye icon
 import { getAuth, signInWithPopup, signInWithRedirect, GoogleAuthProvider, getRedirectResult } from 'firebase/auth';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './AuthPage.css';
-// Initialize Firebase
-const firebaseConfig = {
-  apiKey: "AIzaSyAGA-Lr8r_8TKqTsAzmUnX0a64a7rEQcrY",
-  authDomain: "authentication-78895.firebaseapp.com",
-  projectId: "authentication-78895",
-  storageBucket: "authentication-78895.appspot.com",
-  messagingSenderId: "116502468756",
-  appId: "1:116502468756:web:63c21d491d3d67f8bdfc81"
-};
-// const app = initializeApp(firebaseConfig);
-// const auth = getAuth(app);
+import { auth } from '../../firebase/firebase';
+
+// Google Auth Provider
 const provider = new GoogleAuthProvider();
+
+// Detect mobile devices
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
+
 const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -31,11 +29,12 @@ const LoginForm = () => {
   const [otpSent, setOtpSent] = useState(false); // Track if OTP has been sent
   const [otp, setOtp] = useState(''); // OTP input
   const [newPassword, setNewPassword] = useState(''); // New password input
+  const [showSetPassword, setShowSetPassword] = useState(false); // Toggle set password section
   const navigate = useNavigate();
   const { login } = useAuth();
   const passwordInputRef = useRef(null);
- const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user";
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  // const url = "http://localhost:4000/api/user";// Backend API URL
 
   // Handle login form submission
   const handleSubmit = async (e) => {
@@ -44,18 +43,16 @@ const LoginForm = () => {
     setError('');
 
     try {
-      const response = await axios.post(`${url}/login`, { email, password},{withCredentials:true});
+      const response = await axios.post(`${url}/login`, { email, password }, { withCredentials: true });
       if (response.data.success) {
-        const name=response.data.name
-        const isadmin=response.data.isAdmin
-        console.log('admin',isadmin)
+        const name = response.data.name;
+        const isadmin = response.data.isAdmin;
         login({ name, isadmin });
         toast.success('Login successful!');
-        if(isadmin){
-          navigate('/admin/dhome')
-        }
-        else{
-          navigate('/home')
+        if (isadmin) {
+          navigate('/admin/dhome');
+        } else {
+          navigate('/home');
         }
       }
     } catch (error) {
@@ -66,6 +63,67 @@ const LoginForm = () => {
       setLoading(false);
     }
   };
+
+  // Handle Google Sign-In
+  const handleGoogleSignIn = async () => {
+    try {
+      if (isMobileDevice()) {
+        // Use redirect for mobile devices
+        await signInWithRedirect(auth, provider);
+      } else {
+        // Use popup for desktop devices
+        const result = await signInWithPopup(auth, provider);
+        handleGoogleSignInSuccess(result.user);
+      }
+    } catch (error) {
+      console.error('Error during Google Sign-In:', error);
+      toast.error('Failed to sign in with Google. Please try again.');
+    }
+  };
+
+  // Handle Google Sign-In success
+  const handleGoogleSignInSuccess = async (user) => {
+    try {
+      // Send user data to backend
+      const response = await axios.post(`${url}/google-login`, {
+        email: user.email,
+        name: user.displayName,
+        uid: user.uid,
+      }, { withCredentials: true });
+
+      if (response.data.success) {
+        const name = response.data.name;
+        const isadmin = response.data.isAdmin;
+        login({ name, isadmin });
+        toast.success('Google Sign-In successful!');
+        if (isadmin) {
+          navigate('/admin/dhome');
+        } else {
+          navigate('/home');
+        }
+      }
+    } catch (error) {
+      console.error('Error during Google Sign-In:', error);
+      toast.error('Failed to sign in with Google. Please try again.');
+    }
+  };
+
+  // Handle redirect result after Google Sign-In
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result) {
+          handleGoogleSignInSuccess(result.user);
+        }
+      } catch (error) {
+        console.error('Error handling redirect result:', error);
+        toast.error('Failed to sign in with Google. Please try again.');
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
 
   // Toggle password visibility
   const toggleEye = () => {
@@ -98,8 +156,7 @@ const LoginForm = () => {
     } catch (error) {
       const message = error.response?.data?.message || 'An error occurred. Please try again.';
       toast.error(message);
-    }
-    finally{
+    } finally {
       setLoading(false);
     }
   };
@@ -122,16 +179,15 @@ const LoginForm = () => {
       if (response.data.success) {
         toast.success('Password reset successful!');
         navigate('/auth');
-        setForgot(false)
-        localStorage.setItem('username',response.data.username)
+        setForgot(false);
+        localStorage.setItem('username', response.data.username);
       }
     } catch (error) {
       const message = error.response?.data?.message || 'An error occurred. Please try again.';
       toast.error(message);
-    }
-    finally{
+    } finally {
       setLoading(false);
-      setForgot(false)
+      setForgot(false);
     }
   };
 
@@ -165,7 +221,7 @@ const LoginForm = () => {
                     placeholder="Enter your email"
                   />
                   <button onClick={handleSendOtp} className="pbutton">
-                    {loading?'Sending OTP...':'Send OTP'}
+                    {loading ? 'Sending OTP...' : 'Send OTP'}
                   </button>
                 </>
               )}
@@ -182,7 +238,7 @@ const LoginForm = () => {
                     placeholder="Enter OTP"
                     required
                   />
-                  
+
                   <label>New Password:</label>
                   <input
                     type="password"
@@ -193,7 +249,7 @@ const LoginForm = () => {
                     required
                   />
                   <button className="pbutton" id="pbutton" onClick={handleResetPassword}>
-                   {loading?"Resetting Password":"Reset Password"}
+                    {loading ? "Resetting Password" : "Reset Password"}
                   </button>
                 </>
               )}
@@ -241,7 +297,7 @@ const LoginForm = () => {
             <p id="or">OR</p>
             <div className="google">
               <img src="gimg3.png" alt="Google" id="gimg" width="30em" height="30em" />
-              <button id="gbutton">
+              <button id="gbutton" onClick={handleGoogleSignIn}>
                 Sign in with Google
               </button>
             </div>

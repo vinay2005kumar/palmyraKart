@@ -259,12 +259,12 @@
 }
 
   @media screen and (max-width:700px){
-      .google{
+      /* .google{
           display:none;
-      }
-      #or{
+      } */
+      /* #or{
           display:none;
-      }
+      } */
     .ahome{
       position: absolute;
       left: 2em;
@@ -324,12 +324,6 @@
     .vgoback{
       position: relative;
        left: 85%;
-    }
-    #or{
-      display: none;
-    }
-    .google{
-      display: none;
     }
   }
   @media only screen and (max-width:400px) {

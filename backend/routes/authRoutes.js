@@ -1,5 +1,5 @@
 import express from 'express'
-import { login,logout,register,verifyEmail,sendVerifyOtp,sendResetOtp,resetPassword, refreshToken } from '../controllers/authController.js'
+import { login,logout,register,verifyEmail,sendVerifyOtp,sendResetOtp,resetPassword, refreshToken, googleSignIn, googleSetPassword } from '../controllers/authController.js'
 import userAuth from '../middleware/userAuth.js'
 
 
@@ -14,6 +14,8 @@ authRouter.post('/verify-account',verifyEmail)
 authRouter.post('/send-reset-otp',sendResetOtp)
 authRouter.post('/reset-password',resetPassword)
 authRouter.post('/refresh-token',refreshToken)
+authRouter.post('/google-login',googleSignIn)
+authRouter.post('/set-password',googleSetPassword)
 
 
 

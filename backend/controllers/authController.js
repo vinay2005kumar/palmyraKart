@@ -51,6 +51,82 @@ export const refreshToken = async (req, res) => {
     return res.status(403).json({ success: false, message: 'Invalid refresh token' });
   }
 };
+
+export const googleSignIn=async(req,res)=>{
+  const { email, name, uid } = req.body;
+  console.log(req.body)
+
+  try {
+    // Check if the user already exists
+    let user = await userModel.findOne({ email });
+
+    if (!user) {
+      // Create a new user if they don't exist
+      user = new userModel({
+        name,
+        email,
+        uid,
+        provider: 'google', // Track the authentication provider
+        isAccountVerified: true, // Mark account as verified
+        emailVerified: true, // Mark email as verified
+      });
+      await user.save();
+    }
+    
+    // Generate a JWT token for the user
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
+      expiresIn: '1h',
+    });
+    const refreshToken = jwt.sign({ id: user._id,isAdmin:user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+
+    // Set tokens in HTTP-only cookies
+    res.cookie('token', token, {
+      httpOnly: true,  // ✅ Prevents JavaScript access (secure)
+      secure: true,  // ✅ Ensures it only works in HTTPS
+      sameSite: 'None',  // ✅ Required for cross-origin request
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,  // ✅ Prevents JavaScript access (secure)
+      secure: true,  // ✅ Ensures it only works in HTTPS
+      sameSite: 'None',  // ✅ Required for cross-origin request
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    // Return the user and token
+    res.status(200).json({
+      success: true,
+       name:user.name,
+       isAdmin:user.isAdmin
+    });
+  } catch (error) {
+    console.log('Error during Google Sign-In:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
+export const googleSetPassword=async(req,res)=>{
+  const { email, newPassword } = req.body;
+
+  try {
+    // Find the user by email
+    const user = await userModel.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+ // Hash password
+ const hashPassword = await bcrypt.hash(password, 10);
+
+    // Update the user's password
+    user.password = hashPassword;
+    await user.save();
+
+    res.status(200).json({ success: true, message: 'Password set successfully' });
+  } catch (error) {
+    console.error('Error setting password:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+}
 // Register a new user
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
@@ -76,7 +152,7 @@ export const register = async (req, res) => {
 
     // Generate tokens
     const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ id: user._id,isAdmin:user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     // Set tokens in HTTP-only cookies
     res.cookie('token', token, {
@@ -87,9 +163,9 @@ export const register = async (req, res) => {
     });
 
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      httpOnly: true,  // ✅ Prevents JavaScript access (secure)
+      secure: true,  // ✅ Ensures it only works in HTTPS
+      sameSite: 'None',  // ✅ Required for cross-origin request
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
@@ -120,7 +196,7 @@ export const login = async (req, res) => {
 
     // Generate tokens
     const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ id: user._id }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ id: user._id,isAdmin:user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     // Set tokens in HTTP-only cookies
     res.cookie('token', token, {

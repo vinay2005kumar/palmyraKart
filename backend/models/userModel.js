@@ -54,6 +54,7 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  provider: { type: String},
   verifyOtp: { type: String, default: '' },
   verifyOtpExpireAt: { type: Date, default: null },
   isAccountVerified: { type: Boolean, default: false },
