@@ -35,7 +35,6 @@ const LoginForm = () => {
   const { login } = useAuth();
   const passwordInputRef = useRef(null);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user";
 
   // Check for redirect results from Google Auth on component mount
   useEffect(() => {
@@ -43,26 +42,12 @@ const LoginForm = () => {
       try {
         setProcessingRedirect(true);
         const result = await getRedirectResult(auth);
-        
         if (result && result.user) {
-          console.log("Redirect result received:", result.user.email);
           await handleGoogleSignInSuccess(result.user);
-        } else {
-          // Check if we were expecting a redirect result
-          const pendingAuth = localStorage.getItem('googleAuthPending');
-          if (pendingAuth === 'true') {
-            // Clear the pending flag as we've now processed the redirect
-            localStorage.removeItem('googleAuthPending');
-            
-            // If we were expecting a result but didn't get one, something went wrong
-            console.log("No redirect result but was expecting one");
-            // We don't want to show an error because it might just be a regular page load
-          }
         }
       } catch (error) {
         console.error('Error handling redirect result:', error);
         toast.error('Failed to sign in with Google. Please try again.');
-        localStorage.removeItem('googleAuthPending');
       } finally {
         setProcessingRedirect(false);
       }
@@ -71,40 +56,10 @@ const LoginForm = () => {
     checkRedirectResult();
   }, []);
 
-  // Handle login form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const response = await axios.post(`${url}/login`, { email, password }, { withCredentials: true });
-      if (response.data.success) {
-        const name = response.data.name;
-        const isadmin = response.data.isAdmin;
-        login({ name, isadmin });
-        toast.success('Login successful!');
-        if (isadmin) {
-          navigate('/admin/dhome');
-        } else {
-          navigate('/home');
-        }
-      }
-    } catch (error) {
-      const message = error.response?.data?.message || 'An error occurred. Please try again.';
-      setError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Handle Google Sign-In success
   const handleGoogleSignInSuccess = async (user) => {
     try {
       setLoading(true);
-      console.log("Processing Google sign-in for:", user.email);
-      
       // Send user data to backend
       const response = await axios.post(`${url}/google-login`, {
         email: user.email,
@@ -112,31 +67,20 @@ const LoginForm = () => {
         uid: user.uid,
       }, { withCredentials: true });
 
-      console.log("Backend response:", response.data);
-
       if (response.data.success) {
         const name = response.data.name;
         const isadmin = response.data.isAdmin;
-        
-        // Store authentication state
         login({ name, isadmin });
-        
         toast.success('Google Sign-In successful!');
-        
-        // Navigate after a short delay to ensure state is updated
-        setTimeout(() => {
-          if (isadmin) {
-            navigate('/admin/dhome');
-          } else {
-            navigate('/home');
-          }
-        }, 300);
-      } else {
-        throw new Error(response.data.message || "Authentication failed");
+        if (isadmin) {
+          navigate('/admin/dhome');
+        } else {
+          navigate('/home');
+        }
       }
     } catch (error) {
       console.error('Error during Google Sign-In:', error);
-      toast.error('Failed to complete Google sign-in process. Please try again.');
+      toast.error('Failed to sign in with Google. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -150,52 +94,33 @@ const LoginForm = () => {
     try {
       setLoading(true);
       
-      // Mark that we're expecting a redirect result
+      // Add persistance to local storage to help with redirects
       localStorage.setItem('googleAuthPending', 'true');
       
       if (isMobile) {
-        // For mobile: always use redirect
-        console.log("Using redirect flow for mobile");
-        // Add additional scopes if needed
-        provider.addScope('profile');
-        provider.addScope('email');
-        
-        // Set custom parameters for better UX
-        provider.setCustomParameters({
-          prompt: 'select_account'
-        });
-        
+        // Better approach for mobile: always use redirect
         await signInWithRedirect(auth, provider);
-        // Code execution stops here until redirect completes
+        // The redirect will navigate away, so we won't reach this point until the user returns
       } else {
-        // For desktop: try popup first, fallback to redirect
+        // For desktop, try popup first, fallback to redirect if popup fails
         try {
-          console.log("Using popup flow for desktop");
           const result = await signInWithPopup(auth, provider);
-          
           if (result && result.user) {
-            // No need for localStorage handling in popup flow
-            localStorage.removeItem('googleAuthPending');
             await handleGoogleSignInSuccess(result.user);
           }
         } catch (popupError) {
           console.error('Popup error:', popupError);
-          
           // If popup is blocked or fails, fall back to redirect
           if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
             toast.info('Popup was blocked. Redirecting for authentication...');
             await signInWithRedirect(auth, provider);
-            // Code execution stops here until redirect completes
           } else {
             throw popupError; // Re-throw other errors
           }
         }
       }
     } catch (error) {
-      console.error('Error initiating Google Sign-In:', error);
-      
-      // Clear pending flag since we encountered an error
-      localStorage.removeItem('googleAuthPending');
+      console.error('Error during Google Sign-In:', error);
       
       if (error.code === 'auth/network-request-failed') {
         toast.error('Network error. Please check your internet connection.');
@@ -204,76 +129,11 @@ const LoginForm = () => {
       }
     } finally {
       setLoading(false);
+      localStorage.removeItem('googleAuthPending');
     }
   };
 
-  // Toggle password visibility
-  const toggleEye = () => {
-    setEye(!eye);
-    if (passwordInputRef.current) {
-      passwordInputRef.current.type = eye ? 'password' : 'text';
-    }
-  };
-
-  // Toggle forgot password section
-  const toggleForgot = () => {
-    setForgot(!forgot);
-    setOtpSent(false);
-  };
-
-  // Handle sending OTP for password reset
-  const handleSendOtp = async () => {
-    setLoading(true);
-    if (!forgotEmail) {
-      toast.warn('Please enter your email.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await axios.post(`${url}/send-reset-otp`, { email: forgotEmail });
-      if (response.data.success) {
-        toast.success(`OTP sent to ${forgotEmail}`);
-        setOtpSent(true);
-      }
-    } catch (error) {
-      const message = error.response?.data?.message || 'An error occurred. Please try again.';
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle password reset submission
-  const handleResetPassword = async () => {
-    setLoading(true);
-    if (!otp || !newPassword) {
-      toast.warn('Please enter all details.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await axios.post(`${url}/reset-password`, {
-        email: forgotEmail,
-        otp,
-        newPassword,
-      }, { withCredentials: true });
-
-      if (response.data.success) {
-        toast.success('Password reset successful!');
-        setForgot(false);
-        if (response.data.username) {
-          localStorage.setItem('username', response.data.username);
-        }
-      }
-    } catch (error) {
-      const message = error.response?.data?.message || 'An error occurred. Please try again.';
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Rest of your component code...
 
   return (
     <>
