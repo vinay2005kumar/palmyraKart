@@ -8,104 +8,78 @@ import { IoReorderThree } from "react-icons/io5";
 import { RxCross1 } from "react-icons/rx";
 import { CgNotes } from "react-icons/cg";
 import axios from 'axios';
-import { database, ref, set, onValue,get } from "../firebase/firebase";
+import { database, ref, set, onValue, get } from "../firebase/firebase";
+
 const Topbar = () => {
-  const { isAuthenticated, user, logout,dkart,dashboardkart } = useAuth();
-  //const [name, setName] = useState(localStorage.getItem('username') ? { name: localStorage.getItem('username') } : null);
-  const [name, setName] = useState();
-  const[tname,settname]=useState()
+  const { isAuthenticated, user, logout, dkart, dashboardkart } = useAuth();
+  const [name, setName] = useState('');
+  const [tname, settname] = useState(false);
   const [ticon, setticon] = useState(false);
   const [note, setNote] = useState(false); // State to manage Terms and Conditions modal
   const navigate = useNavigate();
   const iconContainerRef = useRef(null);
   const navbarRef = useRef(null);
   const [language, setLanguage] = useState('english');
-  const[istoggleicon,setistoggleicon]=useState(true)
   const isMobile = window.innerWidth < 765;
-  const[iskart,setkart]=useState()
+  const [iskart, setkart] = useState();
+  const [isOpen, setIsOpen] = useState(null);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = 'http://localhost:4000/api/user';
-// ------------------------------------------------------------
-  // const socket = io(url, {
-  //   transports: ["websocket", "polling"], // Force WebSocket transport
-  //   withCredentials: true, // Include credentials (optional)
-  //   reconnection: true, // Enable auto-reconnect
-  //   reconnectionAttempts: 5, // Try reconnecting 5 times
-  //   reconnectionDelay: 1000, // Delay between reconnect attempts
-  // });
 
-// ------------------------------------------------------------
-const toggleicon=()=>{
-  setistoggleicon(prev=>!prev)
-}
-const [isOpen, setIsOpen] = useState(null);
+  // Handle Firebase status
+  useEffect(() => {
+    const url = import.meta.env.VITE_FIREBASE_URL;
+    const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
+    const statusRef = ref(database, `${url}/${collection}`);
+    
+    // Fetch initial value once
+    get(statusRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        setIsOpen(snapshot.val().isOpen);
+      }
+    });
+    
+    // Listen for real-time updates
+    const unsubscribe = onValue(statusRef, (snapshot) => {
+      if (snapshot.exists()) {
+        setIsOpen(snapshot.val().isOpen);
+      }
+    });
+    
+    return () => unsubscribe(); // Cleanup on unmount
+  }, []);
 
-useEffect(() => {
-  const url=import.meta.env.VITE_FIREBASE_URL
-  const collection=import.meta.env.VITE_FIREBASE_COLLECTION
-  const statusRef = ref(database, `${url}/${collection}`);
- // Fetch initial value once
- get(statusRef).then((snapshot) => {
-  if (snapshot.exists()) {
-    setIsOpen(snapshot.val().isOpen);
-  }
-});
-  // Listen for real-time updates
-  const unsubscribe = onValue(statusRef, (snapshot) => {
-    if (snapshot.exists()) {
-      setIsOpen(snapshot.val().isOpen);
+  // Update authentication status
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setName(user);
+      settname(true);
+    } else {
+      settname(false);
+      setName('');
     }
-  });
-  console.log('isopen',isOpen)
-  return () => unsubscribe(); // Cleanup on unmount
-}, []);
+  }, [user, isAuthenticated]); 
 
-
-useEffect(() => {
-  // console.log('top', user, isAuthenticated);
-  if(isAuthenticated){
-    setName(user);
-    settname(true);
-  }
-  else{
-    settname(false)
-  }
-}, [user, isAuthenticated]); 
-
-   // Fetch initial kart status
-   useEffect(() => {
+  // Handle kart status
+  useEffect(() => {
     const fetchKartStatus = async () => {
       try {
         const res = await axios.get(`${url}/kart-status`);
-    
-        const value = res.data; // Access the value
-        setkart(value); 
-       console.log('d t status',iskart)
+        const value = res.data;
+        setkart(value);
       } catch (error) {
-        console.error('Error fetching user:', error);
+        console.error('Error fetching kart status:', error);
       }
     };
-  
+    
+    // Uncomment if you want to fetch kart status on component mount
     // fetchKartStatus();
-    // ------------------------------------------------------------
-    // Listen for real-time updates
-    // socket.on("kart-status-updated", (status) => {
-    //   setkart(status);
-    //   console.log('t status',iskart)
-    // });
-    // return () => {
-    //   socket.off("kart-status-updated");
-    // };
-   
-// ------------------------------------------------------------
-// console.log('top',user,isAuthenticated)
   }, []);
 
   const termsAndConditions = {
     english: [
       "Authentication is required to place an order, and you will be notified of any updates regarding your order.",
       <>Orders can be placed <strong>between 6:00 PM and 9:00 AM.</strong> You may cancel your order <strong> before 9:00 AM on the same day."</strong></>,
-      "Occasionally, the website may be closed due to weather conditions (e.g., rain). Don’t worry, it won’t affect your orders.",
+      "Occasionally, the website may be closed due to weather conditions (e.g., rain). Don't worry, it won't affect your orders.",
       <>Please collect your items <strong>between 10:00 AM and 5:00 PM.</strong> Orders not picked up within this time frame will expire and be marked as 'expired.'</>,
       <> <strong>"If your order status expires, you will receive a 90% refund of the amount paid."</strong></>,
       "We apologize for the inconvenience. Currently, we have a limited delivery area, but we are working to expand and bring fresh fruits to more locations soon.",
@@ -143,26 +117,25 @@ useEffect(() => {
       "3. अपनी डिटेल्स भरें और 'Save' पर क्लिक करें। 'Customer Details' में जानकारी देखें। भुगतान करें।",
       "4. भुगतान पूरा होने पर, आपको OTP मिलेगा। इसे गोपनीय रखें। फिर 'Orders' अनुभाग में जाएं।",
     ]
-    
   };
+
   const handleLanguageChange = (event) => {
     setLanguage(event.target.value);
   };
-  // Update name from user object
-  useEffect(() => {
-    if (user && user!='undefined') {
-      setName(user);
-      settname(true)
-    } else {
-      setName(''); // Ensure name is reset to avoid "undefined"
-    }
-      // handleKart()
-   
-  }, [user]);
+
+  // Handle toggle icon
+  const handleToggleIcon = () => {
+    setticon(!ticon);
+  };
+
   // Logout Confirmation Toast
   const handleLogout = () => {
     const toastId = 'logout-toast';
-    handleticon();
+    
+    // Close navbar if open
+    if (ticon) {
+      setticon(false);
+    }
 
     if (!toast.isActive(toastId)) {
       toast.info(
@@ -219,11 +192,6 @@ useEffect(() => {
         }
       );
     }
-  }; 
-  // Handle Toggle Icon
-  const handleticon = () => {
-    setticon((prevTicon) => !prevTicon);
-    toggleicon()
   };
 
   // Handle Click Outside to Close Navbar
@@ -234,23 +202,21 @@ useEffect(() => {
       !navbarRef.current.contains(event.target) &&
       iconContainerRef.current &&
       !iconContainerRef.current.contains(event.target)
-      
     ) {
       setticon(false);
-      setistoggleicon(true)
     }
   };
 
   useEffect(() => {
-    // console.log('tkart',kart)
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [ticon,dkart]);
+  }, [ticon, dkart]);
+
   return (
     <>
-      {/* <ToastContainer /> */}
+      <ToastContainer />
       {/* Topbar Component */}
       <nav id="nav">
         <NavLink to="/">
@@ -258,42 +224,47 @@ useEffect(() => {
             <img src="plogo.png" alt="Logo" id="limg2" />
           </div>
         </NavLink>
+        
         {tname && (
           <p className="logotext">Hello {user}</p>
         )}
-        <div ref={iconContainerRef}>
-          {istoggleicon?  <IoReorderThree
-            id="ticon" onClick={handleticon}
-          />:<RxCross1 onClick={handleticon} id='ticon2'/>}
-          <div className="note-icon"style={{cursor:'pointer'}}>
-            <CgNotes  onClick={() => setNote(true)} />
-          <p style={{fontSize:'0.5em',textWrap:'nowrap',position:'absolute',bottom:'-1.5em'}}>Terms & Conditions</p>
-          </div>
+        
+        <div ref={iconContainerRef} className="icon-container">
+          {ticon ? (
+            <RxCross1 onClick={handleToggleIcon} id='ticon2' />
+          ) : (
+            <IoReorderThree id="ticon" onClick={handleToggleIcon} />
+          )}
           
+          <div className="note-icon" style={{cursor:'pointer'}}>
+            <CgNotes onClick={() => setNote(true)} />
+            <p style={{fontSize:'0.5em', textWrap:'nowrap', position:'absolute', bottom:'-1.5em'}}>Terms & Conditions</p>
+          </div>
         </div>
 
         <div id="tbox" className={ticon ? 'active' : ''} ref={navbarRef}>
-          <NavLink to="/" className="ttext">
+          <NavLink to="/" className="ttext" onClick={() => setticon(false)}>
             <p className="ttext">Home</p>
           </NavLink>
-          <NavLink to="/about" className="ttext">
+          <NavLink to="/about" className="ttext" onClick={() => setticon(false)}>
             <p className="ttext">About</p>
           </NavLink>
-          <NavLink to="/ordermenu" className="ttext">
+          <NavLink to="/ordermenu" className="ttext" onClick={() => setticon(false)}>
             <p className="ttext">OrderMenu</p>
           </NavLink>
-          <NavLink to="/order" className="ttext">
+          <NavLink to="/order" className="ttext" onClick={() => setticon(false)}>
             <p className="ttext">Orders</p>
           </NavLink>
-          <NavLink to="/reviews" className="ttext">
+          <NavLink to="/reviews" className="ttext" onClick={() => setticon(false)}>
             <p className="ttext">Reviews</p>
           </NavLink>
-          {isAuthenticated && tname?(
+          
+          {isAuthenticated && tname ? (
             <p className="ttext" onClick={handleLogout} style={{ cursor: 'pointer' }}>
               Logout
             </p>
           ) : (
-            <NavLink to="/auth" className="ttext">
+            <NavLink to="/auth" className="ttext" onClick={() => setticon(false)}>
               <p className="ttext">Login</p>
             </NavLink>
           )}
@@ -307,7 +278,11 @@ useEffect(() => {
             <RxCross1 onClick={() => setNote(false)} className="note-close" />
             <h2>Terms and Conditions</h2>
             <p style={{paddingLeft:'0.8em'}}>Welcome to our website! Here are the terms and conditions:</p>
-            <select value={language} onChange={handleLanguageChange} style={{position:'absolute'}} className='lselect'
+            <select 
+              value={language} 
+              onChange={handleLanguageChange} 
+              style={{position:'absolute'}} 
+              className='lselect'
             >
               <option value="english">English</option>
               <option value="telugu">Telugu</option>
@@ -322,12 +297,17 @@ useEffect(() => {
         </div>
       )}
 
-      {isOpen && (<div className='kart'>
-        {isOpen === null ? <h4>Loading...</h4> : 
-        <marquee behavior="" direction="" >
-        "PalmyraKart is temporarily unavailable for placing orders. Please visit us again soon to check for updates!"</marquee>}
-        </div>)}
-        
+      {isOpen && (
+        <div className='kart'>
+          {isOpen === null ? (
+            <h4>Loading...</h4>
+          ) : (
+            <marquee behavior="" direction="">
+              "PalmyraKart is temporarily unavailable for placing orders. Please visit us again soon to check for updates!"
+            </marquee>
+          )}
+        </div>
+      )}
     </>
   );
 };
