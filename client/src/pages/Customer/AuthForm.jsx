@@ -261,8 +261,8 @@ const SignupForm = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [eye, setEye] = useState(false);
-  //const url = 'https://palmyra-fruit.onrender.com/api/user';
-  const url = 'http://localhost:4000/api/user';
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = 'http://localhost:4000/api/user';
   const passwordInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const handleRegister = async (e) => {
