@@ -168,7 +168,7 @@ const Order = ({ order2, resetOrder }) => {
   // Handle payment success toast
   useEffect(() => {
     if (order2) {
-      toast.success('Payment Successful! Your order will be processed shortly.');
+      toastfun('Payment Successful! Your order will be processed shortly.','success');
       resetOrder();
     }
   }, [order2, resetOrder]);
@@ -177,7 +177,7 @@ const Order = ({ order2, resetOrder }) => {
   useEffect(() => {
     checkAuth()
     checkIfBeforeTenAM();
-    console.log('odetails', orderDetails, userDetails)
+    // console.log('odetails', orderDetails, userDetails)
     setEmail(userDetails.email)
   }, []);
 

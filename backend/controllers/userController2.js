@@ -1261,6 +1261,9 @@ export const sendNotification = async (req, res) => {
             <p class="message">
                 We're excited to announce that our fresh Palmyra fruit season has begun! This tropical delicacy is now available in our store.
             </p>
+              <p class="message">
+               ${message}
+            </p>
             <div class="promotion">
                 <h3 class="promotion-title">Limited Time Fruits</h3>
                 <p><a href='https://palmyrakart.onrender.com'>Visit Link</a> To Make Fresh Fruits Quickly</p>
