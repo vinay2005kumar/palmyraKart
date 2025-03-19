@@ -690,14 +690,14 @@ export const sendOrderOtp = async (req, res) => {
         <p><strong>Quantity:</strong> ${quantity}</p>
         <p><strong>Total Price:</strong> <span class="highlight">₹${price}</span></p>
         <p><strong>Status:</strong> ${status}</p>
-        <p><strong>Ordered Date:</strong> ${formattedDate}</p>
+        <p><strong>Ordered Date:</strong> ${order.date}</p>
       </div>
 
       <div class="payment-details">
         <h3>💳 Payment Information</h3>
         <p><strong>Payment ID:</strong> ${order.paymentId}</p>
         <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
-        <p><strong>Payment Date:</strong> ${formattedDate}</p>
+        <p><strong>Payment Date:</strong> ${order.date}</p>
         <p><strong>Payment Status:</strong> <span class="highlight">Successful</span></p>
       </div>
 
@@ -719,14 +719,11 @@ export const sendOrderOtp = async (req, res) => {
         <h3>📍 Collection Information</h3>
         <ul>
           <li><strong>Ready for Collection:</strong> <span class="highlight">After 10:00 AM</span></li>
-          <li><strong>Collection Deadline:</strong> <span class="highlight">5:00 PM on ${formattedDeadline}</span></li>
+          <li><strong>Collection Deadline:</strong> <span class="highlight">5:00 PM on ${pickupDeadline}</span></li>
           <li><strong>Collection Point:</strong> <span class="highlight">PalmyraKart Store, Main Street</span></li>
           <li>If you're unable to collect your order, <span class="highlight">don't worry!</span> A refund may be available as per our Terms & Conditions.</li>
           <li>You can also <span class="highlight">place a fresh order for tomorrow.</span> We'd love to serve you again!</li>
         </ul>
-        <p style="text-align: center; margin-top: 15px;">
-          <a href="https://palmyrakart.onrender.com/track-order?id=${order.orderId}" class="btn tracking-btn">Track Your Order</a>
-        </p>
       </div>
 
       <div class="help-section">
@@ -795,7 +792,7 @@ export const verifyOrder = async (req, res) => {
       // Prepare email content
       const item = order.items[0].itemName; // Use the first item in the order
       const quantity = order.items[0].quantity;
-      const price = order.totalAmount;
+      const price = order.finalAmount;
       const date = order.date;
 
       const formattedDate = new Date(date).toLocaleString('en-US', {
@@ -998,7 +995,7 @@ export const verifyOrder = async (req, res) => {
         <p><strong>Quantity:</strong> ${quantity}</p>
         <p><strong>Total Price:</strong> ₹${price}</p>
         <p><strong>Status:</strong> <span class="highlight">Delivered</span></p>
-        <p><strong>Order Purchasing Date:</strong> ${formattedDate}</p>
+        <p><strong>Order Purchasing Date:</strong> ${order.date}</p>
         <p><strong>Delivery Date:</strong> ${new Date().toLocaleString('en-US', {
           month: 'long',
           day: 'numeric',
@@ -1102,11 +1099,218 @@ export const sendNotification = async (req, res) => {
         // Send email to each user
         for (const user of users) {
           const email = user.email;
+          const msg=
+         `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Special Offer on Palmyra Fruits</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f7f2;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #2e7d32;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .logo {
+            max-width: 150px;
+            margin-bottom: 10px;
+        }
+        .banner {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .content {
+            padding: 30px;
+            color: #333333;
+        }
+        .title {
+            color: #2e7d32;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .message {
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .product-container {
+            display: flex;
+            margin: 20px 0;
+            background-color: #f4f9f4;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .product-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        .product-info {
+            flex: 1;
+        }
+        .product-name {
+            font-weight: bold;
+            font-size: 18px;
+            color: #2e7d32;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .product-description {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .product-price {
+            font-weight: bold;
+            color: #e65100;
+        }
+        .cta-button {
+            display: block;
+            background-color: #e65100;
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            text-align: center;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 25px auto;
+            width: 200px;
+            transition: background-color 0.3s;
+        }
+        .cta-button:hover {
+            background-color: #d84315;
+        }
+        .footer {
+            background-color: #f4f4f4;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666666;
+        }
+        .social-icons {
+            margin: 15px 0;
+        }
+        .social-icon {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background-color: #2e7d32;
+            border-radius: 50%;
+            margin: 0 5px;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+            text-decoration: none;
+        }
+        .promotion {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .promotion-title {
+            color: #e65100;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .unsubscribe {
+            color: #999999;
+            text-decoration: underline;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .animate-fade {
+            animation: fadeIn 1s ease-in;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://via.placeholder.com/150x50" alt="Palmyra Fruits" class="logo">
+            <h1>Fresh Palmyra Fruits</h1>
+        </div>
+        <img src="https://via.placeholder.com/600x300" alt="Fresh Palmyra Fruits" class="banner">
+        <div class="content">
+            <h2 class="title animate-fade">Special Season Offer!</h2>
+            <p class="message">
+                Dear Valued Customer,
+            </p>
+            <p class="message">
+                We're excited to announce that our fresh Palmyra fruit season has begun! This tropical delicacy is now available in our store.
+            </p>
+            <div class="promotion">
+                <h3 class="promotion-title">Limited Time Fruits</h3>
+                <p><a href='https://palmyrakart.onrender.com'>Visit Link</a> To Make Fresh Fruits Quickly</p>
+            </div>
+            <h3>Featured Products:</h3>
+            <div class="product-container animate-fade">
+                <img src="https://via.placeholder.com/120" alt="Fresh Palmyra Fruit" class="product-image">
+                <div class="product-info">
+                    <h4 class="product-name">Fresh Palmyra Fruit</h4>
+                    <p class="product-description">Handpicked from organic farms, our Palmyra fruits are rich in vitamins and minerals.</p>
+                    <p class="product-price">$5.99 per kg</p>
+                </div>
+            </div>
+            <div class="product-container animate-fade">
+                <img src="https://via.placeholder.com/120" alt="Palmyra Fruit Juice" class="product-image">
+                <div class="product-info">
+                    <h4 class="product-name">Palmyra Fruit Juice</h4>
+                    <p class="product-description">Pure, refreshing, and naturally sweet juice made from fresh Palmyra fruits.</p>
+                    <p class="product-price">$3.99 per bottle</p>
+                </div>
+            </div>
+            <a href="https://palmyrakart.onrender.com" class="cta-button">SHOP NOW</a>
+            <p class="message">
+                Thank you for choosing our store for your Palmyra fruit needs. We look forward to serving you with the freshest and best quality fruits.
+            </p>
+            <p class="message">
+                Best regards,<br>
+                The Palmyra Fruits Team
+            </p>
+        </div>
+        <div class="footer">
+            <div class="social-icons">
+                <a href="https://facebook.com/palmyrafruits" class="social-icon">f</a>
+                <a href="https://instagram.com/palmyrafruits" class="social-icon">i</a>
+                <a href="https://twitter.com/palmyrafruits" class="social-icon">t</a>
+            </div>
+            <p>© 2025 Palmyra Fruits. All rights reserved.</p>
+            <p>123 Fruit Street, Tropical City, TC 12345</p>
+            <p>
+                <a href="https://yourwebsite.com/unsubscribe" class="unsubscribe">Unsubscribe</a> from our mailing list
+            </p>
+        </div>
+    </div>
+</body>
+</html>`
           const mailOptions = {
             from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
             to: email,
             subject: subject,
-            text: message,
+            html: msg, // Use personalized HTML
           };
   
           await transporter.sendMail(mailOptions);
@@ -1322,7 +1526,7 @@ export const closeOrder = async (req, res) => {
         <p><strong>Quantity:</strong> ${quantity}</p>
         <p><strong>Total Price:</strong> ₹${price}</p>
         <p><strong>Status:</strong> <span class="highlight">Cancelled</span></p>
-        <p><strong>Order Purchasing Date:</strong> ${formattedDate}</p>
+        <p><strong>Order Purchasing Date:</strong> ${order.date}</p>
         <p><strong>Cancellation Time:</strong> ${new Date().toLocaleString('en-US', {
               timeZone: 'Asia/Kolkata',
               month: 'long',
@@ -1350,8 +1554,8 @@ export const closeOrder = async (req, res) => {
       <p>&copy; 2025 PalmyraKart. All rights reserved.</p>
       <p>
         <small>
-          <a href="https://palmyrakart.onrender.com/privacy" style="color: #666; margin: 0 10px;">Privacy Policy</a> | 
-          <a href="https://palmyrakart.onrender.com/terms" style="color: #666; margin: 0 10px;">Terms & Conditions</a>
+          <a href="https://palmyrakart.onrender.com" style="color: #666; margin: 0 10px;">Privacy Policy</a> | 
+          <a href="https://palmyrakart.onrender.com" style="color: #666; margin: 0 10px;">Terms & Conditions</a>
         </small>
       </p>
     </div>
