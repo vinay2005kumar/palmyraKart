@@ -4,7 +4,8 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const GoogleSignIn = ({ login, navigate }) => {
-  const url = 'http://localhost:4000/api/user'; // Backend API URL
+  const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = "http://localhost:4000/api/user"; // Backend API URL
 
   // Handle Google Sign-In success
   const handleCredentialResponse = async (response) => {
