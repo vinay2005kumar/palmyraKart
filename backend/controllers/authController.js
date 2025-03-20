@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 import transporter from '../config/nodeMailer.js';
 import dotenv from 'dotenv';
+import axios from 'axios';
 dotenv.config();
 // Helper function to send emails
 console.log('JWT_SECRET:', process.env.JWT_SECRET);
@@ -52,12 +53,15 @@ export const refreshToken = async (req, res) => {
   }
 };
 
-export const googleSignIn=async(req,res)=>{
-  const { email, name, uid } = req.body;
-  console.log(req.body)
+export const googleSignIn = async (req, res) => {
+  const { credential } = req.body;
 
   try {
-    // Check if the user already exists
+    // Verify the Google ID token
+    const response = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${credential}`);
+    const { email, name, sub: googleId } = response.data;
+
+    // Check if the user already exists in your database
     let user = await userModel.findOne({ email });
 
     if (!user) {
@@ -65,20 +69,27 @@ export const googleSignIn=async(req,res)=>{
       user = new userModel({
         name,
         email,
-        uid,
+        googleId,
         provider: 'google', // Track the authentication provider
         isAccountVerified: true, // Mark account as verified
         emailVerified: true, // Mark email as verified
       });
       await user.save();
+    } else {
+      // If the user exists but signed up with email/password, update their record with Google details
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.provider = 'google';
+        user.isAccountVerified = true;
+        user.emailVerified = true;
+        await user.save();
+      }
     }
-    
+
     // Generate a JWT token for the user
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
-    const refreshToken = jwt.sign({ id: user._id,isAdmin:user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
-
     // Set tokens in HTTP-only cookies
     res.cookie('token', token, {
       httpOnly: true,  // ✅ Prevents JavaScript access (secure)
@@ -96,15 +107,84 @@ export const googleSignIn=async(req,res)=>{
     // Return the user and token
     res.status(200).json({
       success: true,
-       name:user.name,
-       isAdmin:user.isAdmin
+      name: user.name,
+      isAdmin: user.isAdmin,
+      token,
     });
   } catch (error) {
-    console.log('Error during Google Sign-In:', error);
+    console.error('Error during Google Sign-In:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
-export const googleSetPassword=async(req,res)=>{
+// export const googleCallback=async(req,res)=>{
+//   const { code, state } = req.query;
+//   const frontendOrigin = decodeURIComponent(state || 'http://localhost:3000'); // Default fallback
+
+//   try {
+//     // Exchange authorization code for tokens
+//     const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+//       code,
+//       client_id: process.env.GOOGLE_CLIENT_ID,
+//       client_secret: process.env.GOOGLE_CLIENT_SECRET,
+//       redirect_uri: 'http://localhost:4000/api/user/google/callback', // Must match frontend
+//       grant_type: 'authorization_code'
+//     });
+
+//     // Get user info with the access token
+//     const userInfoResponse = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
+//       headers: { Authorization: `Bearer ${tokenResponse.data.access_token}` }
+//     });
+
+//     const { name, email, sub: uid } = userInfoResponse.data;
+
+//     // Check if the user already exists
+//     let user = await userModel.findOne({ email });
+
+//     if (!user) {
+//       // Create a new user if they don't exist
+//       user = new userModel({
+//         name,
+//         email,
+//         uid,
+//         provider: 'google',
+//         isAccountVerified: true,
+//         emailVerified: true,
+//       });
+//       await user.save();
+//     }
+
+//     // Generate JWT tokens
+//     const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, {
+//       expiresIn: '1h',
+//     });
+//     const refreshToken = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_REFRESH_SECRET, { 
+//       expiresIn: '7d' 
+//     });
+
+//     // Set tokens in HTTP-only cookies
+//     res.cookie('token', token, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === 'production',
+//       sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+//       maxAge: 15 * 60 * 1000, // 15 minutes
+//     });
+
+//     res.cookie('refreshToken', refreshToken, {
+//       httpOnly: true,
+//       secure: process.env.NODE_ENV === 'production',
+//       sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+//       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+//     });
+
+//     // Redirect back to the frontend with success parameter
+//     res.redirect(`${frontendOrigin}/auth?login_success=true&name=${encodeURIComponent(user.name)}&isAdmin=${user.isAdmin}`);
+
+//   } catch (error) {
+//     console.error('Google OAuth error:', error);
+//     res.redirect(`${frontendOrigin}/auth?error=google_auth_failed`);
+//   }
+// }
+export const googleSetPassword = async (req, res) => {
   const { email, newPassword } = req.body;
 
   try {
@@ -114,8 +194,8 @@ export const googleSetPassword=async(req,res)=>{
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
- // Hash password
- const hashPassword = await bcrypt.hash(password, 10);
+    // Hash password
+    const hashPassword = await bcrypt.hash(password, 10);
 
     // Update the user's password
     user.password = hashPassword;
@@ -152,7 +232,7 @@ export const register = async (req, res) => {
 
     // Generate tokens
     const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ id: user._id,isAdmin:user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     // Set tokens in HTTP-only cookies
     res.cookie('token', token, {
@@ -196,7 +276,7 @@ export const login = async (req, res) => {
 
     // Generate tokens
     const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
-    const refreshToken = jwt.sign({ id: user._id,isAdmin:user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
+    const refreshToken = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
 
     // Set tokens in HTTP-only cookies
     res.cookie('token', token, {

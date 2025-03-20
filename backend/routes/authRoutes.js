@@ -15,6 +15,7 @@ authRouter.post('/send-reset-otp',sendResetOtp)
 authRouter.post('/reset-password',resetPassword)
 authRouter.post('/refresh-token',refreshToken)
 authRouter.post('/google-login',googleSignIn)
+// authRouter.get('/google/callback',googleCallback)
 authRouter.post('/set-password',googleSetPassword)
 
 

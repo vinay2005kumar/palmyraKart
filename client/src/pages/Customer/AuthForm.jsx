@@ -1,23 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { FaRegEye } from 'react-icons/fa';
-import { PiEyeClosedBold } from 'react-icons/pi';
-import { 
-  getAuth, 
-  signInWithPopup, 
-  signInWithRedirect, 
-  GoogleAuthProvider, 
-  getRedirectResult 
-} from 'firebase/auth';
+import { FaRegEye } from 'react-icons/fa'; // For eye icon
+import { PiEyeClosedBold } from 'react-icons/pi'; // For closed eye icon
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './AuthPage.css';
-import { auth } from '../../firebase/firebase';
-
-// Google Auth Provider
-const provider = new GoogleAuthProvider();
+import GoogleSignIn from '../../components/GoogleSignIn'; // Import the GoogleSignIn component
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -25,36 +15,16 @@ const LoginForm = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [eye, setEye] = useState(false);
-  const [forgot, setForgot] = useState(false);
-  const [forgotEmail, setForgotEmail] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [processingRedirect, setProcessingRedirect] = useState(false);
+  const [forgot, setForgot] = useState(false); // Toggle forgot password section
+  const [forgotEmail, setForgotEmail] = useState(''); // Email for password reset
+  const [otpSent, setOtpSent] = useState(false); // Track if OTP has been sent
+  const [otp, setOtp] = useState(''); // OTP input
+  const [newPassword, setNewPassword] = useState(''); // New password input
   const navigate = useNavigate();
   const { login } = useAuth();
   const passwordInputRef = useRef(null);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-
-  // Check for redirect results from Google Auth on component mount
-  useEffect(() => {
-    const checkRedirectResult = async () => {
-      try {
-        setProcessingRedirect(true);
-        const result = await getRedirectResult(auth);
-        if (result && result.user) {
-          await handleGoogleSignInSuccess(result.user);
-        }
-      } catch (error) {
-        console.error('Error handling redirect result:', error);
-        toast.error('Failed to sign in with Google. Please try again.');
-      } finally {
-        setProcessingRedirect(false);
-      }
-    };
-
-    checkRedirectResult();
-  }, []);
+  //const url = "http://localhost:4000/api/user";// Backend API URL
 
   // Handle login form submission
   const handleSubmit = async (e) => {
@@ -84,83 +54,6 @@ const LoginForm = () => {
     }
   };
 
-  // Handle Google Sign-In success
-  const handleGoogleSignInSuccess = async (user) => {
-    try {
-      setLoading(true);
-      // Send user data to backend
-      const response = await axios.post(`${url}/google-login`, {
-        email: user.email,
-        name: user.displayName,
-        uid: user.uid,
-      }, { withCredentials: true });
-
-      if (response.data.success) {
-        const name = response.data.name;
-        const isadmin = response.data.isAdmin;
-        login({ name, isadmin });
-        toast.success('Google Sign-In successful!');
-        if (isadmin) {
-          navigate('/admin/dhome');
-        } else {
-          navigate('/home');
-        }
-      }
-    } catch (error) {
-      console.error('Error during Google Sign-In:', error);
-      toast.error('Failed to sign in with Google. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle Google Sign-In
-  const handleGoogleSignIn = async () => {
-    // Detect if running on mobile
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    try {
-      setLoading(true);
-      
-      // Add persistence to local storage to help with redirects
-      localStorage.setItem('googleAuthPending', 'true');
-      
-      if (isMobile) {
-        // Better approach for mobile: always use redirect
-        await signInWithRedirect(auth, provider);
-        // The redirect will navigate away, so we won't reach this point until the user returns
-      } else {
-        // For desktop, try popup first, fallback to redirect if popup fails
-        try {
-          const result = await signInWithPopup(auth, provider);
-          if (result && result.user) {
-            await handleGoogleSignInSuccess(result.user);
-          }
-        } catch (popupError) {
-          console.error('Popup error:', popupError);
-          // If popup is blocked or fails, fall back to redirect
-          if (popupError.code === 'auth/popup-blocked' || popupError.code === 'auth/popup-closed-by-user') {
-            toast.info('Popup was blocked. Redirecting for authentication...');
-            await signInWithRedirect(auth, provider);
-          } else {
-            throw popupError; // Re-throw other errors
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error during Google Sign-In:', error);
-      
-      if (error.code === 'auth/network-request-failed') {
-        toast.error('Network error. Please check your internet connection.');
-      } else {
-        toast.error('Failed to sign in with Google. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-      localStorage.removeItem('googleAuthPending');
-    }
-  };
-
   // Toggle password visibility
   const toggleEye = () => {
     setEye(!eye);
@@ -172,7 +65,7 @@ const LoginForm = () => {
   // Toggle forgot password section
   const toggleForgot = () => {
     setForgot(!forgot);
-    setOtpSent(false);
+    setOtpSent(false); // Reset OTP sent state when toggling
   };
 
   // Handle sending OTP for password reset
@@ -180,7 +73,6 @@ const LoginForm = () => {
     setLoading(true);
     if (!forgotEmail) {
       toast.warn('Please enter your email.');
-      setLoading(false);
       return;
     }
 
@@ -188,7 +80,7 @@ const LoginForm = () => {
       const response = await axios.post(`${url}/send-reset-otp`, { email: forgotEmail });
       if (response.data.success) {
         toast.success(`OTP sent to ${forgotEmail}`);
-        setOtpSent(true);
+        setOtpSent(true); // Show OTP and new password fields
       }
     } catch (error) {
       const message = error.response?.data?.message || 'An error occurred. Please try again.';
@@ -203,7 +95,6 @@ const LoginForm = () => {
     setLoading(true);
     if (!otp || !newPassword) {
       toast.warn('Please enter all details.');
-      setLoading(false);
       return;
     }
 
@@ -216,16 +107,16 @@ const LoginForm = () => {
 
       if (response.data.success) {
         toast.success('Password reset successful!');
+        navigate('/auth');
         setForgot(false);
-        if (response.data.username) {
-          localStorage.setItem('username', response.data.username);
-        }
+        localStorage.setItem('username', response.data.username);
       }
     } catch (error) {
       const message = error.response?.data?.message || 'An error occurred. Please try again.';
       toast.error(message);
     } finally {
       setLoading(false);
+      setForgot(false);
     }
   };
 
@@ -237,60 +128,62 @@ const LoginForm = () => {
       <div className="login">
         <ToastContainer />
         {forgot ? (
-          <div className="forgotbox">
-            <h2>Forgot Password</h2>
-            <div>
-              <NavLink to="/auth" className="pgoback" onClick={toggleForgot}>
-                Go Back
-              </NavLink>
+          <>
+            <div className="forgotbox">
+              <h2>Forgot Password</h2>
+              <div>
+                <NavLink to="/auth" className="pgoback" onClick={toggleForgot}>
+                  Go Back
+                </NavLink>
+              </div>
+
+              {/* Step 1: Email Input */}
+              {!otpSent && (
+                <>
+                  <label htmlFor="pemail">Enter Your Email:</label>
+                  <input
+                    type="email"
+                    id="pemail"
+                    className="pemail"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="Enter your email"
+                  />
+                  <button onClick={handleSendOtp} className="pbutton">
+                    {loading ? 'Sending OTP...' : 'Send OTP'}
+                  </button>
+                </>
+              )}
+
+              {/* Step 2: OTP and New Password Input */}
+              {otpSent && (
+                <>
+                  <label>Verification Code:</label>
+                  <input
+                    type="text"
+                    className="pemail"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value)}
+                    placeholder="Enter OTP"
+                    required
+                  />
+
+                  <label>New Password:</label>
+                  <input
+                    type="password"
+                    className="pemail"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password"
+                    required
+                  />
+                  <button className="pbutton" id="pbutton" onClick={handleResetPassword}>
+                    {loading ? "Resetting Password" : "Reset Password"}
+                  </button>
+                </>
+              )}
             </div>
-
-            {/* Step 1: Email Input */}
-            {!otpSent && (
-              <>
-                <label htmlFor="pemail">Enter Your Email:</label>
-                <input
-                  type="email"
-                  id="pemail"
-                  className="pemail"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  placeholder="Enter your email"
-                />
-                <button onClick={handleSendOtp} className="pbutton" disabled={loading}>
-                  {loading ? 'Sending OTP...' : 'Send OTP'}
-                </button>
-              </>
-            )}
-
-            {/* Step 2: OTP and New Password Input */}
-            {otpSent && (
-              <>
-                <label>Verification Code:</label>
-                <input
-                  type="text"
-                  className="pemail"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter OTP"
-                  required
-                />
-
-                <label>New Password:</label>
-                <input
-                  type="password"
-                  className="pemail"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Enter new password"
-                  required
-                />
-                <button className="pbutton" id="pbutton" onClick={handleResetPassword} disabled={loading}>
-                  {loading ? "Resetting Password" : "Reset Password"}
-                </button>
-              </>
-            )}
-          </div>
+          </>
         ) : (
           <>
             <form onSubmit={handleSubmit} className="form-container">
@@ -331,11 +224,9 @@ const LoginForm = () => {
               {error && <p className="error-message">{error}</p>}
             </form>
             <p id="or">OR</p>
-            <div className="google">
-              <img src="gimg3.png" alt="Google" id="gimg" width="30em" height="30em" />
-              <button id="gbutton" onClick={handleGoogleSignIn} disabled={loading || processingRedirect}>
-                {loading || processingRedirect ? 'Processing...' : 'Sign in with Google'}
-              </button>
+            <div className='google-btn'>
+              {/* Render the GoogleSignIn component */}
+              <GoogleSignIn login={login} navigate={navigate} />
             </div>
           </>
         )}

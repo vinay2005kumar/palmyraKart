@@ -41,7 +41,7 @@ const Dhome = () => {
     const [cnotify, setcnotify] = useState(false);
     const [isKartOpen, setIsKartOpen] = useState();
     const url = 'https://palmyra-fruit.onrender.com/api/user';
- // const url = "http://localhost:4000/api/user";
+  //const url = "http://localhost:4000/api/user";
     const [currlimit, setcurrlimit] = useState();
     const { dashboardkart } = useAuth();
     
