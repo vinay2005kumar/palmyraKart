@@ -1,14 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import GoogleLoader from './GoogleLoader'; // Import the Loader component
+import './GoogleSignIn.css'; // Assuming you'll create a CSS file
 
 const GoogleSignIn = ({ login, navigate }) => {
+  const [isLoading, setIsLoading] = useState(false);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user"; // Backend API URL
 
   // Handle Google Sign-In success
   const handleCredentialResponse = async (response) => {
+    setIsLoading(true); // Start loading when sign-in process begins
+    
     try {
       // Send the Google ID token to your backend for verification
       const backendResponse = await axios.post(`${url}/google-login`, {
@@ -28,6 +33,7 @@ const GoogleSignIn = ({ login, navigate }) => {
     } catch (error) {
       console.error('Error during Google Sign-In:', error);
       toast.error('Failed to sign in with Google. Please try again.');
+      setIsLoading(false); // Stop loading on error
     }
   };
 
@@ -43,14 +49,14 @@ const GoogleSignIn = ({ login, navigate }) => {
     // Initialize Google Sign-In
     script.onload = () => {
       window.google.accounts.id.initialize({
-        client_id:import.meta.env.VITE_APP_GOOGLE_CLIENT_ID, // Replace with your Google Client ID
-        callback: handleCredentialResponse, // Callback function to handle the response
+        client_id: import.meta.env.VITE_APP_GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
       });
 
       // Render the Google Sign-In button
       window.google.accounts.id.renderButton(
         document.getElementById('google-signin-button'),
-        { theme: 'outline', size: 'large' } // Customize the button
+        { theme: 'outline', size: 'large' }
       );
 
       // Optional: Prompt the user to select an account automatically
@@ -59,12 +65,20 @@ const GoogleSignIn = ({ login, navigate }) => {
 
     // Cleanup the script on component unmount
     return () => {
-      document.body.removeChild(script);
+      if (document.body.contains(script)) {
+        document.body.removeChild(script);
+      }
     };
   }, []);
 
   return (
-    <div id="google-signin-button"></div>
+    <div className="google-signin-container">
+      {isLoading ? (
+        <GoogleLoader text="Signing in with Google..." />
+      ) : (
+        <div id="google-signin-button"></div>
+      )}
+    </div>
   );
 };
 

@@ -5,7 +5,7 @@ import { RxCross2 } from "react-icons/rx";
 import { PiCurrencyInr } from "react-icons/pi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useAdmin } from '../../context/AdminContext'; 
+import { useAdmin } from '../../context/AdminContext';
 import FruitLoader from "../../components/FruitLoader";
 import Dtopbar from "./Dtopbar";
 import axios from "axios";
@@ -126,10 +126,10 @@ const Dorders = ({ onOrderDetails }) => {
   // Sort orders by address
   const sortedData = sortByAddress
     ? [...pendingOrders].sort((a, b) => {
-        const addressA = a.shippingAddress.street.toLowerCase();
-        const addressB = b.shippingAddress.street.toLowerCase();
-        return addressA < addressB ? -1 : addressA > addressB ? 1 : 0;
-      })
+      const addressA = a.shippingAddress.street.toLowerCase();
+      const addressB = b.shippingAddress.street.toLowerCase();
+      return addressA < addressB ? -1 : addressA > addressB ? 1 : 0;
+    })
     : pendingOrders;
 
   // Filter orders by phone number and place
@@ -144,6 +144,20 @@ const Dorders = ({ onOrderDetails }) => {
 
     return phoneMatch && placeMatch;
   });
+  const parseCustomDate = (dateString) => {
+    // Example: "March 19 at 09:25:19 AM"
+    const [datePart, timePart] = dateString.split(' at ');
+    const [month, day] = datePart.split(' ');
+
+    // Get current year (assuming the date is from current year)
+    const year = new Date().getFullYear();
+
+    // Create a date string that JavaScript can parse
+    const standardDateString = `${month} ${day}, ${year} ${timePart}`;
+    return new Date(standardDateString);
+  };
+
+  // Then you can use it like this:
 
   // Fetch data on component mount
   useEffect(() => {
@@ -155,16 +169,16 @@ const Dorders = ({ onOrderDetails }) => {
   return (
     <>
       {/* Topbar and ToastContainer are always displayed */}
-      <Dtopbar/>
+      <Dtopbar />
       <ToastContainer />
-  
+
       {/* Conditional rendering based on loading state */}
       {loading ? (
         <FruitLoader />
       ) : (
         <div className="order2">
           <h1 className="dall">Pending Orders</h1>
-  
+
           {/* Filters and totals */}
           <div className="dnumber fdnumber">
             <label htmlFor="dnumber2">Enter Number:</label>
@@ -176,7 +190,7 @@ const Dorders = ({ onOrderDetails }) => {
               placeholder="Enter Phone Number"
             />
           </div>
-  
+
           <div className="dnumber fdplace">
             <label htmlFor="dplace">Enter Place:</label>
             <input
@@ -187,7 +201,7 @@ const Dorders = ({ onOrderDetails }) => {
               placeholder="Enter Place (Street Address)"
             />
           </div>
-  
+
           <div className="dtotal">
             <p>Total Orders: {serialNumber}</p>
             <p className="mtquantity">Total Quantity: {totalPieces} Pieces</p>
@@ -196,7 +210,7 @@ const Dorders = ({ onOrderDetails }) => {
               {totalCost}
             </p>
           </div>
-  
+
           {/* Orders table */}
           <div className="ditems">
             {verify ? (
@@ -268,8 +282,8 @@ const Dorders = ({ onOrderDetails }) => {
                           {order.items[0].price}
                         </td>
                         <td>{order.status}</td>
-                        <td>{new Date(order.date).toLocaleDateString()}</td>
-                        <td>{new Date(order.date).toLocaleTimeString()}</td>
+                        <td>{parseCustomDate(order.date).toLocaleDateString()}</td>
+                        <td>{parseCustomDate(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
                             onClick={() => handleDelete(order.orderId, user.email)}

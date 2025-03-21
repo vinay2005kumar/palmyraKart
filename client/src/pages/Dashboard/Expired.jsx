@@ -30,7 +30,7 @@ const Expired = () => {
   const [refundLoading, setRefundLoading] = useState({}); // For refund loading states
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user";
+ // const url = "http://localhost:4000/api/user";
   const [reload,setReload]=useState(false)
   const [refundall,setRefundAll]=useState(false)
   // Filter orders with status 'Cancelled' or 'Refunded'
@@ -372,6 +372,19 @@ const Expired = () => {
     });
   };
 
+  const parseCustomDate = (dateString) => {
+    // Example: "March 19 at 09:25:19 AM"
+    const [datePart, timePart] = dateString.split(' at ');
+    const [month, day] = datePart.split(' ');
+
+    // Get current year (assuming the date is from current year)
+    const year = new Date().getFullYear();
+
+    // Create a date string that JavaScript can parse
+    const standardDateString = `${month} ${day}, ${year} ${timePart}`;
+    return new Date(standardDateString);
+  };
+
   return (
     <>
       <Dtopbar />
@@ -499,8 +512,8 @@ const Expired = () => {
                           {order.items[0].price}
                         </td>
                         <td>{order.status}</td>
-                        <td>{new Date(order.date).toLocaleDateString()}</td>
-                        <td>{new Date(order.date).toLocaleTimeString()}</td>
+                        <td>{parseCustomDate(order.date).toLocaleDateString()}</td>
+                        <td>{parseCustomDate(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
                             onClick={() => handleDelete(order.orderId)}
