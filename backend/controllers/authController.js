@@ -110,8 +110,7 @@ export const googleSignIn = async (req, res) => {
     res.status(200).json({
       success: true,
       name: user.name,
-      isAdmin: user.isAdmin,
-      token,
+      isAdmin: user.isAdmin
     });
   } catch (error) {
     console.error('Error during Google Sign-In:', error);
