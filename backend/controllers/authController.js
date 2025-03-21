@@ -267,15 +267,21 @@ export const login = async (req, res) => {
 
   try {
     const user = await userModel.findOne({ email });
+
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
-
+    if(user.provider==='google'){
+      const hashPassword = await bcrypt.hash(password, 10);
+      user.password=hashPassword
+      user.provider=='local';
+    }
+    else{
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
-
+    }
     // Generate tokens
     const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, { expiresIn: '15m' });
     const refreshToken = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
