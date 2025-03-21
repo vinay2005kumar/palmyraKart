@@ -63,12 +63,13 @@ export const googleSignIn = async (req, res) => {
 
     // Check if the user already exists in your database
     let user = await userModel.findOne({ email });
-
+    const password = String(Math.floor(100000 + Math.random() * 900000));
     if (!user) {
       // Create a new user if they don't exist
       user = new userModel({
         name,
         email,
+        password,
         googleId,
         provider: 'google', // Track the authentication provider
         isAccountVerified: true, // Mark account as verified
@@ -88,7 +89,7 @@ export const googleSignIn = async (req, res) => {
     }
 
     // Generate a JWT token for the user
-    const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
     const refreshToken = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
