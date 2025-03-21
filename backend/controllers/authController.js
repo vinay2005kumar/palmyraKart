@@ -73,6 +73,7 @@ export const googleSignIn = async (req, res) => {
         provider: 'google', // Track the authentication provider
         isAccountVerified: true, // Mark account as verified
         emailVerified: true, // Mark email as verified
+        isAdmin:false
       });
       await user.save();
     } else {
@@ -90,6 +91,7 @@ export const googleSignIn = async (req, res) => {
     const token = jwt.sign({ id: user._id, email: user.email, isAdmin: user.isAdmin }, process.env.JWT_SECRET, {
       expiresIn: '1h',
     });
+    const refreshToken = jwt.sign({ id: user._id, isAdmin: user.isAdmin }, process.env.JWT_REFRESH_SECRET, { expiresIn: '7d' });
     // Set tokens in HTTP-only cookies
     res.cookie('token', token, {
       httpOnly: true,  // ✅ Prevents JavaScript access (secure)
@@ -184,29 +186,29 @@ export const googleSignIn = async (req, res) => {
 //     res.redirect(`${frontendOrigin}/auth?error=google_auth_failed`);
 //   }
 // }
-export const googleSetPassword = async (req, res) => {
-  const { email, newPassword } = req.body;
+// export const googleSetPassword = async (req, res) => {
+//   const { email, newPassword } = req.body;
 
-  try {
-    // Find the user by email
-    const user = await userModel.findOne({ email });
+//   try {
+//     // Find the user by email
+//     const user = await userModel.findOne({ email });
 
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-    // Hash password
-    const hashPassword = await bcrypt.hash(password, 10);
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: 'User not found' });
+//     }
+//     // Hash password
+//     const hashPassword = await bcrypt.hash(password, 10);
 
-    // Update the user's password
-    user.password = hashPassword;
-    await user.save();
+//     // Update the user's password
+//     user.password = hashPassword;
+//     await user.save();
 
-    res.status(200).json({ success: true, message: 'Password set successfully' });
-  } catch (error) {
-    console.error('Error setting password:', error);
-    res.status(500).json({ success: false, message: 'Internal server error' });
-  }
-}
+//     res.status(200).json({ success: true, message: 'Password set successfully' });
+//   } catch (error) {
+//     console.error('Error setting password:', error);
+//     res.status(500).json({ success: false, message: 'Internal server error' });
+//   }
+// }
 // Register a new user
 export const register = async (req, res) => {
   const { name, email, password } = req.body;
