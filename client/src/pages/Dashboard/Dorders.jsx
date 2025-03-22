@@ -9,6 +9,7 @@ import { useAdmin } from '../../context/AdminContext';
 import FruitLoader from "../../components/FruitLoader";
 import Dtopbar from "./Dtopbar";
 import axios from "axios";
+
 const Dorders = ({ onOrderDetails }) => {
   const {
     users,
@@ -20,6 +21,7 @@ const Dorders = ({ onOrderDetails }) => {
     error,
     deleteOrder,
     getdata,
+    DeleteSelectedOrders,
   } = useAdmin();
 
   const [verify, setVerify] = useState(false); // For verification modal
@@ -31,10 +33,11 @@ const Dorders = ({ onOrderDetails }) => {
   const [vname, setVname] = useState(""); // For verification name
   const [vno, setVno] = useState(""); // For verification phone number
   const [orderId, setOrderId] = useState(""); // For order ID
-
+  const [selectedDateFilter, setSelectedDateFilter] = useState("all"); // Date filter
+  const [selectedOrders, setSelectedOrders] = useState([]); // For storing selected order IDs
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user";
+
   // Handle order deletion
   const handleDelete = (orderId, email) => {
     const toastId = `delete-toast-${orderId}`;
@@ -90,6 +93,7 @@ const Dorders = ({ onOrderDetails }) => {
       );
     }
   };
+
   // Handle verification modal
   const handleVerify = (orderId, email, name, phoneNumber) => {
     setVno(phoneNumber);
@@ -144,35 +148,54 @@ const Dorders = ({ onOrderDetails }) => {
 
     return phoneMatch && placeMatch;
   });
-  const parseCustomDate = (dateString) => {
-    // Example: "March 19 at 09:25:19 AM"
-    const [datePart, timePart] = dateString.split(' at ');
-    const [month, day] = datePart.split(' ');
 
-    // Get current year (assuming the date is from current year)
-    const year = new Date().getFullYear();
-
-    // Create a date string that JavaScript can parse
-    const standardDateString = `${month} ${day}, ${year} ${timePart}`;
-    return new Date(standardDateString);
+  // Handle Select All
+  const handleSelectAll = () => {
+    if (selectedOrders.length === filteredData.length) {
+      // Deselect all
+      setSelectedOrders([]);
+    } else {
+      // Select all
+      setSelectedOrders(filteredData.map((order) => order.orderId));
+    }
   };
 
-  // Then you can use it like this:
+  // Handle individual order selection
+  const handleOrderSelection = (orderId) => {
+    if (selectedOrders.includes(orderId)) {
+      setSelectedOrders(selectedOrders.filter((id) => id !== orderId));
+    } else {
+      setSelectedOrders([...selectedOrders, orderId]);
+    }
+  };
+
+  // Handle deletion of selected orders
+  const handleDeleteSelectedOrders = async () => {
+    if (selectedOrders.length === 0) {
+      toast.warn("No orders selected for deletion.");
+      return;
+    }
+
+    try {
+      await DeleteSelectedOrders(selectedOrders);
+      setSelectedOrders([]); // Clear selected orders after deletion
+      toast.success("Selected orders deleted successfully.");
+    } catch (error) {
+      console.error("Error deleting selected orders:", error);
+      toast.error("Failed to delete selected orders.");
+    }
+  };
 
   // Fetch data on component mount
   useEffect(() => {
-    console.log('hello')
-    // getdata();
-    console.log('hi')
+    getdata();
   }, []);
 
   return (
     <>
-      {/* Topbar and ToastContainer are always displayed */}
       <Dtopbar />
       <ToastContainer />
 
-      {/* Conditional rendering based on loading state */}
       {loading ? (
         <FruitLoader />
       ) : (
@@ -209,6 +232,21 @@ const Dorders = ({ onOrderDetails }) => {
               Total Cost: <PiCurrencyInr />
               {totalCost}
             </p>
+            <span>
+              <button
+                onClick={handleSelectAll}
+                className="select-all-btn"
+              >
+                {selectedOrders.length === filteredData.length ? "Deselect All" : "Select All"}
+              </button>
+              <button
+                onClick={handleDeleteSelectedOrders}
+                disabled={selectedOrders.length === 0}
+                className="delete-selected-btn"
+              >
+                Delete Selected Orders
+              </button>
+            </span>
           </div>
 
           {/* Orders table */}
@@ -235,6 +273,7 @@ const Dorders = ({ onOrderDetails }) => {
               <table border="1px" className="dtable ddtable">
                 <thead>
                   <tr>
+                    <th>Select</th>
                     <th>S.No</th>
                     <th>Verification</th>
                     <th>Customer Name</th>
@@ -254,7 +293,14 @@ const Dorders = ({ onOrderDetails }) => {
                   {filteredData.map((order, index) => {
                     const user = users.find((user) => user._id === order.user);
                     return (
-                      <tr key={order._id}>
+                      <tr key={order.orderId}>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={selectedOrders.includes(order.orderId)}
+                            onChange={() => handleOrderSelection(order.orderId)}
+                          />
+                        </td>
                         <td>{index + 1}</td>
                         <td>
                           <button
@@ -282,8 +328,8 @@ const Dorders = ({ onOrderDetails }) => {
                           {order.items[0].price}
                         </td>
                         <td>{order.status}</td>
-                        <td>{parseCustomDate(order.date).toLocaleDateString()}</td>
-                        <td>{parseCustomDate(order.date).toLocaleTimeString()}</td>
+                        <td>{new Date(order.date).toLocaleDateString()}</td>
+                        <td>{new Date(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
                             onClick={() => handleDelete(order.orderId, user.email)}

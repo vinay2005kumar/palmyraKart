@@ -40,7 +40,7 @@ const Dhome = () => {
     const [closeTime, setCloseTime] = useState(null);
     const [cnotify, setcnotify] = useState(false);
     const [isKartOpen, setIsKartOpen] = useState();
-    const url = 'https://palmyra-fruit.onrender.com/api/user';
+   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
     const [currlimit, setcurrlimit] = useState();
     const { dashboardkart } = useAuth();
@@ -111,72 +111,82 @@ const Dhome = () => {
         }
     };
 
-   // Fetch data from the backend
-   const getdata = async () => {
-    try {
-        // console.log('Fetching data...');
-        // await fetchAdminData(); // Use the getdata function from AdminContext
-         console.log('dh',orders)
-        const today = new Date();
-        const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-        const startTime = new Date(todayUTC);
-        startTime.setUTCHours(9, 0, 0, 0);
-
-        let todayOrders = 0;
-        let todayQuantity = 0;
-        let todayPrice = 0;
-        let deliveredOrders = 0;
-        let deliveredQuantity = 0;
-        let deliveredPrice = 0;
-        let totaldorders = 0;
-        let totaldquantity = 0;
-        let totaldcost = 0;
-
-        orders.forEach((order) => {
-            const orderDate = new Date(order.date);
-            const orderUTC = new Date(Date.UTC(orderDate.getUTCFullYear(), orderDate.getUTCMonth(), orderDate.getUTCDate()));
-
-            if (order.status === 'Pending' && orderUTC.getTime() === todayUTC.getTime()) {
-                todayOrders++;
-                order.items.forEach((item) => {
-                    const pieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                    todayQuantity += pieces;
-                    todayPrice += item.price;
-                });
+    const getdata = async () => {
+        try {
+          const today = new Date();
+          const todayFormatted = today.toLocaleDateString('en-US', {
+            month: 'long',
+            day: 'numeric',
+          }); // Format: "March 21"
+      
+          let todayOrders = 0;
+          let todayQuantity = 0;
+          let todayPrice = 0;
+          let deliveredOrders = 0;
+          let deliveredQuantity = 0;
+          let deliveredPrice = 0;
+          let totaldorders = 0;
+          let totaldquantity = 0;
+          let totaldcost = 0;
+      
+          orders.forEach((order) => {
+            // Parse the order date (e.g., "March 21 at 12:04:21 PM")
+            const [monthDay, time] = order.date.split(' at ');
+            const [month, day] = monthDay.split(' ');
+            const year = today.getFullYear(); // Assume current year
+            const dateString = `${month} ${day}, ${year} ${time}`; // Format: "March 21, 2024 12:04:21 PM"
+            const orderDate = new Date(dateString);
+      
+            // Check if the order date is today
+            const orderDateFormatted = orderDate.toLocaleDateString('en-US', {
+              month: 'long',
+              day: 'numeric',
+            }); // Format: "March 21"
+      
+            if (order.status === 'Pending' && orderDateFormatted === todayFormatted) {
+              todayOrders++;
+              order.items.forEach((item) => {
+                const pieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
+                todayQuantity += pieces;
+                todayPrice += item.price;
+              });
             }
-
-            if (order.status === 'Delivered'||'Delivered*' && orderDate >= startTime) {
-                deliveredOrders++;
-                order.items.forEach((item) => {
-                    const deliveredPieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                    deliveredQuantity += deliveredPieces;
-                    deliveredPrice += item.price * item.quantity;
-                });
+      
+            if (
+              (order.status === 'Delivered') &&
+              orderDateFormatted === todayFormatted
+            ) {
+              deliveredOrders++;
+              order.items.forEach((item) => {
+                const deliveredPieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
+                deliveredQuantity += deliveredPieces;
+                deliveredPrice += item.price * item.quantity;
+              });
             }
-
-            if (order.status === 'Delivered') {
-                totaldorders++;
-                order.items.forEach((item) => {
-                    const totaldcount = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                    totaldquantity += totaldcount;
-                    totaldcost += item.price * item.quantity;
-                });
+      
+            if (order.status === 'Delivered' || order.status === 'Delivered*') {
+              totaldorders++;
+              order.items.forEach((item) => {
+                const totaldcount = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
+                totaldquantity += totaldcount;
+                totaldcost += item.price * item.quantity;
+              });
             }
-        });
-
-        setTodayOrders(todayOrders);
-        setTodayQuantity(todayQuantity);
-        setTodayPrice(todayPrice);
-        setDeliveredOrders(deliveredOrders);
-        setDeliveredTodayQuantity(deliveredQuantity);
-        setDeliveredTodayPrice(deliveredPrice);
-        setTotalOrders(totaldorders);
-        setTotalQuantity(totaldquantity);
-        setTotalPrice(totaldcost);
-    } catch (error) {
-        console.error('Error fetching data:', error);
-    }
-};
+          });
+      
+          setTodayOrders(todayOrders);
+          setTodayQuantity(todayQuantity);
+          setTodayPrice(todayPrice);
+          setDeliveredOrders(deliveredOrders);
+          setDeliveredTodayQuantity(deliveredQuantity);
+          setDeliveredTodayPrice(deliveredPrice);
+          setTotalOrders(totaldorders);
+          setTotalQuantity(totaldquantity);
+          setTotalPrice(totaldcost);
+        } catch (error) {
+          console.error('Error fetching data:', error);
+        }
+      };
 
 useEffect(() => {
     getdata();

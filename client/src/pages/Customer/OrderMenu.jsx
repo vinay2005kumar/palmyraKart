@@ -62,13 +62,7 @@ useEffect(() => {
 
   return () => unsubscribe(); // Cleanup on unmount
 }, []);
-  // const socket = io(url, {
-  //   transports: ["websocket", "polling"], // Force WebSocket transport
-  //   withCredentials: true, // Include credentials (optional)
-  //   reconnection: true, // Enable auto-reconnect
-  //   reconnectionAttempts: 5, // Try reconnecting 5 times
-  //   reconnectionDelay: 1000, // Delay between reconnect attempts
-  // });
+
   const fetchAvailableQuantity = async () => {
     const availableQuantity = await quantity(); // Fetch quantity from parent component
     setTotalAvailable(availableQuantity);
