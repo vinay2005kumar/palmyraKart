@@ -30,7 +30,7 @@ const Expired = () => {
   const [refundLoading, setRefundLoading] = useState({}); // For refund loading states
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
   const url = 'https://palmyra-fruit.onrender.com/api/user';
- // const url = "http://localhost:4000/api/user";
+  //const url = "http://localhost:4000/api/user";
   const [reload,setReload]=useState(false)
   const [refundall,setRefundAll]=useState(false)
   // Filter orders with status 'Cancelled' or 'Refunded'
@@ -359,7 +359,7 @@ const Expired = () => {
       autoClose: 3000,
       style: {
         position: 'absolute',
-        top: isMobile ? '6vh' : '60px',
+        top: isMobile ? '6vh' : '80px',
         right: '0em',
         width: isMobile ? '60vw' : '35vw',
         height: isMobile ? '8vh' : '10vh',
@@ -372,18 +372,18 @@ const Expired = () => {
     });
   };
 
-  const parseCustomDate = (dateString) => {
-    // Example: "March 19 at 09:25:19 AM"
-    const [datePart, timePart] = dateString.split(' at ');
-    const [month, day] = datePart.split(' ');
+  // const parseCustomDate = (dateString) => {
+  //   // Example: "March 19 at 09:25:19 AM"
+  //   const [datePart, timePart] = dateString.split(' at ');
+  //   const [month, day] = datePart.split(' ');
 
-    // Get current year (assuming the date is from current year)
-    const year = new Date().getFullYear();
+  //   // Get current year (assuming the date is from current year)
+  //   const year = new Date().getFullYear();
 
-    // Create a date string that JavaScript can parse
-    const standardDateString = `${month} ${day}, ${year} ${timePart}`;
-    return new Date(standardDateString);
-  };
+  //   // Create a date string that JavaScript can parse
+  //   const standardDateString = `${month} ${day}, ${year} ${timePart}`;
+  //   return new Date(standardDateString);
+  // };
 
   return (
     <>
@@ -512,8 +512,8 @@ const Expired = () => {
                           {order.items[0].price}
                         </td>
                         <td>{order.status}</td>
-                        <td>{parseCustomDate(order.date).toLocaleDateString()}</td>
-                        <td>{parseCustomDate(order.date).toLocaleTimeString()}</td>
+                        <td>{new Date(order.date).toLocaleDateString()}</td>
+                        <td>{new Date(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
                             onClick={() => handleDelete(order.orderId)}

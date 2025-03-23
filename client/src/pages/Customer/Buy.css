@@ -168,8 +168,8 @@ select{
    
 }
 .vicon{
-    position: relative;
-    top:0.18em;
+   position: relative;
+   margin-top: 1em;
 }
 .values p{
     margin-bottom: -0.1em;

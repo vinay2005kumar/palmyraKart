@@ -1,6 +1,6 @@
 import express from 'express';
 import userAuth from '../middleware/userAuth.js';
-import { getUserData, getKartStatus, updateKartStatus, sendNotification, closeOrder, limitUpdate, getReviews, isUserReviews, addReviews, updateReview, deleteReview, replyReview, getUser, verifyOrder, quantity, getAllUsers, sendOrderOtp, deleteOrder, orderCancel, removeOrder } from '../controllers/userController2.js';
+import { getUserData, getKartStatus, updateKartStatus, sendNotification, closeOrder, limitUpdate, getReviews, isUserReviews, addReviews, updateReview, deleteReview, replyReview, getUser, verifyOrder, quantity, getAllUsers, sendOrderOtp, deleteOrder, orderCancel, removeOrder, cancelSelectedOrders } from '../controllers/userController2.js';
 import { createOrder, refundAll, refundPayment, verifyPayment } from '../controllers/paymentController.js';
 
 const userRouter = express.Router();
@@ -25,6 +25,7 @@ userRouter.post('/send-orderOtp', userAuth, sendOrderOtp);
 userRouter.get('/quantity', quantity);
 userRouter.delete('/order/:id', orderCancel);
 userRouter.delete('/removeOrder/:orderId',removeOrder)
+userRouter.post('/cancel-selected-orders',cancelSelectedOrders)
 userRouter.delete('/deleteOrder/:orderId',deleteOrder)
 // Notification routes
 userRouter.post('/send-notification', sendNotification);

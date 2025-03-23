@@ -137,18 +137,18 @@ const Ddelivered = () => {
       return 0;
     });
 
-    const parseCustomDate = (dateString) => {
-      // Example: "March 19 at 09:25:19 AM"
-      const [datePart, timePart] = dateString.split(' at ');
-      const [month, day] = datePart.split(' ');
+    // const parseCustomDate = (dateString) => {
+    //   // Example: "March 19 at 09:25:19 AM"
+    //   const [datePart, timePart] = dateString.split(' at ');
+    //   const [month, day] = datePart.split(' ');
   
-      // Get current year (assuming the date is from current year)
-      const year = new Date().getFullYear();
+    //   // Get current year (assuming the date is from current year)
+    //   const year = new Date().getFullYear();
   
-      // Create a date string that JavaScript can parse
-      const standardDateString = `${month} ${day}, ${year} ${timePart}`;
-      return new Date(standardDateString);
-    };
+    //   // Create a date string that JavaScript can parse
+    //   const standardDateString = `${month} ${day}, ${year} ${timePart}`;
+    //   return new Date(standardDateString);
+    // };
 
   return (
     <>
@@ -275,8 +275,8 @@ const Ddelivered = () => {
                           {order.items[0].price}
                         </td>
                         <td>{order.status}</td>
-                         <td>{parseCustomDate(order.date).toLocaleDateString()}</td>
-                         <td>{parseCustomDate(order.date).toLocaleTimeString()}</td>
+                        <td>{new Date(order.date).toLocaleDateString()}</td>
+                        <td>{new Date(order.date).toLocaleTimeString()}</td>
                         <td>
                           <button
                             onClick={() => handleDelete(order.orderId)}

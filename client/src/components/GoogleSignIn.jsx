@@ -8,7 +8,7 @@ import './GoogleSignIn.css'; // Assuming you'll create a CSS file
 const GoogleSignIn = ({ login, navigate }) => {
   const [isLoading, setIsLoading] = useState(false);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user"; // Backend API URL
+  //const url = "http://localhost:4000/api/user";
 
   // Handle Google Sign-In success
   const handleCredentialResponse = async (response) => {

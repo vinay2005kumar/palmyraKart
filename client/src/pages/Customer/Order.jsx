@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { RxCross2 } from 'react-icons/rx';
-import { useAuth } from '../../context/AuthContext';// Import the context
+import { useAuth } from '../../context/AuthContext'; // Import the context
 
 const Order = ({ order2, resetOrder }) => {
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true);
@@ -20,10 +20,9 @@ const Order = ({ order2, resetOrder }) => {
   const [email, setEmail] = useState('');
   const { orderDetails, userDetails, checkAuth, removeOrder, isLoading } = useAuth(); // Use context values
   const navigate = useNavigate();
-  const [date, setDate] = useState()
+  const [date, setDate] = useState();
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
-
   // Cancel order
   const cancelOrder = async (orderId, email) => {
     try {
@@ -37,11 +36,10 @@ const Order = ({ order2, resetOrder }) => {
       checkAuth();
       setCancel(false);
 
-      // Show success toast
-      const message = status === 'Cancelled' ? 'Expired order cancelled successfully' : 'Order cancelled successfully';
-      toast.success(message);
+      const message = 'Order Cancelled Successfully';
+      toastfun('Order Cancelled Successfully','success');
     } catch (error) {
-      toast.error('Failed to cancel the order. Please try again.');
+      toastfun('Failed to cancel the order. Please try again.','error');
     }
   };
 
@@ -69,7 +67,7 @@ const Order = ({ order2, resetOrder }) => {
 
   const toastfun = (msg, type) => {
     toast[type](msg, {
-      position: 'top-center',
+      position: 'top-right',
       autoClose: 3000,
       style: {
         position: 'absolute',
@@ -87,7 +85,7 @@ const Order = ({ order2, resetOrder }) => {
   };
 
   // Function to handle the actual deletion
-  const confirmDelete = async (orderId,status) => {
+  const confirmDelete = async (orderId, status) => {
     const toastId = `delete-toast-${orderId}`;
 
     if (!toast.isActive(toastId)) {
@@ -98,27 +96,24 @@ const Order = ({ order2, resetOrder }) => {
             onClick={async () => {
               toast.dismiss(toastId);
               try {
-                if(status=="Cancelled"){
-                  toast.error('Order can not be delete until Refund..')
+                if (status === 'Cancelled') {
+                  toastfun('Order cannot be deleted until Refunded.','error');
+                } else {
+                  const deleteUrl = `${url}/deleteOrder/${orderId}`;
+                  await axios.delete(deleteUrl, {
+                    headers: { 'Content-Type': 'application/json' },
+                  });
+
+                  // Update the context state
+                  removeOrder(orderId);
+
+                  // Show success toast
+                  toastfun('Order history deleted successfully', 'success');
                 }
-                else{
-                const deleteUrl = `${url}/deleteOrder/${orderId}`;
-                await axios.delete(deleteUrl, {
-                  headers: { 'Content-Type': 'application/json' },
-                });
-
-                // Update the context state
-                deleteOrder(orderId);
-
-                // Show success toast
-                toastfun('Order history deleted successfully', 'success');
-              }
               } catch (error) {
                 toastfun('Failed to delete the order history. Please try again.', 'error');
               }
-            
             }}
-        
             style={{
               fontSize: '1.1em',
               margin: '5px',
@@ -165,20 +160,37 @@ const Order = ({ order2, resetOrder }) => {
       );
     }
   };
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+  
+    // Extract date components
+    const day = date.toLocaleString('en-US', { weekday: 'short' }); // e.g., "Sun"
+    const month = date.toLocaleString('en-US', { month: 'short' }); // e.g., "Mar"
+    const dayOfMonth = date.getDate(); // e.g., 23
+    const year = date.getFullYear(); // e.g., 2025
+  
+    // Extract time components and convert to 12-hour format
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0'); // Ensure 2 digits
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12; // Convert to 12-hour format
+  
+    // Combine into the desired format
+    return `${day} ${month} ${dayOfMonth} ${year} at ${hours}:${minutes} ${ampm}`;
+  };
   // Handle payment success toast
   useEffect(() => {
     if (order2) {
-      toastfun('Payment Successful! Your order will be processed shortly.','success');
+      toastfun('Payment Successful! Your order will be processed shortly.', 'success');
       resetOrder();
     }
   }, [order2, resetOrder]);
 
   // Fetch data on component mount
   useEffect(() => {
-    checkAuth()
+    checkAuth();
     checkIfBeforeTenAM();
-    // console.log('odetails', orderDetails, userDetails)
-    setEmail(userDetails.email)
+    setEmail(userDetails.email);
   }, []);
 
   return (
@@ -202,47 +214,9 @@ const Order = ({ order2, resetOrder }) => {
                 orderDetails
                   .slice() // Create a shallow copy to avoid mutating the original array
                   .sort((a, b) => {
-                    // Parse custom date format "March 19 at 09:25:19 AM"
-                    const parseDate = (dateString) => {
-                      const months = {
-                        January: 0, February: 1, March: 2, April: 3, May: 4, June: 5,
-                        July: 6, August: 7, September: 8, October: 9, November: 10, December: 11,
-                      };
-
-                      // Split the date string into parts
-                      const [month, day, at, time, modifier] = dateString.split(' ');
-                      const [hours, minutes, seconds] = time.split(':');
-
-                      // Convert to 24-hour format
-                      let hours24 = parseInt(hours, 10);
-                      if (modifier === 'PM' && hours24 !== 12) {
-                        hours24 += 12;
-                      }
-                      if (modifier === 'AM' && hours24 === 12) {
-                        hours24 = 0;
-                      }
-
-                      // Create a valid Date object
-                      return new Date(
-                        new Date().getFullYear(), // Use current year (or adjust as needed)
-                        months[month], // Month index
-                        parseInt(day, 10), // Day
-                        hours24, // Hours (24-hour format)
-                        parseInt(minutes, 10), // Minutes
-                        parseInt(seconds, 10) // Seconds
-                      );
-                    };
-
-                    // Parse dates for comparison
-                    const dateA = parseDate(a.date);
-                    const dateB = parseDate(b.date);
-
-                    console.log('date', dateA, dateB);
-
-                    // Handle invalid dates (fallback to 0 if invalid)
-                    if (isNaN(dateA) || isNaN(dateB)) {
-                      return 0; // Keep the order unchanged if dates are invalid
-                    }
+                    // Parse dates directly using the Date constructor
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
 
                     // Sort in descending order (most recent first)
                     return dateB - dateA;
@@ -257,7 +231,7 @@ const Order = ({ order2, resetOrder }) => {
                       <p id="price">
                         Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
                       </p>
-                      <p id="date">Date & Time: {order.date}</p>
+                      <p id="date">Date & Time: {formatDate(order.date)}</p>
                       <p id="oaddress">
                         Delivery Address: {`${order.shippingAddress.street}`}
                       </p>
@@ -276,7 +250,7 @@ const Order = ({ order2, resetOrder }) => {
                           </button>
                         </div>
                       ) : (
-                        <button id='cancel' onClick={() => confirmDelete(order.orderId,order.status)}>
+                        <button id='cancel' onClick={() => confirmDelete(order.orderId, order.status)}>
                           Delete
                         </button>
                       )}

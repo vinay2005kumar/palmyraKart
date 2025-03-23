@@ -3,25 +3,24 @@ import Topbar from '../../components/Topbar';
 import "./Reviews.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useAuth } from '../../context/AuthContext'; // Import the context
+import { useAuth } from '../../context/AuthContext';
 import FruitLoader from "../../components/FruitLoader";
 
 const Reviews = () => {
-  const [compose, setCompose] = useState(true); // Toggle compose review form
-  const [rating, setRating] = useState(""); // Review rating (1-5)
-  const [highlight, setHighlight] = useState(""); // Review highlight
-  const [description, setDescription] = useState(""); // Review comment
-  const [editingReview, setEditingReview] = useState(null); // Review being edited
-  const [loading, setLoading] = useState(false); // Loading state for API calls
-  const isMobile = window.innerWidth < 765; // Check if the device is mobile
-
-  // Use context values
+  const [compose, setCompose] = useState(true);
+  const [rating, setRating] = useState("");
+  const [highlight, setHighlight] = useState("");
+  const [description, setDescription] = useState("");
+  const [editingReview, setEditingReview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const isMobile = window.innerWidth < 765;
+  const [activeToastId, setActiveToastId] = useState(null); // Track the active toast ID
   const {
     userDetails,
-    reviewDetails, // Authenticated user's reviews
-    allReviews, // All users' reviews
-    checkAuth, // Fetch authenticated user's data (including reviews)
-    fetchReviews, // Fetch all users' reviews
+    reviewDetails,
+    allReviews,
+    checkAuth,
+    fetchReviews,
     addReview,
     updateReview,
     deleteReview,
@@ -29,34 +28,46 @@ const Reviews = () => {
   } = useAuth();
   const { name, email: userEmail } = userDetails;
 
-  // Toast notification function
   const toastfun = (msg, type) => {
+    const toastId = "unique-toast-id"; // Use a consistent ID for all toasts
+  
+    // Dismiss any existing toast with the same ID
+    if (toast.isActive(toastId)) {
+      toast.dismiss(toastId);
+    }
+  
+    // Show the new toast
     toast[type](msg, {
+      toastId, // Assign the unique ID
       position: "top-center",
       autoClose: 3000,
       style: {
         position: "absolute",
         right: "0em",
-        top: isMobile ? "0em" : "0px",
+        top: isMobile ? "0em" : "70px",
         left: isMobile ? "18%" : "-2em",
         width: isMobile ? "70vw" : "40vw",
         height: isMobile ? "10vh" : "20vh",
         fontSize: isMobile ? "1.1em" : "1.2em",
         padding: "10px",
       },
-      onClick: () => {
-        toast.dismiss();
+      onClick: () =>  {
+        if (toast.isActive(toastId)) {
+          toast.dismiss(toastId);
+          setActiveToastId(null); // Clear the active toast ID
+        }
+      },
+      onClose: () => {
+        setActiveToastId(null); // Clear the active toast ID when the toast is closed
       },
     });
   };
 
-  // Fetch reviews on mount
   useEffect(() => {
-    checkAuth(); // Fetch authenticated user's data (including their reviews)
-    fetchReviews(); // Fetch all users' reviews
+    checkAuth();
+    fetchReviews();
   }, []);
 
-  // Handle review submission (create or update)
   const handleSubmit = async () => {
     if (!rating || !highlight || !description) {
       toastfun("Please fill out all fields before submitting.", "warn");
@@ -73,16 +84,13 @@ const Reviews = () => {
       };
 
       if (editingReview) {
-        // Update existing review
         await updateReview(editingReview._id, reviewData);
         toastfun("Review updated successfully.", "success");
       } else {
-        // Create new review
         await addReview(reviewData);
         toastfun("Review added successfully.", "success");
       }
 
-      // Reset form fields
       setRating("");
       setHighlight("");
       setDescription("");
@@ -90,64 +98,71 @@ const Reviews = () => {
       setCompose(true);
     } catch (error) {
       toastfun("Failed to submit review.", "error");
-      console.log(error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle review deletion
   const handleDelete = async (reviewId) => {
-    toast(
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <p style={{ padding: "1em", fontSize: "1.2em", textAlign: "center", color: "#444" }}>
-          Do you really want to delete this review?
-        </p>
-        <button
-          onClick={async () => {
-            try {
-              await deleteReview(reviewId);
-              toast.dismiss();
-              toastfun("Review deleted successfully.", "success");
-            } catch (error) {
-              toastfun("Failed to delete review.", "error");
+    const toastId = `delete-toast-${reviewId}`;
+
+    if (!toast.isActive(toastId)) {
+      toast(
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <p style={{ padding: "1em", fontSize: "1.2em", textAlign: "center", color: "#444" }}>
+            Do you really want to delete this review?
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                await deleteReview(reviewId);
+                if (toast.isActive(toastId)) {
+                  toast.dismiss(toastId);
+                }
+                toastfun("Review deleted successfully.", "success");
+              } catch (error) {
+                toastfun("Failed to delete review.", "error");
+              }
+            }}
+            style={{
+              width: isMobile ? "40%" : "90%",
+              fontSize: "1.1em",
+              padding: "8px 10px",
+              background: "#4CAF50",
+              color: "white",
+              border: "none",
+              borderRadius: "4px",
+              cursor: "pointer",
+              marginTop: "10px",
+              transition: "background-color 0.3s ease",
+            }}
+          >
+            Confirm Delete
+          </button>
+        </div>,
+        {
+          toastId,
+          autoClose: false,
+          position: "top-center",
+          onClick: () => {
+            if (toast.isActive(toastId)) {
+              toast.dismiss(toastId);
             }
-          }}
-          style={{
-            width: isMobile ? "40%" : "90%",
-            fontSize: "1.1em",
-            padding: "8px 10px",
-            background: "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "4px",
-            cursor: "pointer",
-            marginTop: "10px",
-            transition: "background-color 0.3s ease",
-          }}
-        >
-          Confirm Delete
-        </button>
-      </div>,
-      {
-        autoClose: false,
-        position: "top-center",
-        onClick: () => {
-          toast.dismiss();
-        },
-        style: {
-          width: "100%",
-          top: "6em",
-          padding: "15px",
-          borderRadius: "8px",
-          backgroundColor: "#f5f5f5",
-          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-        },
-      }
-    );
+          },
+          style: {
+            width: "100%",
+            top: "6em",
+            padding: "15px",
+            borderRadius: "8px",
+            backgroundColor: "#f5f5f5",
+            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          },
+        }
+      );
+    }
   };
 
-  // Handle review edit
   const handleEdit = (review) => {
     setRating(review.rating);
     setHighlight(review.highlight);
@@ -156,7 +171,6 @@ const Reviews = () => {
     setCompose(false);
   };
 
-  // Generate random color for user avatar
   const getRandomColor = (name) => {
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -166,7 +180,6 @@ const Reviews = () => {
     return color;
   };
 
-  // Get initial for user avatar
   const getInitial = (name) => {
     return name ? name.charAt(0).toUpperCase() : "?";
   };
@@ -175,8 +188,8 @@ const Reviews = () => {
     <>
       <Topbar />
       <div className="reviews-section">
-        {isLoading ? ( // Show loader if isLoading is true
-          <FruitLoader></FruitLoader>
+        {isLoading ? (
+          <FruitLoader />
         ) : (
           <>
             <div className="rsec1">

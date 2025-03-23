@@ -19,9 +19,7 @@ const Dorders = ({ onOrderDetails }) => {
     serialNumber,
     loading,
     error,
-    deleteOrder,
     getdata,
-    DeleteSelectedOrders,
   } = useAdmin();
 
   const [verify, setVerify] = useState(false); // For verification modal
@@ -37,19 +35,53 @@ const Dorders = ({ onOrderDetails }) => {
   const [selectedOrders, setSelectedOrders] = useState([]); // For storing selected order IDs
   const isMobile = window.innerWidth <= 760; // Check if the device is mobile
   const url = 'https://palmyra-fruit.onrender.com/api/user';
+  //const url = "http://localhost:4000/api/user";// Backend API URL
 
-  // Handle order deletion
+  const toastfun = (msg, type) => {
+    toast[type](msg, {
+      position: 'top-right',
+      autoClose: 3000,
+      style: {
+        position: 'absolute',
+        top: isMobile ? '6vh' : '80px',
+        right: '0em',
+        width: isMobile ? '60vw' : '35vw',
+        height: isMobile ? '8vh' : '10vh',
+        fontSize: '1.2rem',
+        padding: '10px',
+      },
+      onClick: () => {
+        toast.dismiss();
+      },
+    });
+  };
+
+  // Handle order cancellation
   const handleDelete = (orderId, email) => {
     const toastId = `delete-toast-${orderId}`;
-    const cancellationReason = 'Order deleted by admin';
 
     if (!toast.isActive(toastId)) {
-      toast.info(
+      toastfun(
         <div>
-          <p style={{ padding: '1px' }}>Do you really want to delete this order?</p>
+          <p style={{ padding: '1px' }}>Do you really want to cancel this order?</p>
           <button
             onClick={async () => {
-              deleteOrder(orderId, email, cancellationReason);
+              try {
+                // Call the /cancel-selected-orders endpoint
+                const res = await axios.post(`${url}/cancel-selected-orders`, {
+                  orderIds: [orderId], // Pass the order ID as an array
+                });
+
+                if (res.status === 200) {
+                  toastfun("Order cancelled successfully", 'success');
+                  getdata(); // Refresh the order list
+                } else {
+                  toastfun("Failed to cancel the order.", 'error');
+                }
+              } catch (error) {
+                console.error("Error cancelling order:", error);
+                toastfun("Failed to cancel the order. Please try again.", 'error');
+              }
               toast.dismiss(toastId);
             }}
             style={{
@@ -81,16 +113,34 @@ const Dorders = ({ onOrderDetails }) => {
             No
           </button>
         </div>,
-        {
-          position: 'top-center',
-          closeOnClick: true,
-          draggable: false,
-          autoClose: false,
-          onClick: () => toast.dismiss(toastId),
-          toastId,
-          style: { top: '6em', width: isMobile ? '70%' : '100%' },
-        }
+        'info'
       );
+    }
+  };
+
+  // Handle cancellation of selected orders
+  const handleDeleteSelectedOrders = async () => {
+    if (selectedOrders.length === 0) {
+      toastfun("No orders selected for cancellation.", 'warn');
+      return;
+    }
+
+    try {
+      // Call the backend endpoint to cancel selected orders
+      const res = await axios.post(`${url}/cancel-selected-orders`, {
+        orderIds: selectedOrders, // Pass the array of selected order IDs
+      });
+
+      if (res.status === 200) {
+        toastfun("Selected orders cancelled successfully", 'success');
+        getdata(); // Refresh the order list
+        setSelectedOrders([]); // Clear selected orders
+      } else {
+        toastfun("Failed to cancel selected orders.", 'error');
+      }
+    } catch (error) {
+      console.error("Error cancelling selected orders:", error);
+      toastfun("Failed to cancel selected orders. Please try again.", 'error');
     }
   };
 
@@ -116,24 +166,24 @@ const Dorders = ({ onOrderDetails }) => {
       });
 
       if (response.status === 200) {
-        toast.success("Order verified successfully");
+        toastfun("Order verified successfully", 'success');
         getdata(); // Refresh order list
         setVerify(false);
         setOtp("");
       }
     } catch (error) {
       console.error("Error verifying order:", error);
-      toast.error("Failed to verify order. Please try again.");
+      toastfun("Failed to verify order. Please try again.", 'error');
     }
   };
 
   // Sort orders by address
   const sortedData = sortByAddress
     ? [...pendingOrders].sort((a, b) => {
-      const addressA = a.shippingAddress.street.toLowerCase();
-      const addressB = b.shippingAddress.street.toLowerCase();
-      return addressA < addressB ? -1 : addressA > addressB ? 1 : 0;
-    })
+        const addressA = a.shippingAddress.street.toLowerCase();
+        const addressB = b.shippingAddress.street.toLowerCase();
+        return addressA < addressB ? -1 : addressA > addressB ? 1 : 0;
+      })
     : pendingOrders;
 
   // Filter orders by phone number and place
@@ -166,23 +216,6 @@ const Dorders = ({ onOrderDetails }) => {
       setSelectedOrders(selectedOrders.filter((id) => id !== orderId));
     } else {
       setSelectedOrders([...selectedOrders, orderId]);
-    }
-  };
-
-  // Handle deletion of selected orders
-  const handleDeleteSelectedOrders = async () => {
-    if (selectedOrders.length === 0) {
-      toast.warn("No orders selected for deletion.");
-      return;
-    }
-
-    try {
-      await DeleteSelectedOrders(selectedOrders);
-      setSelectedOrders([]); // Clear selected orders after deletion
-      toast.success("Selected orders deleted successfully.");
-    } catch (error) {
-      console.error("Error deleting selected orders:", error);
-      toast.error("Failed to delete selected orders.");
     }
   };
 
@@ -244,7 +277,7 @@ const Dorders = ({ onOrderDetails }) => {
                 disabled={selectedOrders.length === 0}
                 className="delete-selected-btn"
               >
-                Delete Selected Orders
+                Cancel Selected Orders
               </button>
             </span>
           </div>
@@ -335,7 +368,7 @@ const Dorders = ({ onOrderDetails }) => {
                             onClick={() => handleDelete(order.orderId, user.email)}
                             className="del"
                           >
-                            Delete
+                            Cancel
                           </button>
                         </td>
                       </tr>

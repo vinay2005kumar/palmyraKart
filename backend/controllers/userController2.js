@@ -363,6 +363,271 @@ export const orderCancel = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+export const cancelSelectedOrders = async (req, res) => {
+  const { orderIds } = req.body; // Array of order IDs to cancel
+
+  if (!orderIds || !Array.isArray(orderIds)) {
+    return res.status(400).json({ message: 'Invalid order IDs provided' });
+  }
+
+  try {
+    // Step 1: Find the orders with the provided order IDs
+    const orders = await Order.find({ orderId: { $in: orderIds } });
+
+    if (orders.length === 0) {
+      return res.status(404).json({ message: 'No orders found to cancel' });
+    }
+
+    // Step 2: Loop through each order and fetch the associated user
+    for (const order of orders) {
+      const { items, finalAmount, date, status, user: userId } = order;
+      const item=items[0].itemName
+      const quantity=items[0].quantity
+      // Fetch the user associated with the order
+      const user = await User.findById(userId);
+
+      if (!user) {
+        console.warn(`User not found for order ID: ${order.orderId}`);
+        continue; // Skip this order if the user is not found
+      }
+
+      // Only send email if the order status is "pending"
+      if (status === 'Pending') {
+        const formattedDate = new Date(date).toLocaleString('en-US', {
+          timeZone: 'Asia/Kolkata',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true, // 12-hour format with AM/PM
+        });
+
+        const subject = 'Order Cancellation Confirmation';
+        const htmlMessage = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            /* Base Styles */
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              color: #333;
+              line-height: 1.6;
+              margin: 0;
+              padding: 0;
+              background-color: #f7f7f7;
+            }
+            .container {
+              max-width: 600px;
+              margin: 20px auto;
+              background: #ffffff;
+              border-radius: 12px;
+              overflow: hidden;
+              box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            }
+            /* Header - Red for cancellation */
+            .header {
+              background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);
+              padding: 30px 20px;
+              text-align: center;
+              color: white;
+            }
+            .header h1 {
+              margin: 0;
+              font-size: 24px;
+              font-weight: 600;
+            }
+            .header p {
+              margin: 10px 0 0;
+              opacity: 0.9;
+            }
+            /* Content */
+            .content {
+              padding: 30px 25px;
+            }
+            h2 {
+              color: #d32f2f;
+              font-size: 22px;
+              margin-top: 0;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #f0f0f0;
+              padding-bottom: 10px;
+            }
+            .highlight {
+              color: #d32f2f;
+              font-weight: 600;
+            }
+            /* Cancellation Icon */
+            .cancel-icon {
+              text-align: center;
+              margin: 20px 0;
+            }
+            .cancel-icon .circle {
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              background-color: #d32f2f;
+              margin: 0 auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: 40px;
+            }
+            /* Order Details */
+            .order-details {
+              background: #f9f9f9;
+              padding: 20px;
+              border-radius: 8px;
+              margin: 20px 0;
+              border-left: 4px solid #d32f2f;
+            }
+            .order-details h3 {
+              margin-top: 0;
+              color: #d32f2f;
+            }
+            .order-details p {
+              margin: 8px 0;
+            }
+            /* Next Order Section */
+            .next-order {
+              background: #fff8e1;
+              padding: 15px;
+              border-radius: 8px;
+              margin: 20px 0;
+              border-left: 4px solid #ffb300;
+            }
+            .next-order h3 {
+              margin-top: 0;
+              color: #ffb300;
+            }
+            /* Footer */
+            .footer {
+              text-align: center;
+              padding: 20px;
+              background: #f5f5f5;
+              color: #666;
+              font-size: 14px;
+              border-top: 1px solid #eeeeee;
+            }
+            /* Buttons */
+            .btn {
+              background: #ffb300;
+              color: white;
+              padding: 12px 20px;
+              text-decoration: none;
+              border-radius: 4px;
+              display: inline-block;
+              font-weight: 500;
+              text-align: center;
+              margin: 10px 5px;
+            }
+            .btn:hover {
+              opacity: 0.9;
+            }
+            /* Responsive */
+            @media only screen and (max-width: 600px) {
+              .container {
+                width: 100%;
+                border-radius: 0;
+              }
+              .content {
+                padding: 20px 15px;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Order Cancelled</h1>
+              <p>We regret to inform you that your order has been cancelled</p>
+            </div>
+            
+            <div class="content">
+              <div class="cancel-icon">
+                <div class="circle">✖</div>
+              </div>
+              
+              <h2>We're sorry! Your order has been cancelled.</h2>
+              <p>Unfortunately, you were unable to collect your order before <span class="highlight">5:00 PM on ${new Date().toLocaleString('en-US', {
+                      month: 'long',
+                      day: 'numeric'
+                    })}</span>, and our session has now closed.</p>
+              <p>Don't worry! You can place a fresh order for tomorrow at your convenience. We’d love to serve you again!</p>
+              <p>Your refund will be credited soon. Please allow some time for processing.</p>
+              <p>For more details, kindly review our <a href="https://palmyrakart.onrender.com" style="color: #2e7d32; text-decoration: none; font-weight: 600;">Terms & Conditions</a>.</p>
+        
+              <div class="order-details">
+                <h3>🛍️ Order Details</h3>
+                <p><strong>Item Type:</strong> ${item}</p>
+                <p><strong>Quantity:</strong> ${quantity}</p>
+                <p><strong>Total Price:</strong> ₹${finalAmount}</p>
+                <p><strong>Status:</strong> <span class="highlight">Cancelled</span></p>
+                <p><strong>Order Purchasing Date:</strong> ${date}</p>
+                <p><strong>Cancellation Time:</strong> ${new Date().toLocaleString('en-US', {
+                      timeZone: 'Asia/Kolkata',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}</p>
+              </div>
+        
+              <div class="next-order">
+                <h3>🛒 Ready to reorder?</h3>
+                <p>You can place a new order for tomorrow. We’d love to serve you with fresh and quality products!</p>
+                <div style="text-align: center;">
+                  <a href="https://palmyrakart.onrender.com" class="btn">Place a New Order</a>
+                </div>
+              </div>
+              
+              <p style="text-align: center;">Thank you for choosing <strong>PalmyraKart</strong>. We hope to see you again soon! 💚</p>
+            </div>
+        
+            <div class="footer">
+              <p><strong>PalmyraKart</strong> - Fresh & Quality Products</p>
+              <p>&copy; 2025 PalmyraKart. All rights reserved.</p>
+              <p>
+                <small>
+                  <a href="https://palmyrakart.onrender.com" style="color: #666; margin: 0 10px;">Privacy Policy</a> | 
+                  <a href="https://palmyrakart.onrender.com" style="color: #666; margin: 0 10px;">Terms & Conditions</a>
+                </small>
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+        `;
+
+        const mailOptions = {
+          from: process.env.SMTP_EMAIL || 'vinaybuttala@gmail.com',
+          to: user.email,
+          subject: subject,
+          html: htmlMessage,
+        };
+
+        await transporter.sendMail(mailOptions);
+      }
+
+      // Update the order status to "Cancelled" and mark it as cancelled by the admin
+      order.status = 'Cancelled';
+      order.cancellationReason = 'Cancelled by Admin';
+      order.cancelledBy = 'Admin';
+      await order.save();
+
+    }
+
+    res.status(200).json({ message: 'Selected orders cancelled successfully' });
+  } catch (error) {
+    console.error('Error cancelling selected orders:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
 
 export const deleteOrder = async (req, res) => {
   const { orderId } = req.params; // Get orderId from query parameters
@@ -451,8 +716,6 @@ export const sendOrderOtp = async (req, res) => {
       second: '2-digit', // Seconds (e.g., "45")
       hour12: true, // Use 12-hour format (e.g., "2:30 PM")
     });
-
-    order.date = istDate;
     order.otp = orderOtp;
     await order.save();
     console.log(order.date)
@@ -1356,7 +1619,7 @@ export const closeOrder = async (req, res) => {
             // Prepare email content
             const item = order.items[0].itemName; // Use the first item in the order
             const quantity = order.items[0].quantity;
-            const price = order.totalAmount;
+            const price = order.finalAmount;
 
             const formattedDate = new Date(order.date).toLocaleString('en-US', {
               month: 'long',
@@ -1762,3 +2025,6 @@ export const updateReview = async (req, res) => {
       res.status(500).json({ message: 'Error sending email', error: error.message });
     }
   };
+
+
+  

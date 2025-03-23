@@ -34,15 +34,15 @@ const Dhome = () => {
     const [hrender, sethrender] = useState(false);
     const [hdata, sethdata] = useState([]);
     const [hlimit, sethlimit] = useState();
-    const { Limit, setLimit } = useAuth();
+    const [limit,setLimit]=useState()
+    const [stock,setStock]=useState()
     const [limit2, setlimit2] = useState();
     const isMobile = window.innerWidth <= 760;
     const [closeTime, setCloseTime] = useState(null);
     const [cnotify, setcnotify] = useState(false);
     const [isKartOpen, setIsKartOpen] = useState();
-   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user";
-    const [currlimit, setcurrlimit] = useState();
+    const url = 'https://palmyra-fruit.onrender.com/api/user';
+    //const url = "http://localhost:4000/api/user";
     const { dashboardkart } = useAuth();
     
 
@@ -74,6 +74,9 @@ const Dhome = () => {
         get(statusRef).then((snapshot) => {
             if (snapshot.exists()) {
                 setIsOpen(snapshot.val().isOpen);
+                const { limit, stock } = snapshot.val();
+                setLimit(limit || 100); // Default to 100 if `limit` is missing or 0
+                setStock(stock || 0); // Default to 0 if `stock` is missing or 0
             }
         });
     }, []);
@@ -85,7 +88,10 @@ const Dhome = () => {
         // Listen for real-time updates for `limit`
         const unsubscribe = onValue(limitRef, (snapshot) => {
             if (snapshot.exists()) {
-                document.getElementById("curr").innerHTML = snapshot.val().limit;
+                setIsOpen(snapshot.val().isOpen);
+                const { limit, stock } = snapshot.val();
+                setLimit(limit || 100); // Default to 100 if `limit` is missing or 0
+                setStock(stock || 0); // Default to 0 if `stock` is missing or 0
             }
         });
 
@@ -113,80 +119,64 @@ const Dhome = () => {
 
     const getdata = async () => {
         try {
-          const today = new Date();
-          const todayFormatted = today.toLocaleDateString('en-US', {
-            month: 'long',
-            day: 'numeric',
-          }); // Format: "March 21"
-      
-          let todayOrders = 0;
-          let todayQuantity = 0;
-          let todayPrice = 0;
-          let deliveredOrders = 0;
-          let deliveredQuantity = 0;
-          let deliveredPrice = 0;
-          let totaldorders = 0;
-          let totaldquantity = 0;
-          let totaldcost = 0;
-      
-          orders.forEach((order) => {
-            // Parse the order date (e.g., "March 21 at 12:04:21 PM")
-            const [monthDay, time] = order.date.split(' at ');
-            const [month, day] = monthDay.split(' ');
-            const year = today.getFullYear(); // Assume current year
-            const dateString = `${month} ${day}, ${year} ${time}`; // Format: "March 21, 2024 12:04:21 PM"
-            const orderDate = new Date(dateString);
-      
-            // Check if the order date is today
-            const orderDateFormatted = orderDate.toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-            }); // Format: "March 21"
-      
-            if (order.status === 'Pending' && orderDateFormatted === todayFormatted) {
-              todayOrders++;
-              order.items.forEach((item) => {
-                const pieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                todayQuantity += pieces;
-                todayPrice += item.price;
-              });
-            }
-      
-            if (
-              (order.status === 'Delivered') &&
-              orderDateFormatted === todayFormatted
-            ) {
-              deliveredOrders++;
-              order.items.forEach((item) => {
-                const deliveredPieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                deliveredQuantity += deliveredPieces;
-                deliveredPrice += item.price * item.quantity;
-              });
-            }
-      
-            if (order.status === 'Delivered' || order.status === 'Delivered*') {
-              totaldorders++;
-              order.items.forEach((item) => {
-                const totaldcount = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
-                totaldquantity += totaldcount;
-                totaldcost += item.price * item.quantity;
-              });
-            }
-          });
-      
-          setTodayOrders(todayOrders);
-          setTodayQuantity(todayQuantity);
-          setTodayPrice(todayPrice);
-          setDeliveredOrders(deliveredOrders);
-          setDeliveredTodayQuantity(deliveredQuantity);
-          setDeliveredTodayPrice(deliveredPrice);
-          setTotalOrders(totaldorders);
-          setTotalQuantity(totaldquantity);
-          setTotalPrice(totaldcost);
+            const today = new Date();
+            const todayDateString = today.toDateString(); // Format: "Sun Mar 23 2025"
+    
+            let todayOrders = 0;
+            let todayQuantity = 0;
+            let todayPrice = 0;
+            let deliveredOrders = 0;
+            let deliveredQuantity = 0;
+            let deliveredPrice = 0;
+            let totaldorders = 0;
+            let totaldquantity = 0;
+            let totaldcost = 0;
+    
+            orders.forEach((order) => {
+                const orderDate = new Date(order.date); // Convert order.date to a Date object
+                const orderDateString = orderDate.toDateString(); // Format: "Sun Mar 23 2025"
+    
+                // Check if the order date is today
+                const isToday = orderDateString === todayDateString;
+    
+                // Calculate quantities and prices
+                order.items.forEach((item) => {
+                    const pieces = item.itemType === 'dozen' ? item.quantity * 12 : item.quantity;
+    
+                    if (order.status === 'Pending' && isToday) {
+                        todayOrders++;
+                        todayQuantity += pieces;
+                        todayPrice += item.price;
+                    }
+    
+                    if (order.status === 'Delivered' && isToday) {
+                        deliveredOrders++;
+                        deliveredQuantity += pieces;
+                        deliveredPrice += item.price;
+                    }
+    
+                    if (order.status === 'Delivered' || order.status === 'Delivered*') {
+                        totaldorders++;
+                        totaldquantity += pieces;
+                        totaldcost += item.price;
+                    }
+                });
+            });
+    
+            // Update state with calculated values
+            setTodayOrders(todayOrders);
+            setTodayQuantity(todayQuantity);
+            setTodayPrice(todayPrice);
+            setDeliveredOrders(deliveredOrders);
+            setDeliveredTodayQuantity(deliveredQuantity);
+            setDeliveredTodayPrice(deliveredPrice);
+            setTotalOrders(totaldorders);
+            setTotalQuantity(totaldquantity);
+            setTotalPrice(totaldcost);
         } catch (error) {
-          console.error('Error fetching data:', error);
+            console.error('Error fetching data:', error);
         }
-      };
+    };
 
 useEffect(() => {
     getdata();
@@ -423,9 +413,12 @@ useEffect(() => {
         const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
 
         try {
-            await update(ref(database, `${url}/${collection}`), { limit: hlimit });
+            await update(ref(database, `${url}/${collection}`), { 
+                limit: hlimit,
+                stock: 0
+            });
             toastfun(`Limit set to ${hlimit} pieces`, 'success');
-            document.getElementById("curr").innerHTML = hlimit;
+            setLimit(hlimit)
         } catch (error) {
             toastfun("Error updating limit", "error");
             console.error("Error updating limit:", error);
@@ -479,9 +472,11 @@ useEffect(() => {
                             <input type="number" id="limit" onChange={(e) => sethlimit(e.target.value)} />
                             <label>Enter The Today's Limit</label>
                             <button className='dbut' type='submit' onClick={handlelimit}>SET</button>
-                            <p>Current limit is: <span id='curr'>{currlimit}</span></p>
+                            <p>Current limit is: <span id='curr'>{limit}</span></p>
+                          
                         </div>
                         <div className="dlbox32">
+                        <p>Remaining Stock is:<span>{limit-stock}</span></p>
                             <label>Close Today's Selling</label>
                             <button onClick={closeToday} className='dbut close'>CLOSE</button>
                         </div>

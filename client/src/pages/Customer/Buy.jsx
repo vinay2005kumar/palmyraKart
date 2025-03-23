@@ -2,10 +2,12 @@ import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Buy.css";
 import { PiCurrencyInrBold } from "react-icons/pi";
+import { PiCurrencyInr } from "react-icons/pi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import PaymentComponent from "./PaymentComponent"; // Import the PaymentComponent
 import { useAuth } from '../../context/AuthContext'; // Import the context
+import { database, ref, get, onValue } from '../../firebase/firebase'; // Import Firebase functions
 
 const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, handlePaymentSuccess }) => {
   const [bphone, setbphone] = useState("");
@@ -20,6 +22,7 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
   const [tprice, settprice] = useState(0);
   const [limit, setlimit] = useState(llimit3);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [stock, setStock] = useState(0); // To store the available stock from Firebase
   const isMobile = window.innerWidth <= 765;
   const navigate = useNavigate();
   const paymentRef = useRef(null);
@@ -69,6 +72,33 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
     checkAuth(); // Fetch user data from context
   }, []);
 
+  // Fetch stock and limit from Firebase
+  useEffect(() => {
+    const url = import.meta.env.VITE_FIREBASE_URL;
+    const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
+    const inventoryRef = ref(database, `${url}/${collection}`);
+
+    // Fetch initial data using `get`
+    get(inventoryRef).then((snapshot) => {
+      if (snapshot.exists()) {
+        const { limit, stock } = snapshot.val();
+        setlimit(limit || 100); // Default to 100 if `limit` is missing or 0
+        setStock(stock || 0); // Default to 0 if `stock` is missing or 0
+      }
+    });
+
+    // Listen for real-time updates using `onValue`
+    const unsubscribe = onValue(inventoryRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const { limit, stock } = snapshot.val();
+        setlimit(limit || 100); // Default to 100 if `limit` is missing or 0
+        setStock(stock || 0); // Default to 0 if `stock` is missing or 0
+      }
+    });
+
+    return () => unsubscribe(); // Cleanup on unmount
+  }, []);
+
   const generateOrderId = () => {
     const prefix = "ORD"; // Fixed prefix
     const timestamp = Date.now().toString(36).toUpperCase(); // Base36 encoded timestamp
@@ -115,9 +145,10 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
     setIsProcessing(true); // Disable the button
 
     try {
-      const updatedTotalCount2 = await fetchAvailableQuantity();
-      if (updatedTotalCount2 >= limit) {
-        toastfun(`Sorry, the orders have reached the limit, only ${updatedTotalCount2 - limit} are available`, "info");
+      // Check if the selected quantity exceeds the available stock
+      const totalSelectedQuantity = btype === "single" ? bcount : bcount * 12;
+      if (totalSelectedQuantity > (limit - stock)) {
+        toastfun(`Only ${limit - stock} pieces are available. Please reduce your order quantity.`, "info");
         return;
       }
 
@@ -143,22 +174,6 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
       toastfun("Payment processing failed. Please try again.", "error");
     } finally {
       setIsProcessing(false); // Re-enable the button
-    }
-  };
-
-  const fetchAvailableQuantity = async () => {
-    try {
-      const availableQuantity = await quantity(count);
-      let updatedTotalCount2 = 0;
-      if (btype === "single") {
-        updatedTotalCount2 = availableQuantity + bcount;
-      } else if (btype === "dozen") {
-        updatedTotalCount2 = availableQuantity + bcount * 12;
-      }
-      return updatedTotalCount2;
-    } catch (error) {
-      console.error("Error fetching available quantity:", error);
-      return 0;
     }
   };
 
@@ -253,24 +268,24 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
               <p>TOTAL PAY</p>
               <div className="values">
                 <p id="itemcost">
-                  <PiCurrencyInrBold className="vicon" />
+                <PiCurrencyInr />
                   {itemprice}
                 </p>
                 <p id="platform">
-                  <PiCurrencyInrBold className="vicon" />
+                <PiCurrencyInr />
                   3
                 </p>
                 <p id="gst">
-                  <PiCurrencyInrBold className="vicon" />
+                <PiCurrencyInr />
                   10
                 </p>
                 <p id="totalcost">
-                  <PiCurrencyInrBold className="vicon" />
+                <PiCurrencyInr />
                   {tprice}
                 </p>
               </div>
             </div>
-            <button id="pay" onClick={handlePay} disabled={isProcessing}>
+            <button id="pay" onClick={handlePay} disabled={isProcessing || (bcount > (limit - stock))}>
               {isProcessing ? "Paying..." : "PAY NOW"}
             </button>
           </div>
