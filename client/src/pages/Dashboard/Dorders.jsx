@@ -118,30 +118,80 @@ const Dorders = ({ onOrderDetails }) => {
     }
   };
 
-  // Handle cancellation of selected orders
   const handleDeleteSelectedOrders = async () => {
     if (selectedOrders.length === 0) {
       toastfun("No orders selected for cancellation.", 'warn');
       return;
     }
-
-    try {
-      // Call the backend endpoint to cancel selected orders
-      const res = await axios.post(`${url}/cancel-selected-orders`, {
-        orderIds: selectedOrders, // Pass the array of selected order IDs
-      });
-
-      if (res.status === 200) {
-        toastfun("Selected orders cancelled successfully", 'success');
-        getdata(); // Refresh the order list
-        setSelectedOrders([]); // Clear selected orders
-      } else {
-        toastfun("Failed to cancel selected orders.", 'error');
-      }
-    } catch (error) {
-      console.error("Error cancelling selected orders:", error);
-      toastfun("Failed to cancel selected orders. Please try again.", 'error');
-    }
+  
+    // Confirmation toast
+    const toastId = `confirm-delete-toast-${Date.now()}`; // Unique toast ID
+  
+    toastfun(
+      <div>
+        <p style={{ padding: '1px' }}>Are you sure you want to cancel the selected orders?</p>
+        <button
+          onClick={async () => {
+            try {
+              // Call the backend endpoint to cancel selected orders
+              const res = await axios.post(`${url}/cancel-selected-orders`, {
+                orderIds: selectedOrders, // Pass the array of selected order IDs
+              });
+  
+              if (res.status === 200) {
+                toastfun("Selected orders cancelled successfully", 'success');
+                getdata(); // Refresh the order list
+                setSelectedOrders([]); // Clear selected orders
+              } else {
+                toastfun("Failed to cancel selected orders.", 'error');
+              }
+            } catch (error) {
+              console.error("Error cancelling selected orders:", error);
+              toastfun("Failed to cancel selected orders. Please try again.", 'error');
+            }
+  
+            // Dismiss the confirmation toast
+            if (toast.isActive(toastId)) {
+              toast.dismiss(toastId);
+            }
+          }}
+          style={{
+            fontSize: '1.1em',
+            margin: '5px',
+            padding: '5px 15px',
+            background: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => {
+            // Dismiss the confirmation toast
+            if (toast.isActive(toastId)) {
+              toast.dismiss(toastId);
+            }
+          }}
+          style={{
+            fontSize: '1.1em',
+            margin: '5px',
+            padding: '5px 15px',
+            background: '#f44336',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          No
+        </button>
+      </div>,
+      'info', // Toast type
+      toastId // Pass the unique toast ID
+    );
   };
 
   // Handle verification modal
