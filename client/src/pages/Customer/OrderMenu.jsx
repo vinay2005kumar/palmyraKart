@@ -159,7 +159,7 @@ const OrderMenu = ({ buy, llimit2 }) => {
                   onClick={() => handleBuyClick(count, 'p3.jpeg', 'single')}
                   id="obuy"
                   className={isOpen ? "disabled" : ""}
-                  disabled={isBeforeTenAM || isOpen || (count > (orderLimit - totalAvailable))} // Disable if past 10:00 AM, cart is closed, or order exceeds limit
+                  disabled={isOpen || (count > (orderLimit - totalAvailable))} // Disable if past 10:00 AM, cart is closed, or order exceeds limit
                 >
                   BUY
                 </button>
@@ -198,7 +198,7 @@ const OrderMenu = ({ buy, llimit2 }) => {
                   id="obuy2"
                   className={isOpen ? "disabled" : ""}
                   onClick={() => handleBuyClick(count2, 'p2.jpeg', 'dozen')}
-                  disabled={isBeforeTenAM || isOpen || (count2 * 12 > (orderLimit - totalAvailable))} // Disable if past 10:00 AM, cart is closed, or order exceeds limit
+                  disabled={isOpen || (count2 * 12 > (orderLimit - totalAvailable))} // Disable if past 10:00 AM, cart is closed, or order exceeds limit
                 >
                   BUY
                 </button>
