@@ -23,7 +23,8 @@ const Topbar = () => {
   const isMobile = window.innerWidth < 765;
   const [iskart, setkart] = useState();
   const [isOpen, setIsOpen] = useState(null);
-  const url = 'https://palmyra-fruit.onrender.com/api/user';
+ const url = 'https://palmyra-fruit.onrender.com/api/user';
+ //const url = "http://localhost:4000/api/user";
 
   // Handle Firebase status
   useEffect(() => {
