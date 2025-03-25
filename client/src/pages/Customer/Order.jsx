@@ -265,7 +265,7 @@ const Order = ({ order2, resetOrder }) => {
                               order.status, 
                               new Date(order.date).toLocaleString()
                             )}
-                            disabled={isBeforeTenAM || order.status === 'delivered'}
+                            disabled={order.status === 'delivered'}
                           >
                             Cancel
                           </button>
