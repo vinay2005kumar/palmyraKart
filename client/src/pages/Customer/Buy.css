@@ -3,7 +3,7 @@
     height: 600px;
     /* border: 1px solid green; */
     position: relative;
-    top:6em;
+    top:7em;
     box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
 }
 .goback{
@@ -326,10 +326,34 @@ top:6.3em;
   position: absolute;
   top:0px;
 }
+
+.stock-info .pieces{
+    position: absolute;
+    top:8%;
+    right: 5%;
+    font-size: 1.2em;
+}
+.stock-info .snote{
+    position: absolute;
+    top:10%;
+    font-size: 1.2em;
+    left: 5%;
+}
+.snote span{
+    color: blue;
+}
 @media screen and (max-width:700px) {
     .goback{
         position: absolute;
         z-index: 99;
+        top: 0.7em!important;;
+    }
+    .pieces{
+        top:0.8em!important;
+    }
+    .snote{
+        top:3.5em!important;
+        font-size: 0.9em!important;
     }
     #bmain{
         width: 100%;

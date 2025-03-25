@@ -168,9 +168,9 @@ const Ddelivered = () => {
               className="place"
               value={selectedDateFilter}
               onChange={(e) => handleDateFilterChange(e.target.value)}
-            >
-              <option value="all">All Orders</option>
+            >  
               <option value="today">Today</option>
+              <option value="all">All Orders</option>
               <option value="yesterday">Yesterday</option>
               <option value="last3days">Last 3 Days</option>
               <option value="last7days">Last 7 Days</option>

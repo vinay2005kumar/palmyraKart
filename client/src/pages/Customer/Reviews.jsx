@@ -28,39 +28,46 @@ const Reviews = () => {
   } = useAuth();
   const { name, email: userEmail } = userDetails;
 
-  const toastfun = (msg, type) => {
-    const toastId = "unique-toast-id"; // Use a consistent ID for all toasts
-  
-    // Dismiss any existing toast with the same ID
-    if (toast.isActive(toastId)) {
-      toast.dismiss(toastId);
+  const toastfun = (msg, type, toastId = 'default-toast') => {
+    if (!toast.isActive(toastId)) {
+      // Calculate approximate dimensions based on message length
+      const messageLength = msg.length;
+      const lineLength = isMobile ? 30 : 50; // Characters per line
+      const lines = Math.ceil(messageLength / lineLength);
+      
+      // Calculate dynamic dimensions
+      const minWidth = isMobile ? '80vw' : '30vw';
+      const maxWidth = isMobile ? '90vw' : '40vw';
+      const baseHeight = isMobile ? '10vh' : '10vh';
+      const lineHeight = '1.5rem';
+      const padding = 20; // px
+      
+      const dynamicHeight = `calc(${baseHeight} + ${Math.max(0, lines - 3)} * ${lineHeight})`;
+      
+      toast[type](msg, {
+        position: 'top-right',
+        autoClose: 3000,
+        toastId,
+        style: {
+          position: 'absolute',
+          top: isMobile ? '6vh' : '7vh',
+          left: isMobile ? '5%' : 'auto',
+          right: isMobile ? '5%' : '20px',
+          minWidth: minWidth,
+          maxWidth: maxWidth,
+          width: 'auto', // Let it grow based on content
+          height: 'auto', // Let it grow based on content
+          minHeight: baseHeight,
+          fontSize: '1.2rem',
+          padding: '10px',
+          whiteSpace: 'pre-wrap', // Preserve line breaks and wrap text
+          wordWrap: 'break-word', // Break long words
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      });
     }
-  
-    // Show the new toast
-    toast[type](msg, {
-      toastId, // Assign the unique ID
-      position: "top-center",
-      autoClose: 3000,
-      style: {
-        position: "absolute",
-        right: "0em",
-        top: isMobile ? "0em" : "70px",
-        left: isMobile ? "18%" : "-2em",
-        width: isMobile ? "70vw" : "40vw",
-        height: isMobile ? "10vh" : "20vh",
-        fontSize: isMobile ? "1.1em" : "1.2em",
-        padding: "10px",
-      },
-      onClick: () =>  {
-        if (toast.isActive(toastId)) {
-          toast.dismiss(toastId);
-          setActiveToastId(null); // Clear the active toast ID
-        }
-      },
-      onClose: () => {
-        setActiveToastId(null); // Clear the active toast ID when the toast is closed
-      },
-    });
   };
 
   useEffect(() => {

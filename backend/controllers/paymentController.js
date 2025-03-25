@@ -9,13 +9,6 @@ import { initializeApp } from "firebase/app";
 import { getDatabase, ref, runTransaction, get } from "firebase/database";
 import User from '../models/userModel.js';
 
-// Initialize Razorpay with your keys
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
-// Initialize Firebase
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
   authDomain: process.env.FIREBASE_AUTH_DOMAIN,
@@ -29,6 +22,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -50,12 +49,8 @@ export const createOrder = async (req, res) => {
     const user = req.user;
 
     // Input validation
-    if (
-      !amount || amount <= 0 ||
-      !finalAmount || finalAmount <= 0 ||
-      !orderId || !address || !phone ||
-      !items || !Array.isArray(items) || items.length === 0
-    ) {
+    if (!amount || amount <= 0 || !finalAmount || finalAmount <= 0 || !orderId || 
+        !address || !phone || !items || !Array.isArray(items) || items.length === 0) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'Missing or invalid required fields' });
     }
@@ -66,33 +61,44 @@ export const createOrder = async (req, res) => {
       return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
     }
 
-    // Create a Razorpay order
-    const options = {
-      amount: finalAmount * 100,
-      currency,
-      receipt: orderId,
-      notes: {
-        productName,
-        description,
-      },
-    };
+    // Calculate total quantity in the order
+    const orderQuantity = items.reduce((total, item) => total + item.quantity, 0);
 
-    const razorpayOrder = await new Promise((resolve, reject) => {
-      razorpay.orders.create(options, (err, order) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(order);
-        }
+    // Check inventory availability before creating order
+    const inventoryRef = ref(database, `${process.env.FIREBASE_URL}/${process.env.FIREBASE_COLLECTION}`);
+    const snapshot = await get(inventoryRef);
+    
+    if (!snapshot.exists()) {
+      await session.abortTransaction();
+      return res.status(400).json({ error: 'Inventory data not found' });
+    }
+
+    const { limit, stock } = snapshot.val();
+    if (stock + orderQuantity > limit) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        error: 'Insufficient inventory', 
+        available: limit - stock,
+        required: orderQuantity
       });
+    }
+
+    // Create Razorpay order
+    const razorpayOrder = await new Promise((resolve, reject) => {
+      razorpay.orders.create({
+        amount: finalAmount * 100,
+        currency,
+        receipt: orderId,
+        notes: { productName, description },
+      }, (err, order) => err ? reject(err) : resolve(order));
     });
 
-    // Save the order in your database with status "Pending"
+    // Save order to database
     const newOrder = new Order({
       orderId,
       razorpayOrderId: razorpayOrder.id,
       user: user.id,
-      items: items.map((item) => ({
+      items: items.map(item => ({
         itemType: item.itemType,
         itemName: item.itemName,
         quantity: item.quantity,
@@ -101,7 +107,7 @@ export const createOrder = async (req, res) => {
       })),
       finalAmount,
       paymentMethod,
-      paymentStatus: 'Pending', // Set initial status as "Pending"
+      paymentStatus: 'Pending',
       shippingAddress: {
         street: address,
         phoneNumber: phone,
@@ -109,36 +115,37 @@ export const createOrder = async (req, res) => {
       status: 'Pending',
       date: new Date(),
     });
-   
+
     await newOrder.save({ session });
-     console.log('date',newOrder.date)
-    // Commit the transaction
     await session.commitTransaction();
 
-    // Return Razorpay order details to the client
     res.status(200).json({
-      success:true,
+      success: true,
       id: razorpayOrder.id,
       orderId,
       amount: razorpayOrder.amount,
       currency: razorpayOrder.currency,
     });
+
   } catch (error) {
-    // Abort the transaction on error
     await session.abortTransaction();
-    console.error('Error creating Razorpay order:', error);
-    res.status(500).json({  success:false, error: 'Payment initiation failed', details: error.message });
+    console.error('Error creating order:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Order creation failed',
+      details: error.message 
+    });
   } finally {
-    // End the session
     session.endSession();
   }
 };
-// Verify payment
-
 
 export const verifyPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  const MAX_RETRIES = 3;
+  let attempt = 0;
+  let lastError;
 
   try {
     const { orderCreationId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
@@ -146,7 +153,7 @@ export const verifyPayment = async (req, res) => {
     // Input validation
     if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
       await session.abortTransaction();
-      return res.status(400).json({  success:false, error: 'Missing payment verification parameters' });
+      return res.status(400).json({ success: false, error: 'Missing payment verification parameters' });
     }
 
     // Verify signature
@@ -155,92 +162,95 @@ export const verifyPayment = async (req, res) => {
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
-    // Compare signatures
     if (generatedSignature !== razorpaySignature) {
       await session.abortTransaction();
-      return res.status(400).json({  success:false, error: 'Invalid payment signature' });
+      return res.status(400).json({ success: false, error: 'Invalid payment signature' });
     }
 
-    // Fetch the order from the database
+    // Fetch the order
     const order = await Order.findOne({ orderId: orderCreationId }).session(session);
     if (!order) {
       await session.abortTransaction();
-      return res.status(404).json({  success:false, error: 'Order not found' });
+      return res.status(404).json({ success: false, error: 'Order not found' });
     }
-    console.log('orderdate',order.date)
-    // Calculate total quantity in the order
+
     const orderQuantity = order.items.reduce((total, item) => total + item.quantity, 0);
+    const inventoryRef = ref(database, `${process.env.FIREBASE_URL}/${process.env.FIREBASE_COLLECTION}`);
 
-    // Create Firebase reference
-    const url = process.env.FIREBASE_URL.trim();
-    const collection = process.env.FIREBASE_COLLECTION.trim();
-    const inventoryRef = ref(database, `${url}/${collection}`);
-
-    // Fetch current inventory data
+    // Get initial values for fallback
     const snapshot = await get(inventoryRef);
     if (!snapshot.exists()) {
       await session.abortTransaction();
-      return res.status(400).json({  success:false, error: 'Inventory data not found in Firebase' });
+      return res.status(400).json({ success: false, error: 'Inventory data not found' });
     }
-
     const { limit: fetchedLimit, stock: fetchedStock } = snapshot.val();
 
-    // Perform inventory check and update atomically
-    try {
-      await runTransaction(inventoryRef, (inventory) => {
-        // If inventory is null, use the values fetched earlier
-        if (!inventory) {
-          console.log("Inventory is null. Using fetched values.");
-          inventory = {
-            limit: fetchedLimit,
-            stock: fetchedStock,
-          };
-        }
+    // Retry transaction logic
+    while (attempt < MAX_RETRIES) {
+      try {
+        await runTransaction(inventoryRef, (inventory) => {
+          // Handle null case
+          if (inventory === null) {
+            inventory = { limit: fetchedLimit, stock: fetchedStock };
+          }
 
-        const { limit, stock } = inventory;
-        console.log(`Current stock: ${stock}, Order quantity: ${orderQuantity}, Limit: ${limit}`);
+          const { limit, stock } = inventory;
+          
+          // Check inventory
+          if (stock + orderQuantity > limit) {
+            throw new Error('INVENTORY_LIMIT_EXCEEDED');
+          }
 
-        // Check if the order exceeds the daily limit
-        if (stock + orderQuantity > limit) {
-          throw new Error('INVENTORY_LIMIT_EXCEEDED');
-        }
-
-        // Update the stock
-        inventory.stock = stock + orderQuantity;
-        return inventory;
-      });
-    } catch (error) {
-      console.error('Firebase transaction failed:', error.message);
-      if (error.message === 'INVENTORY_LIMIT_EXCEEDED') {
-        await session.abortTransaction();
-        return res.status(400).json({ 
-          success:false,
-          error: 'Inventory limit exceeded', 
-          details: 'Not enough items in stock to fulfill this order' 
+          // Update inventory
+          inventory.stock = stock + orderQuantity;
+          return inventory;
         });
+        break; // Success
+      } catch (error) {
+        lastError = error;
+        attempt++;
+        if (attempt === MAX_RETRIES) break;
+        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
       }
-      await session.abortTransaction();
-      return res.status(500).json({success:false, error: 'Firebase transaction failed', details: error.message });
     }
 
-    // Update the order status to "Paid"
+    if (attempt === MAX_RETRIES) {
+      if (lastError.message === 'INVENTORY_LIMIT_EXCEEDED') {
+        // Attempt refund
+        try {
+          await razorpay.payments.refund(razorpayPaymentId, {
+            amount: order.finalAmount * 100
+          });
+          return res.status(400).json({
+            success: false,
+            error: 'Item sold out. Payment has been refunded.'
+          });
+        } catch (refundError) {
+          console.error('Refund failed:', refundError);
+          throw new Error('Inventory limit exceeded and refund failed');
+        }
+      }
+      throw lastError;
+    }
+
+    // Update order status
     order.paymentStatus = 'Completed';
     order.status = 'Pending';
-    order.paymentId = razorpayPaymentId; // Store Razorpay payment ID
+    order.paymentId = razorpayPaymentId;
     await order.save({ session });
 
-    // Commit the transaction
     await session.commitTransaction();
-    console.log('success')
-    // Return success response
-    res.status(200).json({success:true,message: 'Payment confirmed and stock updated successfully' });
+    res.status(200).json({ success: true, message: 'Payment confirmed and stock updated' });
+
   } catch (error) {
-    // Abort the transaction on error
     await session.abortTransaction();
-    console.log('Error confirming payment:', error);
-    res.status(500).json({ error: 'Payment confirmation failed', details: error.message });
+    console.error('Payment verification failed:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Payment verification failed',
+      details: error.message 
+    });
   } finally {
-    // End the session
     session.endSession();
   }
 };

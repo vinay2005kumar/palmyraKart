@@ -1,15 +1,14 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "./Buy.css";
-import { PiCurrencyInrBold } from "react-icons/pi";
-import { PiCurrencyInr } from "react-icons/pi";
+import { PiCurrencyInrBold, PiCurrencyInr } from "react-icons/pi";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import PaymentComponent from "./PaymentComponent"; // Import the PaymentComponent
-import { useAuth } from '../../context/AuthContext'; // Import the context
-import { database, ref, get, onValue } from '../../firebase/firebase'; // Import Firebase functions
+import PaymentComponent from "./PaymentComponent";
+import { useAuth } from '../../context/AuthContext';
+import { database, ref, onValue } from '../../firebase/firebase';
 
-const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, handlePaymentSuccess }) => {
+const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
   const [bphone, setbphone] = useState("");
   const [selectedArea, setSelectedArea] = useState("");
   const [places, setPlaces] = useState([]);
@@ -20,14 +19,13 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
   const [bpath, setbpath] = useState(path);
   const [btype, setbtype] = useState(itemtype);
   const [tprice, settprice] = useState(0);
-  const [limit, setlimit] = useState(llimit3);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [stock, setStock] = useState(0); // To store the available stock from Firebase
+  const [availableStock, setAvailableStock] = useState(0);
+  const [isStockChecking, setIsStockChecking] = useState(false);
   const isMobile = window.innerWidth <= 765;
   const navigate = useNavigate();
   const paymentRef = useRef(null);
 
-  // Use context values
   const { userDetails, checkAuth } = useAuth();
   const { name: bname, email: customerEmail } = userDetails;
 
@@ -56,7 +54,6 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
     });
   };
 
-  // Calculate total price
   useEffect(() => {
     const calculateTotal = () => {
       const a = itemprice || 0;
@@ -67,45 +64,31 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
     calculateTotal();
   }, [itemprice]);
 
-  // Fetch user data on mount
   useEffect(() => {
-    checkAuth(); // Fetch user data from context
+    checkAuth();
   }, []);
 
-  // Fetch stock and limit from Firebase
   useEffect(() => {
     const url = import.meta.env.VITE_FIREBASE_URL;
     const collection = import.meta.env.VITE_FIREBASE_COLLECTION;
     const inventoryRef = ref(database, `${url}/${collection}`);
 
-    // Fetch initial data using `get`
-    get(inventoryRef).then((snapshot) => {
-      if (snapshot.exists()) {
-        const { limit, stock } = snapshot.val();
-        setlimit(limit || 100); // Default to 100 if `limit` is missing or 0
-        setStock(stock || 0); // Default to 0 if `stock` is missing or 0
-      }
-    });
-
-    // Listen for real-time updates using `onValue`
     const unsubscribe = onValue(inventoryRef, (snapshot) => {
       if (snapshot.exists()) {
         const { limit, stock } = snapshot.val();
-        setlimit(limit || 100); // Default to 100 if `limit` is missing or 0
-        setStock(stock || 0); // Default to 0 if `stock` is missing or 0
+        setAvailableStock(limit - stock);
       }
     });
 
-    return () => unsubscribe(); // Cleanup on unmount
+    return () => unsubscribe();
   }, []);
 
   const generateOrderId = () => {
-    const prefix = "ORD"; // Fixed prefix
-    const timestamp = Date.now().toString(36).toUpperCase(); // Base36 encoded timestamp
-    const randomStr = Math.random().toString(36).slice(2, 6).toUpperCase(); // Random 4-letter string
-    const middleText = "PALMYRA"; // Fixed text in between
-    const randomNum = Math.floor(1000 + Math.random() * 9000); // Random 4-digit number
-
+    const prefix = "ORD";
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const randomStr = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const middleText = "PALMYRA";
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
     return `${prefix}-${timestamp}-${middleText}-${randomStr}${randomNum}`;
   };
 
@@ -137,22 +120,23 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
       return;
     }
 
-    if (isProcessing) {
-      toastfun("Payment is already being processed", "info");
+    if (isProcessing || isStockChecking) {
+      toastfun("Please wait...", "info");
       return;
     }
 
-    setIsProcessing(true); // Disable the button
-
+    setIsStockChecking(true);
+    
     try {
-      // Check if the selected quantity exceeds the available stock
       const totalSelectedQuantity = btype === "single" ? bcount : bcount * 12;
-      if (totalSelectedQuantity > (limit - stock)) {
-        toastfun(`Only ${limit - stock} pieces are available. Please reduce your order quantity.`, "info");
+      
+      if (totalSelectedQuantity > availableStock) {
+        toastfun(`Only ${availableStock} pieces available. Please reduce quantity.`, "error");
         return;
       }
 
-      // Prepare data for payment
+      setIsProcessing(true);
+
       const buyComponentData = {
         bname,
         btype,
@@ -163,9 +147,9 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
         bphone2: bphone,
         generateOrderId,
         navigate,
+        userId: userDetails.id
       };
 
-      // Call initiatePayment on PaymentComponent
       if (paymentRef.current) {
         await paymentRef.current.initiatePayment(buyComponentData);
       }
@@ -173,7 +157,8 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
       console.error("Payment processing failed:", error);
       toastfun("Payment processing failed. Please try again.", "error");
     } finally {
-      setIsProcessing(false); // Re-enable the button
+      setIsProcessing(false);
+      setIsStockChecking(false);
     }
   };
 
@@ -183,6 +168,19 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
       <div className="goback">
         <Link to="/ordermenu">Go Back</Link>
       </div>
+      <div className="stock-info">
+          <div className="pieces">
+          {availableStock > 10 ? (
+                <span className="in-stock">Remaining Pieces are:{availableStock}</span>
+              ) : availableStock > 0 ? (
+                <span className="low-stock">Only {availableStock} left!</span>
+              ) : (
+                <span className="out-of-stock">Out of Stock</span>
+              )}
+          </div>
+            
+              <div className="snote">(<span>Note</span>: Other customers are buying these pieces in real time. You can see the updated stock here. Grab yours quickly before they sell out!)</div>
+            </div>
       <div id="bmain">
         <div className="card1">
           <div className="blocation2">
@@ -250,11 +248,15 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
             </div>
           </div>
         </div>
+     
+
         <div className="card2">
+        
           <div className="bitem">
             <p id="btype">
               You are buying <strong>{bcount} {btype}</strong> palmyra fruits
             </p>
+         
             <div className="bimg">
               <img src={bpath} alt="hi" />
             </div>
@@ -267,26 +269,19 @@ const Buy = ({ count, price, path, itemtype, totalcount, quantity, llimit3, hand
               <hr />
               <p>TOTAL PAY</p>
               <div className="values">
-                <p id="itemcost">
-                <PiCurrencyInr />
-                  {itemprice}
-                </p>
-                <p id="platform">
-                <PiCurrencyInr />
-                  3
-                </p>
-                <p id="gst">
-                <PiCurrencyInr />
-                  10
-                </p>
-                <p id="totalcost">
-                <PiCurrencyInr />
-                  {tprice}
-                </p>
+                <p id="itemcost"><PiCurrencyInr />{itemprice}</p>
+                <p id="platform"><PiCurrencyInr />3</p>
+                <p id="gst"><PiCurrencyInr />10</p>
+                <p id="totalcost"><PiCurrencyInr />{tprice}</p>
               </div>
             </div>
-            <button id="pay" onClick={handlePay} disabled={isProcessing || (bcount > (limit - stock))}>
-              {isProcessing ? "Paying..." : "PAY NOW"}
+            <button 
+              id="pay" 
+              onClick={handlePay} 
+              disabled={isProcessing || isStockChecking || (bcount > availableStock)}
+            >
+              {isProcessing ? "Processing..." : 
+               isStockChecking ? "Checking Stock..." : "PAY NOW"}
             </button>
           </div>
         </div>

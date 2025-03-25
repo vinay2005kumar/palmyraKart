@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { RxCross2 } from 'react-icons/rx';
-import { useAuth } from '../../context/AuthContext'; // Import the context
+import { useAuth } from '../../context/AuthContext';
 
 const Order = ({ order2, resetOrder }) => {
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true);
@@ -18,11 +18,55 @@ const Order = ({ order2, resetOrder }) => {
   const [cancellationReason, setCancellationReason] = useState('order cancel');
   const isMobile = window.innerWidth <= 768;
   const [email, setEmail] = useState('');
-  const { orderDetails, userDetails, checkAuth, removeOrder, isLoading } = useAuth(); // Use context values
+  const { orderDetails, userDetails, checkAuth, removeOrder, isLoading } = useAuth();
   const navigate = useNavigate();
   const [date, setDate] = useState();
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
+
+  // Toast function with proper management
+  const toastfun = (msg, type, toastId = 'default-toast') => {
+    if (!toast.isActive(toastId)) {
+      // Calculate approximate dimensions based on message length
+      const messageLength = msg.length;
+      const lineLength = isMobile ? 30 : 50; // Characters per line
+      const lines = Math.ceil(messageLength / lineLength);
+      
+      // Calculate dynamic dimensions
+      const minWidth = isMobile ? '80vw' : '30vw';
+      const maxWidth = isMobile ? '90vw' : '40vw';
+      const baseHeight = isMobile ? '10vh' : '10vh';
+      const lineHeight = '1.5rem';
+      const padding = 20; // px
+      
+      const dynamicHeight = `calc(${baseHeight} + ${Math.max(0, lines - 3)} * ${lineHeight})`;
+      
+      toast[type](msg, {
+        position: 'top-right',
+        autoClose: 3000,
+        toastId,
+        style: {
+          position: 'absolute',
+          top: isMobile ? '6vh' : '7vh',
+          left: isMobile ? '5%' : 'auto',
+          right: isMobile ? '5%' : '20px',
+          minWidth: minWidth,
+          maxWidth: maxWidth,
+          width: 'auto', // Let it grow based on content
+          height: 'auto', // Let it grow based on content
+          minHeight: baseHeight,
+          fontSize: '1.2rem',
+          padding: '10px',
+          whiteSpace: 'pre-wrap', // Preserve line breaks and wrap text
+          wordWrap: 'break-word', // Break long words
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      });
+    }
+  };
+
   // Cancel order
   const cancelOrder = async (orderId, email) => {
     try {
@@ -32,14 +76,11 @@ const Order = ({ order2, resetOrder }) => {
         data: { email, cancellationReason },
       });
 
-      // Refresh data after cancellation
       checkAuth();
       setCancel(false);
-
-      const message = 'Order Cancelled Successfully';
-      toastfun('Order Cancelled Successfully','success');
+      toastfun('Order Cancelled Successfully', 'success', `cancel-success-${orderId}`);
     } catch (error) {
-      toastfun('Failed to cancel the order. Please try again.','error');
+      toastfun('Failed to cancel the order. Please try again.', 'error', `cancel-error-${orderId}`);
     }
   };
 
@@ -65,124 +106,99 @@ const Order = ({ order2, resetOrder }) => {
     setOrderId(id);
   };
 
-  const toastfun = (msg, type) => {
-    toast[type](msg, {
-      position: 'top-right',
-      autoClose: 3000,
-      style: {
-        position: 'absolute',
-        top: isMobile ? '6vh' : '60px',
-        left: isMobile && '13%',
-        width: isMobile ? '80vw' : '40vw',
-        height: isMobile ? '10vh' : '10vh',
-        fontSize: '1.2rem',
-        padding: '10px',
-      },
-      onClick: () => {
-        toast.dismiss();
-      },
-    });
-  };
-
   // Function to handle the actual deletion
   const confirmDelete = async (orderId, status) => {
     const toastId = `delete-toast-${orderId}`;
+    
+    // Dismiss any existing toast with this ID
+    toast.dismiss(toastId);
 
-    if (!toast.isActive(toastId)) {
-      toast.info(
-        <div>
-          <p style={{ padding: '1px' }}>Are you sure you want to delete this order?</p>
-          <button
-            onClick={async () => {
-              toast.dismiss(toastId);
-              try {
-                if (status === 'Cancelled') {
-                  toastfun('Order cannot be deleted until Refunded.','error');
-                } else {
-                  const deleteUrl = `${url}/deleteOrder/${orderId}`;
-                  await axios.delete(deleteUrl, {
-                    headers: { 'Content-Type': 'application/json' },
-                  });
-
-                  // Update the context state
-                  removeOrder(orderId);
-
-                  // Show success toast
-                  toastfun('Order history deleted successfully', 'success');
-                }
-              } catch (error) {
-                toastfun('Failed to delete the order history. Please try again.', 'error');
-              }
-            }}
-            style={{
-              fontSize: '1.1em',
-              margin: '5px',
-              padding: '5px 15px',
-              background: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            Yes
-          </button>
-          <button
-            onClick={() => toast.dismiss(toastId)}
-            style={{
-              fontSize: '1.1em',
-              margin: '5px',
-              padding: '5px 15px',
-              background: '#f44336',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            No
-          </button>
-        </div>,
-        {
-          position: 'top-center',
-          closeOnClick: true,
-          draggable: false,
-          autoClose: false,
-          onClick: () => {
+    toast.info(
+      <div>
+        <p style={{ padding: '1px' }}>Are you sure you want to delete this order?</p>
+        <button
+          onClick={async () => {
             toast.dismiss(toastId);
-          },
-          toastId,
-          style: {
-            top: '6em',
-            width: isMobile ? '70%' : '100%',
-          },
-        }
-      );
-    }
+            try {
+              if (status === 'Cancelled') {
+                toastfun('Order cannot be deleted until Refunded.', 'error', `delete-error-${orderId}`);
+              } else {
+                const deleteUrl = `${url}/deleteOrder/${orderId}`;
+                await axios.delete(deleteUrl, {
+                  headers: { 'Content-Type': 'application/json' },
+                });
+
+                removeOrder(orderId);
+                toastfun('Order history deleted successfully', 'success', `delete-success-${orderId}`);
+              }
+            } catch (error) {
+              toastfun('Failed to delete the order history. Please try again.', 'error', `delete-error-${orderId}`);
+            }
+          }}
+          style={{
+            fontSize: '1.1em',
+            margin: '5px',
+            padding: '5px 15px',
+            background: '#4CAF50',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => toast.dismiss(toastId)}
+          style={{
+            fontSize: '1.1em',
+            margin: '5px',
+            padding: '5px 15px',
+            background: '#f44336',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+          }}
+        >
+          No
+        </button>
+      </div>,
+      {
+        position: 'top-center',
+        closeOnClick: false,
+        draggable: false,
+        autoClose: false,
+        toastId,
+        style: {
+          top: '6em',
+          width: isMobile ? '70%' : '100%',
+        },
+      }
+    );
   };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-  
-    // Extract date components
-    const day = date.toLocaleString('en-US', { weekday: 'short' }); // e.g., "Sun"
-    const month = date.toLocaleString('en-US', { month: 'short' }); // e.g., "Mar"
-    const dayOfMonth = date.getDate(); // e.g., 23
-    const year = date.getFullYear(); // e.g., 2025
-  
-    // Extract time components and convert to 12-hour format
+    const day = date.toLocaleString('en-US', { weekday: 'short' });
+    const month = date.toLocaleString('en-US', { month: 'short' });
+    const dayOfMonth = date.getDate();
+    const year = date.getFullYear();
     let hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0'); // Ensure 2 digits
+    const minutes = date.getMinutes().toString().padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12; // Convert to 12-hour format
-  
-    // Combine into the desired format
+    hours = hours % 12 || 12;
+
     return `${day} ${month} ${dayOfMonth} ${year} at ${hours}:${minutes} ${ampm}`;
   };
+
   // Handle payment success toast
   useEffect(() => {
     if (order2) {
-      toastfun('Payment Successful! Your order will be processed shortly.', 'success');
-      resetOrder();
+      if (!toast.isActive('payment-success')) {
+        toastfun('Payment Successful! Your order will be processed shortly.', 'success', 'payment-success');
+        resetOrder();
+      }
     }
   }, [order2, resetOrder]);
 
@@ -198,7 +214,7 @@ const Order = ({ order2, resetOrder }) => {
       <Topbar />
       <div className="order">
         <h1>Your Orders</h1>
-        {isLoading ? ( // Show loader if isLoading is true
+        {isLoading ? (
           <FruitLoader></FruitLoader>
         ) : (
           <>
@@ -212,13 +228,10 @@ const Order = ({ order2, resetOrder }) => {
             <div className="items" id="items" style={{ display: cancel ? 'none' : 'block' }}>
               {orderDetails.length > 0 ? (
                 orderDetails
-                  .slice() // Create a shallow copy to avoid mutating the original array
+                  .slice()
                   .sort((a, b) => {
-                    // Parse dates directly using the Date constructor
                     const dateA = new Date(a.date);
                     const dateB = new Date(b.date);
-
-                    // Sort in descending order (most recent first)
                     return dateB - dateA;
                   })
                   .map((order) => (
@@ -243,7 +256,15 @@ const Order = ({ order2, resetOrder }) => {
                         <div>
                           <button
                             id="cancel"
-                            onClick={() => handleCancelClick(order.orderId, order.items[0]?.itemType, order.items[0]?.imagePath, order.items[0]?.quantity, order.items[0]?.price, order.status, new Date(order.date).toLocaleString())}
+                            onClick={() => handleCancelClick(
+                              order.orderId, 
+                              order.items[0]?.itemType, 
+                              order.items[0]?.imagePath, 
+                              order.items[0]?.quantity, 
+                              order.items[0]?.price, 
+                              order.status, 
+                              new Date(order.date).toLocaleString()
+                            )}
                             disabled={isBeforeTenAM || order.status === 'delivered'}
                           >
                             Cancel

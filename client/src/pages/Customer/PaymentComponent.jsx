@@ -1,83 +1,95 @@
-import React, { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
+import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import axios from 'axios';
-import LoadingSpinner from '../../components/LoadingSpinner'; // Import the LoadingSpinner
+import LoadingSpinner from '../../components/LoadingSpinner';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+
 const PaymentComponent = forwardRef(({ amount, productName, description, customerEmail, customerPhone, onPaymentSuccess }, ref) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
- const isMobile = window.innerWidth <= 765;
+  const isMobile = window.innerWidth <= 765;
+
+  const toastfun = (msg, type, toastId = 'default-toast') => {
+    if (!toast.isActive(toastId)) {
+      // Calculate approximate dimensions based on message length
+      const messageLength = msg.length;
+      const lineLength = isMobile ? 30 : 50; // Characters per line
+      const lines = Math.ceil(messageLength / lineLength);
+      
+      // Calculate dynamic dimensions
+      const minWidth = isMobile ? '80vw' : '30vw';
+      const maxWidth = isMobile ? '90vw' : '40vw';
+      const baseHeight = isMobile ? '10vh' : '10vh';
+      const lineHeight = '1.5rem';
+      const padding = 20; // px
+      
+      const dynamicHeight = `calc(${baseHeight} + ${Math.max(0, lines - 3)} * ${lineHeight})`;
+      
+      toast[type](msg, {
+        position: 'top-right',
+        autoClose: 3000,
+        toastId,
+        style: {
+          position: 'absolute',
+          top: isMobile ? '6vh' : '7vh',
+          left: isMobile ? '5%' : 'auto',
+          right: isMobile ? '5%' : '20px',
+          minWidth: minWidth,
+          maxWidth: maxWidth,
+          width: 'auto', // Let it grow based on content
+          height: 'auto', // Let it grow based on content
+          minHeight: baseHeight,
+          fontSize: '1.2rem',
+          padding: '10px',
+          whiteSpace: 'pre-wrap', // Preserve line breaks and wrap text
+          wordWrap: 'break-word', // Break long words
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+      });
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     initiatePayment: async (buyComponentData) => {
       try {
-        setLoading(true); // Show loading spinner
+        setLoading(true);
         setError(null);
 
-        const {
-          bname,
-          btype,
-          bcount,
-          tprice,
-          baddress,
-          bphone2,
-          generateOrderId,
-          navigate,
-        } = buyComponentData;
-  const toastfun = (msg, type) => {
-    toast[type](msg, {
-      position: "top-center",
-      autoClose: 3000,
-      style: {
-        position: "absolute",
-        right: "0em",
-        top: isMobile ? "0em" : "0px",
-        left: isMobile ? "18%" : "-2em",
-        width: isMobile ? "70vw" : "40vw",
-        height: isMobile ? "10vh" : "20vh",
-        fontSize: isMobile ? "1.1em" : "1.2em",
-        padding: "10px",
-      },
-      onClick: () => {
-        toast.dismiss();
-      },
-    });
-  };
+        const { bname, btype, bcount, tprice, baddress, bphone2, generateOrderId, navigate, userId } = buyComponentData;
+
         // Load Razorpay SDK
         const res = await loadRazorpay();
         if (!res) {
-          setError('Razorpay SDK failed to load. Check your internet connection.');
-          toastfun('Razorpay SDK failed to load. Check your internet connection.', 'error');
-          setLoading(false);
-          return;
+          throw new Error('Razorpay SDK failed to load');
         }
 
         const finalAmount = tprice || amount;
-        const orderId = generateOrderId ? generateOrderId() : 'order_' + Date.now().toString();
+        const orderId = generateOrderId();
 
         // Create order on the server
         const orderData = await axios.post(
           `${url}/create-order`,
           {
-            amount: finalAmount * 100, // Convert to paise
+            amount: finalAmount * 100,
             currency: 'INR',
             productName: btype,
             description: `Purchase of ${bcount} ${btype}`,
             address: baddress,
             phone: bphone2,
-            items: [
-              {
-                itemType: btype,
-                itemName: 'Palmyra Fruit',
-                quantity: bcount,
-                price: tprice,
-                imagePath: buyComponentData.bpath,
-              },
-            ],
+            items: [{
+              itemType: btype,
+              itemName: 'Palmyra Fruit',
+              quantity: bcount,
+              price: tprice,
+              imagePath: buyComponentData.bpath,
+            }],
             paymentMethod: 'Credit Card',
             finalAmount: finalAmount,
-            user: buyComponentData.userId,
+            user: userId,
             orderId,
           },
           { withCredentials: true }
@@ -106,33 +118,18 @@ const PaymentComponent = forwardRef(({ amount, productName, description, custome
 
               if (result.data.success) {
                 const orderOtp = Math.floor(100000 + Math.random() * 900000).toString();
-
-                // Send OTP
-                const sendotp = await axios.post(
-                  `${url}/send-orderOtp`,
-                  {
-                    oid: orderId,
-                    orderOtp
-                  },
-                  { withCredentials: true }
-                );
-
-                if (sendotp.data.success) {
-                  toastfun('Payment successful! Check your email for Order OTP', 'success');
-                } else {
-                  toastfun('Payment successful but error in OTP sending. Your order is confirmed.', 'info');
-                }
+                await axios.post(`${url}/send-orderOtp`, { oid: orderId, orderOtp }, { withCredentials: true });
+                
+                toastfun('Payment successful! Check your email for Order OTP', 'success');
                 onPaymentSuccess?.(true);
                 navigate?.('/order');
               } else {
-                setError('Payment verification failed');
-                toastfun('Payment verification failed', 'error');
+                throw new Error('Payment verification failed');
               }
             } catch (err) {
-              setError('Payment verification failed: ' + err.message);
-              toastfun('Payment verification failed: ' + err.message, 'error');
+              toastfun(err.message || 'Payment verification failed', 'error');
             } finally {
-              setLoading(false); // Hide loading spinner
+              setLoading(false);
             }
           },
           prefill: {
@@ -146,9 +143,7 @@ const PaymentComponent = forwardRef(({ amount, productName, description, custome
           },
           theme: { color: '#3399cc' },
           modal: {
-            ondismiss: function () {
-              setLoading(false); // Hide loading spinner
-            },
+            ondismiss: () => setLoading(false),
           },
         };
 
@@ -156,14 +151,13 @@ const PaymentComponent = forwardRef(({ amount, productName, description, custome
         paymentObject.open();
 
         paymentObject.on('payment.failed', function (response) {
-          setError(`Payment failed: ${response.error.description}`);
           toastfun(`Payment failed: ${response.error.description}`, 'error');
-          setLoading(false); // Hide loading spinner
+          setLoading(false);
         });
+
       } catch (error) {
-        setError('Error initiating payment: ' + error.message);
-        toastfun('Error initiating payment: ' + error.message, 'error');
-        setLoading(false); // Hide loading spinner
+        toastfun(error.message || 'Error initiating payment', 'error');
+        setLoading(false);
       }
     },
   }));
@@ -183,7 +177,8 @@ const PaymentComponent = forwardRef(({ amount, productName, description, custome
 
   return (
     <>
-      {loading && <LoadingSpinner />} {/* Show loading spinner when processing */}
+      {loading && <LoadingSpinner />}
+      <ToastContainer />
     </>
   );
 });
