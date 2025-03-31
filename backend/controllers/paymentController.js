@@ -13,9 +13,9 @@ dotenv.config();
 const INVENTORY_USER_ID = process.env.FIREBASE_COLLECTION || 'AmIewDOW747kvqkfhNE2';
 const INVENTORY_PATH = `users/${INVENTORY_USER_ID}`;
 const DEFAULT_INVENTORY = {
-  limit: 1000,    // Total available quantity (set by admin)
-  stock: 0,       // Successfully sold quantity
-  reserved: 0,    // Temporarily reserved during checkout
+  limit: 1000,
+  stock: 0,
+  reserved: 0,
   lastUpdated: Date.now()
 };
 
@@ -33,15 +33,14 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
-// Helper function to calculate actual fruit count
+
 const calculateActualQuantity = (item) => {
   if (item.itemType && item.itemType.toLowerCase() === 'dozen') {
     return item.quantity * 12;
   }
-  // Default to single (or any other type)
   return item.quantity;
 };
-// Inventory Service
+
 const inventoryService = {
   getInventory: async () => {
     const inventoryRef = ref(database, INVENTORY_PATH);
@@ -59,9 +58,7 @@ const inventoryService = {
     const inventoryRef = ref(database, INVENTORY_PATH);
 
     try {
-      // Use Firebase transaction for atomic operations
       const result = await runTransaction(inventoryRef, (currentData) => {
-        // If data doesn't exist, initialize it
         if (!currentData) {
           return DEFAULT_INVENTORY;
         }
@@ -75,8 +72,8 @@ const inventoryService = {
 
         switch (action) {
           case 'reserve':
-            if (currentData.limit - currentData.stock - currentData.reserved < quantity) {
-              // This will abort the transaction
+            const available = currentData.limit - currentData.stock - currentData.reserved;
+            if (available < quantity) {
               throw new Error('OUT_OF_STOCK');
             }
             updated.reserved += quantity;
@@ -116,7 +113,6 @@ const inventoryService = {
   }
 };
 
-// Order Service
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -126,30 +122,24 @@ export const createOrder = async (req, res) => {
       items,
       orderId,
       finalAmount,
-      totalAmount,
-      tax,
-      shippingCost,
-      discount,
-      productName,
-      description,
-      shippingAddress,
-      paymentMethod,
-      date,
-      otp,
       user
     } = req.body;
 
-    console.log('Creating order with data:', req.body);
-
-    // Validate required fields
     if (!user?.id || !orderId || !items?.length) {
       throw new Error('MISSING_REQUIRED_FIELDS');
     }
 
-    // Calculate total quantity and reserve inventory
+    // Check inventory availability first
+    const currentInventory = await inventoryService.getInventory();
     const orderQuantity = items.reduce((sum, item) => {
       return sum + calculateActualQuantity(item);
     }, 0);
+    
+    if (currentInventory.limit - currentInventory.stock - currentInventory.reserved < orderQuantity) {
+      throw new Error('OUT_OF_STOCK');
+    }
+
+    // Reserve inventory
     await inventoryService.updateInventory(orderQuantity, 'reserve', orderId);
 
     // Create Razorpay order
@@ -175,33 +165,25 @@ export const createOrder = async (req, res) => {
         price: item.price,
         imagePath: item.imagePath || ''
       })),
-      totalAmount,
-      tax,
-      shippingCost,
-      discount,
+      totalAmount: req.body.totalAmount,
+      tax: req.body.tax || 0,
+      shippingCost: req.body.shippingCost || 0,
+      discount: req.body.discount || 0,
       finalAmount,
-      paymentMethod,
-      shippingAddress: {
-        street: shippingAddress.street || '',
-        city: shippingAddress.city || '',
-        state: shippingAddress.state || '',
-        country: shippingAddress.country || '',
-        zipCode: shippingAddress.zipCode || '',
-        phoneNumber: shippingAddress.phoneNumber || ''
-      },
+      paymentMethod: req.body.paymentMethod || 'Credit Card',
+      shippingAddress: req.body.shippingAddress || {},
       paymentStatus: 'reserved',
       status: 'Pending',
-      date,
-      otp,
-      productName,
-      description
+      date: req.body.date || new Date().toISOString(),
+      otp: req.body.otp,
+      productName: req.body.productName,
+      description: req.body.description
     });
 
     await newOrder.save({ session });
 
     // Set timeout to release inventory if payment not completed
-    // Consider using a transaction here as well
-    setTimeout(async () => {
+    const releaseTimeout = setTimeout(async () => {
       try {
         const order = await Order.findOne({ orderId });
         if (order?.paymentStatus === 'reserved') {
@@ -215,7 +197,14 @@ export const createOrder = async (req, res) => {
       } catch (error) {
         console.error('Failed to release inventory:', error);
       }
-    }, 15 * 60 * 1000); // 15 minutes
+    }, 2 * 60 * 1000); // 2 minutes
+
+    // Clear timeout if order completes successfully
+    req.on('close', () => {
+      if (res.headersSent) {
+        clearTimeout(releaseTimeout);
+      }
+    });
 
     await session.commitTransaction();
 
@@ -256,9 +245,7 @@ export const verifyPayment = async (req, res) => {
       items
     } = req.body;
 
-    console.log('Verifying payment for order:', orderCreationId);
-
-    // 1. Check if payment already processed (idempotency)
+    // Check if payment already processed
     const existingOrder = await Order.findOne({
       orderId: orderCreationId,
       paymentStatus: 'Completed',
@@ -266,7 +253,6 @@ export const verifyPayment = async (req, res) => {
     });
 
     if (existingOrder) {
-      console.log(`Payment already processed for order ${orderCreationId}`);
       return res.json({
         success: true,
         orderId: orderCreationId,
@@ -275,7 +261,7 @@ export const verifyPayment = async (req, res) => {
       });
     }
 
-    // 2. Verify payment signature
+    // Verify payment signature
     const generatedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
@@ -285,7 +271,7 @@ export const verifyPayment = async (req, res) => {
       throw new Error('INVALID_SIGNATURE');
     }
 
-    // 3. Validate order exists and is in reserved state
+    // Validate order exists
     const order = await Order.findOne({
       orderId: orderCreationId,
       razorpayOrderId: razorpayOrderId,
@@ -296,19 +282,19 @@ export const verifyPayment = async (req, res) => {
       throw new Error('INVALID_ORDER_STATE');
     }
 
-    // 4. Verify payment with Razorpay
+    // Verify payment with Razorpay
     const payment = await razorpay.payments.fetch(razorpayPaymentId);
     if (payment.status !== 'captured' || payment.amount !== Number(amount)) {
       throw new Error('PAYMENT_VALIDATION_FAILED');
     }
 
-    // 5. Confirm inventory reservation
+    // Confirm inventory reservation
     const orderQuantity = items.reduce((sum, item) => {
       return sum + calculateActualQuantity(item);
     }, 0);
     await inventoryService.updateInventory(orderQuantity, 'confirm', orderCreationId);
 
-    // 6. Update order status
+    // Update order status
     order.paymentStatus = 'Completed';
     order.paymentId = razorpayPaymentId;
     order.status = 'Pending';
@@ -351,7 +337,36 @@ export const verifyPayment = async (req, res) => {
   }
 };
 
-// Server startup check
+export const releaseInventory = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { orderId, quantity } = req.body;
+    
+    const order = await Order.findOne({ orderId }).session(session);
+    if (!order || order.paymentStatus !== 'reserved') {
+      await session.commitTransaction();
+      return res.json({ success: true, message: 'Order not in reserved state' });
+    }
+
+    await inventoryService.updateInventory(quantity, 'release', orderId);
+    
+    order.paymentStatus = 'Cancelled';
+    await order.save({ session });
+    
+    await session.commitTransaction();
+    
+    res.json({ success: true });
+  } catch (error) {
+    await session.abortTransaction();
+    console.error('Inventory release failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  } finally {
+    session.endSession();
+  }
+};
+
 export const initializeInventory = async () => {
   try {
     const inventory = await inventoryService.getInventory();
@@ -368,7 +383,6 @@ export const initializeInventory = async () => {
   }
 };
 
-// Get current inventory status
 export const getInventoryStatus = async (req, res) => {
   try {
     const inventory = await inventoryService.getInventory();
@@ -387,13 +401,11 @@ export const getInventoryStatus = async (req, res) => {
   }
 };
 
-// Add a periodic check to detect and fix inventory inconsistencies
 export const scheduleInventoryValidation = () => {
   const VALIDATION_INTERVAL = 30 * 60 * 1000; // 30 minutes
 
   const validateInventoryState = async () => {
     try {
-      // Count active reservations in MongoDB
       const activeReservations = await Order.aggregate([
         { $match: { paymentStatus: 'reserved' } },
         { $unwind: '$items' },
@@ -410,7 +422,6 @@ export const scheduleInventoryValidation = () => {
           difference: inventory.reserved - mongoReserved
         });
 
-        // Fix the discrepancy using a transaction
         const inventoryRef = ref(database, INVENTORY_PATH);
         await runTransaction(inventoryRef, (currentData) => {
           return {
@@ -426,11 +437,9 @@ export const scheduleInventoryValidation = () => {
       console.error('❌ Inventory validation failed:', error);
     }
 
-    // Schedule next validation
     setTimeout(validateInventoryState, VALIDATION_INTERVAL);
   };
 
-  // Start the validation cycle
   setTimeout(validateInventoryState, VALIDATION_INTERVAL);
   console.log(`Scheduled inventory validation to run every ${VALIDATION_INTERVAL / 60000} minutes`);
 };

@@ -2,7 +2,6 @@ import React, { forwardRef, useImperativeHandle, useState, useEffect } from 'rea
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import GoogleLoader from '../../components/GoogleLoader';
 import LoadingSpinner from '../../components/LoadingSpinner';
 
 const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
@@ -10,7 +9,7 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
   const [rzpInstance, setRzpInstance] = useState(null);
   const isMobile = window.innerWidth <= 765;
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  //const url = "http://localhost:4000/api/user";
+  // const url = "http://localhost:4000/api/user";
 
   // Load Razorpay script
   useEffect(() => {
@@ -24,6 +23,9 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
     document.body.appendChild(script);
 
     return () => {
+      if (rzpInstance) {
+        rzpInstance.close();
+      }
       document.body.removeChild(script);
       window.RazorpayLoaded = false;
     };
@@ -67,22 +69,23 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
     setLoading(false);
   };
 
-  const sendOrderOtp = async (orderId, orderOtp) => {
+  const calculateActualQuantity = (item) => {
+    if (item.itemType && item.itemType.toLowerCase() === 'dozen') {
+      return item.quantity * 12;
+    }
+    return item.quantity;
+  };
+
+  const releaseInventory = async (orderId, items) => {
     try {
-      const response = await axios.post(
-        `${url}/send-orderOtp`,
-        { oid: orderId, orderOtp },
+      const quantity = items.reduce((sum, item) => sum + calculateActualQuantity(item), 0);
+      await axios.post(
+        `${url}/release-inventory`,
+        { orderId, quantity },
         { withCredentials: true }
       );
-      
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to send OTP');
-      }
-      
-      return true;
     } catch (error) {
-      console.error('Error sending order OTP:', error);
-      throw error;
+      console.error('Failed to release inventory:', error);
     }
   };
 
@@ -110,7 +113,6 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           bpath
         } = buyComponentData;
 
-        // Create properly structured order payload
         const orderPayload = {
           amount: tprice * 100,
           totalAmount: tprice,
@@ -140,11 +142,9 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           otp: Math.floor(100000 + Math.random() * 900000).toString(),
           orderId: generateOrderId(),
           user: {
-            id: userId  // Properly structured user object
+            id: userId
           }
         };
-
-        console.log('Creating order with payload:', orderPayload);
 
         const orderResponse = await axios.post(
           `${url}/create-order`,
@@ -156,7 +156,6 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           throw new Error(orderResponse.data.error || 'Order creation failed');
         }
 
-        // Initialize Razorpay
         const rzp = new window.Razorpay({
           key: import.meta.env.VITE_APP_RAZORPAY_KEY_ID,
           amount: orderResponse.data.finalAmount * 100,
@@ -166,14 +165,12 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           description: `Purchase of ${bcount} ${btype}`,
           handler: async function(response) {
             try {
-              // Keep modal open during verification
               rzp.modal = { 
                 ondismiss: () => false,
                 escape: false,
                 backdropclose: false
               };
 
-              // Verify payment
               const verification = await axios.post(
                 `${url}/verify-payment`,
                 {
@@ -188,38 +185,27 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
               );
 
               if (verification.data.success) {
-                // Send order OTP after successful verification
-                try {
-                  await sendOrderOtp(
-                    orderResponse.data.orderId, 
-                    orderPayload.otp
-                  );
-                  
-                  rzp.close();
-                  showToast('Payment successfully verified! OTP sent to your registered email.', 'success');
-                  
-                  if (onPaymentSuccess) {
-                    onPaymentSuccess({
-                      orderId: orderResponse.data.orderId,
-                      paymentId: response.razorpay_payment_id,
-                      amount: tprice
-                    });
-                  }
+                rzp.close();
+                showToast('Payment successfully verified!', 'success');
+                
+                if (onPaymentSuccess) {
+                  onPaymentSuccess({
+                    orderId: orderResponse.data.orderId,
+                    paymentId: response.razorpay_payment_id,
+                    amount: tprice
+                  });
+                }
 
-                  if (navigate) {
-                    navigate('/order', {
-                      state: {
-                        orderId: orderResponse.data.orderId,
-                        paymentId: response.razorpay_payment_id
-                      }
-                    });
-                  }
-                } catch (otpError) {
-                  console.error('OTP sending failed:', otpError);
-                  rzp.close();
-                  showToast('Payment verified but failed to send OTP. Please contact support.', 'warning');
+                if (navigate) {
+                  navigate('/order', {
+                    state: {
+                      orderId: orderResponse.data.orderId,
+                      paymentId: response.razorpay_payment_id
+                    }
+                  });
                 }
               } else {
+                await releaseInventory(orderResponse.data.orderId, orderPayload.items);
                 throw new Error(verification.data.error || 'Verification failed');
               }
             } catch (error) {
@@ -234,15 +220,17 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           },
           theme: { color: '#3399cc' },
           modal: {
-            ondismiss: () => {
+            ondismiss: async () => {
               showToast('Payment was cancelled', 'info');
+              await releaseInventory(orderResponse.data.orderId, orderPayload.items);
               setLoading(false);
             }
           }
         });
 
-        rzp.on('payment.failed', (response) => {
+        rzp.on('payment.failed', async (response) => {
           showToast(`Payment failed: ${response.error.description}`, 'error');
+          await releaseInventory(orderResponse.data.orderId, orderPayload.items);
           setLoading(false);
         });
 

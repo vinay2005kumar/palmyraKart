@@ -18,7 +18,7 @@ const orderSchema = new mongoose.Schema({
     razorpayOrderId: { type: String },
     paymentId: { type: String },
     paymentMethod: { type: String, enum: ['Credit Card', 'Debit Card', 'PayPal', 'UPI', 'Net Banking', 'Cash on Delivery']},
-    paymentStatus: { type: String, enum: ['Pending', 'Completed', 'Failed', 'Refunded','reserved','captured'], default: 'Pending' },
+    paymentStatus: { type: String, enum: ['Pending', 'Completed', 'Failed', 'Refunded','reserved','captured','Cancelled'], default: 'Pending' },
     shippingAddress: {
       street: { type: String,default:''},
       city: { type: String,default:''},
