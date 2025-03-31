@@ -25,7 +25,14 @@ app.use(cors({
 }));
 // Handle preflight requests
 app.options('*', cors()); // Allow preflight requests for all routes
-
+// Add this before your routes
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', 'https://palmyrakart.onrender.com');
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.sendStatus(200);
+});
 // Routes
 app.get("/", (req, res) => {
   res.send("Backend running on Render!");
