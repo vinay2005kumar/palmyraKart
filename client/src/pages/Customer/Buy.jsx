@@ -27,7 +27,7 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
   const paymentRef = useRef(null);
 
   const { userDetails, checkAuth } = useAuth();
-  const { name: bname, email: customerEmail } = userDetails;
+  const { name: bname, email: customerEmail, _id: userId } = userDetails || {};
 
   const areaPlaceMapping = {
     Parvathipuram: ["Place 1", "Place 2", "Place 3"],
@@ -66,6 +66,7 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
 
   useEffect(() => {
     checkAuth();
+    console.log('Current user details:', userDetails); // Debug log
   }, []);
 
   useEffect(() => {
@@ -96,15 +97,22 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
     if (!bname) {
       toastfun("Please login first", "warn");
       setsave(false);
-    } else if (bphone === "") {
-      toastfun("Please enter mobile number", "warn");
-      setsave(false);
-    } else if (selectedArea === "" || selectedPlace === "") {
-      toastfun("Please enter your address", "warn");
-      setsave(false);
-    } else {
-      setsave(true);
+      return;
     }
+    
+    if (bphone === "" || bphone.length < 10) {
+      toastfun("Please enter a valid mobile number", "warn");
+      setsave(false);
+      return;
+    }
+    
+    if (selectedArea === "" || selectedPlace === "") {
+      toastfun("Please enter your complete address", "warn");
+      setsave(false);
+      return;
+    }
+    
+    setsave(true);
   };
 
   const handleAreaChange = (e) => {
@@ -115,6 +123,11 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
   };
 
   const handlePay = async () => {
+    if (!userId) {
+      toastfun("User information missing. Please login again.", "error");
+      return;
+    }
+
     if (!save) {
       toastfun("Please fill and confirm details", "warn");
       return;
@@ -147,14 +160,21 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
         bphone2: bphone,
         generateOrderId,
         navigate,
-        userId: userDetails.id
+        userId, // Correct structure
+        customerEmail
       };
+
+      console.log('Payment data:', buyComponentData); // Debug log
 
       if (paymentRef.current) {
         await paymentRef.current.initiatePayment(buyComponentData);
       }
     } catch (error) {
-      console.error("Payment processing failed:", error);
+      console.error("Payment error details:", {
+        message: error.message,
+        response: error.response?.data,
+        stack: error.stack
+      });
       toastfun("Payment processing failed. Please try again.", "error");
     } finally {
       setIsProcessing(false);
@@ -169,18 +189,20 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
         <Link to="/ordermenu">Go Back</Link>
       </div>
       <div className="stock-info">
-          <div className="pieces">
+        <div className="pieces">
           {availableStock > 10 ? (
-                <span className="in-stock">Remaining Pieces are:{availableStock}</span>
-              ) : availableStock > 0 ? (
-                <span className="low-stock">Only {availableStock} left!</span>
-              ) : (
-                <span className="out-of-stock">Out of Stock</span>
-              )}
-          </div>
-            
-              <div className="snote">(<span>Note</span>: Other customers are buying these pieces in real time. You can see the updated stock here. Grab yours quickly before they sell out!)</div>
-            </div>
+            <span className="in-stock">Remaining Pieces are:{availableStock}</span>
+          ) : availableStock > 0 ? (
+            <span className="low-stock">Only {availableStock} left!</span>
+          ) : (
+            <span className="out-of-stock">Out of Stock</span>
+          )}
+        </div>
+        <div className="snote">
+          (<span>Note</span>: Other customers are buying these pieces in real time. 
+          You can see the updated stock here. Grab yours quickly before they sell out!)
+        </div>
+      </div>
       <div id="bmain">
         <div className="card1">
           <div className="blocation2">
@@ -189,7 +211,14 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
               <label htmlFor="phone" className="l1">
                 Your Mobile Number:
               </label>
-              <input type="tel" name="number" id="number" required onChange={(e) => setbphone(e.target.value)} />
+              <input 
+                type="tel" 
+                name="number" 
+                id="number" 
+                required 
+                value={bphone}
+                onChange={(e) => setbphone(e.target.value)} 
+              />
               <div className="bblock">
                 <marquee behavior="" direction="" className="marquee">
                   Currently, the delivery location is available for some areas
@@ -199,7 +228,12 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
                     <label htmlFor="area" className="label">
                       Select Area:
                     </label>
-                    <select name="area" id="area" value={selectedArea} onChange={handleAreaChange}>
+                    <select 
+                      name="area" 
+                      id="area" 
+                      value={selectedArea} 
+                      onChange={handleAreaChange}
+                    >
                       <option value="">Select Area</option>
                       {Object.keys(areaPlaceMapping).map((area) => (
                         <option key={area} value={area}>
@@ -212,7 +246,12 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
                     <label htmlFor="place" className="label">
                       Select Place:
                     </label>
-                    <select name="place" id="place" value={selectedPlace} onChange={(e) => setSelectedPlace(e.target.value)}>
+                    <select 
+                      name="place" 
+                      id="place" 
+                      value={selectedPlace} 
+                      onChange={(e) => setSelectedPlace(e.target.value)}
+                    >
                       <option value="">Select Place</option>
                       {places.map((place) => (
                         <option key={place} value={place}>
@@ -249,16 +288,13 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
           </div>
         </div>
      
-
         <div className="card2">
-        
           <div className="bitem">
             <p id="btype">
               You are buying <strong>{bcount} {btype}</strong> palmyra fruits
             </p>
-         
             <div className="bimg">
-              <img src={bpath} alt="hi" />
+              <img src={bpath} alt="Palmyra fruit" />
             </div>
             <div className="bill">
               <p id="tbill">BILL DETAILS </p>
@@ -288,11 +324,6 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
       </div>
       <PaymentComponent
         ref={paymentRef}
-        amount={tprice}
-        productName={btype}
-        description={`Purchase of ${bcount} ${btype}`}
-        customerEmail={customerEmail}
-        customerPhone={bphone}
         onPaymentSuccess={handlePaymentSuccess}
       />
     </>

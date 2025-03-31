@@ -82,7 +82,6 @@ const OrderMenu = ({ buy, llimit2 }) => {
         alert(`Only ${remainingPieces} pieces are available. Please reduce your order quantity.`);
         return;
       }
-
       if (c === count) {
         buy(count, total1, src, type);
         navigate('/buy');

@@ -1,183 +1,242 @@
-import React, { forwardRef, useImperativeHandle, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useState, useEffect } from 'react';
 import axios from 'axios';
-import LoadingSpinner from '../../components/LoadingSpinner';
-import { ToastContainer, toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import GoogleLoader from '../../components/GoogleLoader';
+import LoadingSpinner from '../../components/LoadingSpinner';
 
-const PaymentComponent = forwardRef(({ amount, productName, description, customerEmail, customerPhone, onPaymentSuccess }, ref) => {
+const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [rzpInstance, setRzpInstance] = useState(null);
+  const isMobile = window.innerWidth <= 765;
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
-  const isMobile = window.innerWidth <= 765;
 
-  const toastfun = (msg, type, toastId = 'default-toast') => {
-    if (!toast.isActive(toastId)) {
-      // Calculate approximate dimensions based on message length
-      const messageLength = msg.length;
-      const lineLength = isMobile ? 30 : 50; // Characters per line
-      const lines = Math.ceil(messageLength / lineLength);
-      
-      // Calculate dynamic dimensions
-      const minWidth = isMobile ? '80vw' : '30vw';
-      const maxWidth = isMobile ? '90vw' : '40vw';
-      const baseHeight = isMobile ? '10vh' : '10vh';
-      const lineHeight = '1.5rem';
-      const padding = 20; // px
-      
-      const dynamicHeight = `calc(${baseHeight} + ${Math.max(0, lines - 3)} * ${lineHeight})`;
-      
-      toast[type](msg, {
-        position: 'top-right',
-        autoClose: 3000,
-        toastId,
-        style: {
-          position: 'absolute',
-          top: isMobile ? '6vh' : '7vh',
-          left: isMobile ? '5%' : 'auto',
-          right: isMobile ? '5%' : '20px',
-          minWidth: minWidth,
-          maxWidth: maxWidth,
-          width: 'auto', // Let it grow based on content
-          height: 'auto', // Let it grow based on content
-          minHeight: baseHeight,
-          fontSize: '1.2rem',
-          padding: '10px',
-          whiteSpace: 'pre-wrap', // Preserve line breaks and wrap text
-          wordWrap: 'break-word', // Break long words
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        },
-      });
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => {
+      window.RazorpayLoaded = true;
+    };
+    script.onerror = () => showToast('Failed to load payment gateway', 'error');
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+      window.RazorpayLoaded = false;
+    };
+  }, []);
+
+  const showToast = (msg, type) => {
+    toast[type](msg, {
+      position: "top-center",
+      autoClose: 5000,
+      hideProgressBar: false,
+      closeOnClick: true,
+      pauseOnHover: true,
+      draggable: true,
+      style: {
+        width: isMobile ? '80vw' : '400px',
+        fontSize: isMobile ? '14px' : '16px'
+      }
+    });
+  };
+
+  const handleError = (error) => {
+    console.error('Payment error details:', {
+      message: error.message,
+      response: error.response?.data,
+      stack: error.stack
+    });
+    
+    let message = error.message || 'Payment processing failed';
+    
+    if (error.response?.data?.code === 'OUT_OF_STOCK') {
+      message = 'Item is out of stock. Please try again later.';
+    } else if (error.response?.data?.code === 'ORDER_CREATION_FAILED') {
+      message = 'Failed to create order. Please try again.';
+    } else if (error.response?.data?.code === 'VERIFICATION_FAILED') {
+      message = 'Payment verification failed. Please contact support.';
+    } else if (error.response?.data?.error) {
+      message = error.response.data.error;
     }
+    
+    showToast(message, 'error');
+    setLoading(false);
   };
 
   useImperativeHandle(ref, () => ({
     initiatePayment: async (buyComponentData) => {
+      if (!window.RazorpayLoaded) {
+        showToast('Payment gateway loading. Please wait...', 'warning');
+        return;
+      }
+
       try {
         setLoading(true);
-        setError(null);
+        
+        const { 
+          bname, 
+          btype, 
+          bcount, 
+          tprice, 
+          baddress, 
+          bphone2, 
+          generateOrderId, 
+          navigate, 
+          userId,
+          customerEmail,
+          bpath
+        } = buyComponentData;
 
-        const { bname, btype, bcount, tprice, baddress, bphone2, generateOrderId, navigate, userId } = buyComponentData;
-
-        // Load Razorpay SDK
-        const res = await loadRazorpay();
-        if (!res) {
-          throw new Error('Razorpay SDK failed to load');
-        }
-
-        const finalAmount = tprice || amount;
-        const orderId = generateOrderId();
-
-        // Create order on the server
-        const orderData = await axios.post(
-          `${url}/create-order`,
-          {
-            amount: finalAmount * 100,
-            currency: 'INR',
-            productName: btype,
-            description: `Purchase of ${bcount} ${btype}`,
-            address: baddress,
-            phone: bphone2,
-            items: [{
-              itemType: btype,
-              itemName: 'Palmyra Fruit',
-              quantity: bcount,
-              price: tprice,
-              imagePath: buyComponentData.bpath,
-            }],
-            paymentMethod: 'Credit Card',
-            finalAmount: finalAmount,
-            user: userId,
-            orderId,
+        // Create properly structured order payload
+        const orderPayload = {
+          amount: tprice * 100,
+          totalAmount: tprice,
+          tax: 0,
+          shippingCost: 0,
+          discount: 0,
+          finalAmount: tprice,
+          productName: btype,
+          description: `Purchase of ${bcount} ${btype}`,
+          shippingAddress: {
+            street: baddress || '',
+            city: '',
+            state: '',
+            country: '',
+            zipCode: '',
+            phoneNumber: bphone2 || ''
           },
+          items: [{
+            itemType: btype,
+            itemName: 'Palmyra Fruit',
+            quantity: bcount,
+            price: tprice,
+            imagePath: bpath || '',
+          }],
+          paymentMethod: 'Credit Card',
+          date: new Date().toISOString(),
+          otp: Math.floor(100000 + Math.random() * 900000).toString(),
+          orderId: generateOrderId(),
+          user: {
+            id: userId  // Properly structured user object
+          }
+        };
+
+        console.log('Creating order with payload:', orderPayload);
+
+        const orderResponse = await axios.post(
+          `${url}/create-order`,
+          orderPayload,
           { withCredentials: true }
         );
 
-        const { id: razorpayOrderId, amount: orderAmount, currency } = orderData.data;
+        if (!orderResponse.data.success) {
+          throw new Error(orderResponse.data.error || 'Order creation failed');
+        }
 
-        // Razorpay options
-        const options = {
+        // Initialize Razorpay
+        const rzp = new window.Razorpay({
           key: import.meta.env.VITE_APP_RAZORPAY_KEY_ID,
-          amount: orderAmount,
-          currency,
-          name: 'Palmyra Fruits',
+          amount: orderResponse.data.finalAmount * 100,
+          currency: 'INR',
+          order_id: orderResponse.data.razorpayOrderId,
+          name: 'Your Business',
           description: `Purchase of ${bcount} ${btype}`,
-          order_id: razorpayOrderId,
-          handler: async function (response) {
+          handler: async function(response) {
             try {
-              const paymentData = {
-                orderCreationId: orderId,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpayOrderId: response.razorpay_order_id,
-                razorpaySignature: response.razorpay_signature,
+              // Keep modal open during verification
+              rzp.modal = { 
+                ondismiss: () => false,
+                escape: false,
+                backdropclose: false
               };
 
-              const result = await axios.post(`${url}/verify`, paymentData, { withCredentials: true });
+              // Verify payment
+              const verification = await axios.post(
+                `${url}/verify-payment`,
+                {
+                  orderCreationId: orderResponse.data.orderId,
+                  razorpayOrderId:orderResponse.data.razorpayOrderId,
+                  razorpayPaymentId: response.razorpay_payment_id,
+                  razorpaySignature: response.razorpay_signature,
+                  amount: orderResponse.data.finalAmount * 100,
+                  items:orderResponse.data.items
+                },
+                { withCredentials: true }
+              );
 
-              if (result.data.success) {
-                const orderOtp = Math.floor(100000 + Math.random() * 900000).toString();
-                await axios.post(`${url}/send-orderOtp`, { oid: orderId, orderOtp }, { withCredentials: true });
+              if (verification.data.success) {
+                rzp.close();
+                showToast('Payment successfully verified!', 'success');
                 
-                toastfun('Payment successful! Check your email for Order OTP', 'success');
-                onPaymentSuccess?.(true);
-                navigate?.('/order');
+                if (onPaymentSuccess) {
+                  onPaymentSuccess({
+                    orderId: orderResponse.data.orderId,
+                    paymentId: response.razorpay_payment_id,
+                    amount: tprice
+                  });
+                }
+
+                if (navigate) {
+                  navigate('/order', {
+                    state: {
+                      orderId: orderResponse.data.orderId,
+                      paymentId: response.razorpay_payment_id
+                    }
+                  });
+                }
               } else {
-                throw new Error('Payment verification failed');
+                throw new Error(verification.data.error || 'Verification failed');
               }
-            } catch (err) {
-              toastfun(err.message || 'Payment verification failed', 'error');
-            } finally {
-              setLoading(false);
+            } catch (error) {
+              handleError(error);
+              rzp.close();
             }
           },
           prefill: {
-            name: bname || 'Customer Name',
+            name: bname || 'Customer',
             email: customerEmail || '',
-            contact: bphone2 || customerPhone || '',
-          },
-          notes: {
-            productName: btype || productName,
-            quantity: bcount || 1,
+            contact: bphone2 || ''
           },
           theme: { color: '#3399cc' },
           modal: {
-            ondismiss: () => setLoading(false),
-          },
-        };
+            ondismiss: () => {
+              showToast('Payment was cancelled', 'info');
+              setLoading(false);
+            }
+          }
+        });
 
-        const paymentObject = new window.Razorpay(options);
-        paymentObject.open();
-
-        paymentObject.on('payment.failed', function (response) {
-          toastfun(`Payment failed: ${response.error.description}`, 'error');
+        rzp.on('payment.failed', (response) => {
+          showToast(`Payment failed: ${response.error.description}`, 'error');
           setLoading(false);
         });
 
+        rzp.open();
+        setRzpInstance(rzp);
+
       } catch (error) {
-        toastfun(error.message || 'Error initiating payment', 'error');
-        setLoading(false);
+        handleError(error);
       }
     },
-  }));
-
-  const loadRazorpay = () => {
-    return new Promise((resolve) => {
-      if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) {
-        return resolve(true);
+    closePayment: () => {
+      if (rzpInstance) {
+        rzpInstance.close();
+        setRzpInstance(null);
       }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
+      setLoading(false);
+    }
+  }));
+  if(loading){
+    return <LoadingSpinner></LoadingSpinner>
+  }
 
   return (
     <>
-      {loading && <LoadingSpinner />}
+      {loading &&<LoadingSpinner></LoadingSpinner>}
       <ToastContainer />
     </>
   );

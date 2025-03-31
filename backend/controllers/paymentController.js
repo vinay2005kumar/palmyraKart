@@ -1,139 +1,241 @@
 import dotenv from 'dotenv';
-dotenv.config();
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
-import { Order } from '../models/orderSchema.js'; // Import the Order model
+import { Order } from '../models/orderSchema.js';
 import mongoose from 'mongoose';
-import transporter from "../config/nodeMailer.js";
 import { initializeApp } from "firebase/app";
-import { getDatabase, ref, runTransaction, get } from "firebase/database";
-import User from '../models/userModel.js';
+import { getDatabase, ref, runTransaction, get, set } from "firebase/database";
 
+// Configurations
+dotenv.config();
+
+// Constants
+const INVENTORY_USER_ID = process.env.FIREBASE_COLLECTION || 'AmIewDOW747kvqkfhNE2';
+const INVENTORY_PATH = `users/${INVENTORY_USER_ID}`;
+const DEFAULT_INVENTORY = {
+  limit: 1000,    // Total available quantity (set by admin)
+  stock: 0,       // Successfully sold quantity
+  reserved: 0,    // Temporarily reserved during checkout
+  lastUpdated: Date.now()
+};
+
+// Initialize Firebase
 const firebaseConfig = {
   apiKey: process.env.FIREBASE_API_KEY,
-  authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-  databaseURL: process.env.FIREBASE_DATABASE_URL,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.FIREBASE_APP_ID,
-  measurementId: process.env.FIREBASE_MEASUREMENT_ID
+  databaseURL: process.env.FIREBASE_DATABASE_URL
 };
 
 const app = initializeApp(firebaseConfig);
 const database = getDatabase(app);
 
+// Initialize Razorpay
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+// Helper function to calculate actual fruit count
+const calculateActualQuantity = (item) => {
+  if (item.itemType && item.itemType.toLowerCase() === 'dozen') {
+    return item.quantity * 12;
+  }
+  // Default to single (or any other type)
+  return item.quantity;
+};
+// Inventory Service
+const inventoryService = {
+  getInventory: async () => {
+    const inventoryRef = ref(database, INVENTORY_PATH);
+    const snapshot = await get(inventoryRef);
 
+    if (!snapshot.exists()) {
+      console.log('Initializing default inventory');
+      await set(inventoryRef, DEFAULT_INVENTORY);
+      return DEFAULT_INVENTORY;
+    }
+    return snapshot.val();
+  },
+
+  updateInventory: async (quantity, action, orderId) => {
+    const inventoryRef = ref(database, INVENTORY_PATH);
+
+    try {
+      // Use Firebase transaction for atomic operations
+      const result = await runTransaction(inventoryRef, (currentData) => {
+        // If data doesn't exist, initialize it
+        if (!currentData) {
+          return DEFAULT_INVENTORY;
+        }
+
+        console.log(`Processing ${action} for order ${orderId}`, {
+          currentState: currentData,
+          quantity
+        });
+
+        const updated = { ...currentData };
+
+        switch (action) {
+          case 'reserve':
+            if (currentData.limit - currentData.stock - currentData.reserved < quantity) {
+              // This will abort the transaction
+              throw new Error('OUT_OF_STOCK');
+            }
+            updated.reserved += quantity;
+            break;
+
+          case 'confirm':
+            if (currentData.reserved < quantity) {
+              console.error('Reservation mismatch!', {
+                tryingToConfirm: quantity,
+                actuallyReserved: currentData.reserved
+              });
+              throw new Error('RESERVATION_MISMATCH');
+            }
+            updated.reserved -= quantity;
+            updated.stock += quantity;
+            break;
+
+          case 'release':
+            updated.reserved = Math.max(0, currentData.reserved - quantity);
+            break;
+        }
+
+        updated.lastUpdated = Date.now();
+        return updated;
+      });
+
+      console.log(`${action} successful for order ${orderId}`, {
+        newState: result.snapshot.val()
+      });
+
+      return result.snapshot.val();
+
+    } catch (error) {
+      console.error(`Inventory ${action} failed for order ${orderId}:`, error);
+      throw error;
+    }
+  }
+};
+
+// Order Service
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
     const {
-      amount,
-      currency = 'INR',
+      items,
+      orderId,
+      finalAmount,
+      totalAmount,
+      tax,
+      shippingCost,
+      discount,
       productName,
       description,
-      address,
-      phone,
-      items,
+      shippingAddress,
       paymentMethod,
-      finalAmount,
-      orderId,
+      date,
+      otp,
+      user
     } = req.body;
 
-    const user = req.user;
+    console.log('Creating order with data:', req.body);
 
-    // Input validation
-    if (!amount || amount <= 0 || !finalAmount || finalAmount <= 0 || !orderId || 
-        !address || !phone || !items || !Array.isArray(items) || items.length === 0) {
-      await session.abortTransaction();
-      return res.status(400).json({ error: 'Missing or invalid required fields' });
+    // Validate required fields
+    if (!user?.id || !orderId || !items?.length) {
+      throw new Error('MISSING_REQUIRED_FIELDS');
     }
 
-    // Check if user is authenticated
-    if (!user || !user.id) {
-      await session.abortTransaction();
-      return res.status(401).json({ error: 'Unauthorized: User not authenticated' });
-    }
-
-    // Calculate total quantity in the order
-    const orderQuantity = items.reduce((total, item) => total + item.quantity, 0);
-
-    // Check inventory availability before creating order
-    const inventoryRef = ref(database, `${process.env.FIREBASE_URL}/${process.env.FIREBASE_COLLECTION}`);
-    const snapshot = await get(inventoryRef);
-    
-    if (!snapshot.exists()) {
-      await session.abortTransaction();
-      return res.status(400).json({ error: 'Inventory data not found' });
-    }
-
-    const { limit, stock } = snapshot.val();
-    if (stock + orderQuantity > limit) {
-      await session.abortTransaction();
-      return res.status(400).json({ 
-        error: 'Insufficient inventory', 
-        available: limit - stock,
-        required: orderQuantity
-      });
-    }
+    // Calculate total quantity and reserve inventory
+    const orderQuantity = items.reduce((sum, item) => {
+      return sum + calculateActualQuantity(item);
+    }, 0);
+    await inventoryService.updateInventory(orderQuantity, 'reserve', orderId);
 
     // Create Razorpay order
-    const razorpayOrder = await new Promise((resolve, reject) => {
-      razorpay.orders.create({
-        amount: finalAmount * 100,
-        currency,
-        receipt: orderId,
-        notes: { productName, description },
-      }, (err, order) => err ? reject(err) : resolve(order));
+    const razorpayOrder = await razorpay.orders.create({
+      amount: finalAmount * 100,
+      currency: 'INR',
+      receipt: orderId,
+      notes: {
+        items: JSON.stringify(items),
+        userId: user.id
+      }
     });
 
-    // Save order to database
+    // Create order document
     const newOrder = new Order({
       orderId,
       razorpayOrderId: razorpayOrder.id,
       user: user.id,
       items: items.map(item => ({
         itemType: item.itemType,
-        itemName: item.itemName,
+        itemName: item.itemName || 'Palmyra Fruit',
         quantity: item.quantity,
         price: item.price,
-        imagePath: item.imagePath,
+        imagePath: item.imagePath || ''
       })),
+      totalAmount,
+      tax,
+      shippingCost,
+      discount,
       finalAmount,
       paymentMethod,
-      paymentStatus: 'Pending',
       shippingAddress: {
-        street: address,
-        phoneNumber: phone,
+        street: shippingAddress.street || '',
+        city: shippingAddress.city || '',
+        state: shippingAddress.state || '',
+        country: shippingAddress.country || '',
+        zipCode: shippingAddress.zipCode || '',
+        phoneNumber: shippingAddress.phoneNumber || ''
       },
+      paymentStatus: 'reserved',
       status: 'Pending',
-      date: new Date(),
+      date,
+      otp,
+      productName,
+      description
     });
 
     await newOrder.save({ session });
+
+    // Set timeout to release inventory if payment not completed
+    // Consider using a transaction here as well
+    setTimeout(async () => {
+      try {
+        const order = await Order.findOne({ orderId });
+        if (order?.paymentStatus === 'reserved') {
+          const orderQuantity = order.items.reduce((sum, item) => 
+            sum + calculateActualQuantity(item), 0);
+          await inventoryService.updateInventory(orderQuantity, 'release', orderId);
+          order.paymentStatus = 'Failed';
+          await order.save();
+          console.log(`Released inventory for expired order ${orderId}`);
+        }
+      } catch (error) {
+        console.error('Failed to release inventory:', error);
+      }
+    }, 15 * 60 * 1000); // 15 minutes
+
     await session.commitTransaction();
 
-    res.status(200).json({
+    res.json({
       success: true,
-      id: razorpayOrder.id,
       orderId,
-      amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency,
+      razorpayOrderId: razorpayOrder.id,
+      amount: finalAmount * 100,
+      finalAmount,
+      items
     });
 
   } catch (error) {
     await session.abortTransaction();
-    console.error('Error creating order:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Order creation failed',
-      details: error.message 
+    console.error('Order creation failed:', error);
+
+    res.status(400).json({
+      success: false,
+      error: error.message,
+      code: error.message === 'OUT_OF_STOCK' ? 'OUT_OF_STOCK' : 'ORDER_CREATION_FAILED'
     });
   } finally {
     session.endSession();
@@ -143,116 +245,194 @@ export const createOrder = async (req, res) => {
 export const verifyPayment = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
-  const MAX_RETRIES = 3;
-  let attempt = 0;
-  let lastError;
 
   try {
-    const { orderCreationId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    const {
+      orderCreationId,
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      amount,
+      items
+    } = req.body;
 
-    // Input validation
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
-      await session.abortTransaction();
-      return res.status(400).json({ success: false, error: 'Missing payment verification parameters' });
+    console.log('Verifying payment for order:', orderCreationId);
+
+    // 1. Check if payment already processed (idempotency)
+    const existingOrder = await Order.findOne({
+      orderId: orderCreationId,
+      paymentStatus: 'Completed',
+      paymentId: razorpayPaymentId
+    });
+
+    if (existingOrder) {
+      console.log(`Payment already processed for order ${orderCreationId}`);
+      return res.json({
+        success: true,
+        orderId: orderCreationId,
+        paymentId: razorpayPaymentId,
+        message: 'Payment already verified and completed'
+      });
     }
 
-    // Verify signature
+    // 2. Verify payment signature
     const generatedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
     if (generatedSignature !== razorpaySignature) {
-      await session.abortTransaction();
-      return res.status(400).json({ success: false, error: 'Invalid payment signature' });
+      throw new Error('INVALID_SIGNATURE');
     }
 
-    // Fetch the order
-    const order = await Order.findOne({ orderId: orderCreationId }).session(session);
+    // 3. Validate order exists and is in reserved state
+    const order = await Order.findOne({
+      orderId: orderCreationId,
+      razorpayOrderId: razorpayOrderId,
+      paymentStatus: 'reserved'
+    }).session(session);
+
     if (!order) {
-      await session.abortTransaction();
-      return res.status(404).json({ success: false, error: 'Order not found' });
+      throw new Error('INVALID_ORDER_STATE');
     }
 
-    const orderQuantity = order.items.reduce((total, item) => total + item.quantity, 0);
-    const inventoryRef = ref(database, `${process.env.FIREBASE_URL}/${process.env.FIREBASE_COLLECTION}`);
-
-    // Get initial values for fallback
-    const snapshot = await get(inventoryRef);
-    if (!snapshot.exists()) {
-      await session.abortTransaction();
-      return res.status(400).json({ success: false, error: 'Inventory data not found' });
-    }
-    const { limit: fetchedLimit, stock: fetchedStock } = snapshot.val();
-
-    // Retry transaction logic
-    while (attempt < MAX_RETRIES) {
-      try {
-        await runTransaction(inventoryRef, (inventory) => {
-          // Handle null case
-          if (inventory === null) {
-            inventory = { limit: fetchedLimit, stock: fetchedStock };
-          }
-
-          const { limit, stock } = inventory;
-          
-          // Check inventory
-          if (stock + orderQuantity > limit) {
-            throw new Error('INVENTORY_LIMIT_EXCEEDED');
-          }
-
-          // Update inventory
-          inventory.stock = stock + orderQuantity;
-          return inventory;
-        });
-        break; // Success
-      } catch (error) {
-        lastError = error;
-        attempt++;
-        if (attempt === MAX_RETRIES) break;
-        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
-      }
+    // 4. Verify payment with Razorpay
+    const payment = await razorpay.payments.fetch(razorpayPaymentId);
+    if (payment.status !== 'captured' || payment.amount !== Number(amount)) {
+      throw new Error('PAYMENT_VALIDATION_FAILED');
     }
 
-    if (attempt === MAX_RETRIES) {
-      if (lastError.message === 'INVENTORY_LIMIT_EXCEEDED') {
-        // Attempt refund
-        try {
-          await razorpay.payments.refund(razorpayPaymentId, {
-            amount: order.finalAmount * 100
-          });
-          return res.status(400).json({
-            success: false,
-            error: 'Item sold out. Payment has been refunded.'
-          });
-        } catch (refundError) {
-          console.error('Refund failed:', refundError);
-          throw new Error('Inventory limit exceeded and refund failed');
-        }
-      }
-      throw lastError;
-    }
+    // 5. Confirm inventory reservation
+    const orderQuantity = items.reduce((sum, item) => {
+      return sum + calculateActualQuantity(item);
+    }, 0);
+    await inventoryService.updateInventory(orderQuantity, 'confirm', orderCreationId);
 
-    // Update order status
+    // 6. Update order status
     order.paymentStatus = 'Completed';
-    order.status = 'Pending';
     order.paymentId = razorpayPaymentId;
+    order.status = 'Pending';
     await order.save({ session });
 
     await session.commitTransaction();
-    res.status(200).json({ success: true, message: 'Payment confirmed and stock updated' });
+
+    res.json({
+      success: true,
+      orderId: orderCreationId,
+      paymentId: razorpayPaymentId,
+      message: 'Payment successfully verified and completed'
+    });
 
   } catch (error) {
     await session.abortTransaction();
     console.error('Payment verification failed:', error);
-    res.status(500).json({ 
+
+    // Release inventory if payment verification fails
+    try {
+      if (req.body.orderCreationId) {
+        const order = await Order.findOne({ orderId: req.body.orderCreationId });
+        if (order && order.paymentStatus === 'reserved') {
+          const orderQuantity = order.items.reduce((sum, item) => 
+            sum + calculateActualQuantity(item), 0);
+          await inventoryService.updateInventory(orderQuantity, 'release', req.body.orderCreationId);
+        }
+      }
+    } catch (releaseError) {
+      console.error('Failed to release inventory after payment failure:', releaseError);
+    }
+
+    res.status(400).json({
       success: false,
-      error: 'Payment verification failed',
-      details: error.message 
+      error: error.message,
+      code: error.message === 'RESERVATION_MISMATCH' ? 'INVENTORY_CONFIRM_FAILED' : 'VERIFICATION_FAILED'
     });
   } finally {
     session.endSession();
   }
+};
+
+// Server startup check
+export const initializeInventory = async () => {
+  try {
+    const inventory = await inventoryService.getInventory();
+    console.log('✅ Inventory system ready', {
+      limit: inventory.limit,
+      stock: inventory.stock,
+      reserved: inventory.reserved,
+      available: inventory.limit - inventory.stock - inventory.reserved
+    });
+    return inventory;
+  } catch (error) {
+    console.error('❌ Failed to initialize inventory:', error);
+    throw error;
+  }
+};
+
+// Get current inventory status
+export const getInventoryStatus = async (req, res) => {
+  try {
+    const inventory = await inventoryService.getInventory();
+    res.json({
+      success: true,
+      limit: inventory.limit,
+      sold: inventory.stock,
+      reserved: inventory.reserved,
+      available: inventory.limit - inventory.stock - inventory.reserved
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get inventory status'
+    });
+  }
+};
+
+// Add a periodic check to detect and fix inventory inconsistencies
+export const scheduleInventoryValidation = () => {
+  const VALIDATION_INTERVAL = 30 * 60 * 1000; // 30 minutes
+
+  const validateInventoryState = async () => {
+    try {
+      // Count active reservations in MongoDB
+      const activeReservations = await Order.aggregate([
+        { $match: { paymentStatus: 'reserved' } },
+        { $unwind: '$items' },
+        { $group: { _id: null, total: { $sum: '$items.quantity' } } }
+      ]);
+
+      const mongoReserved = activeReservations[0]?.total || 0;
+      const inventory = await inventoryService.getInventory();
+
+      if (mongoReserved !== inventory.reserved) {
+        console.warn('⚠️ Inventory inconsistency detected', {
+          firebaseReserved: inventory.reserved,
+          mongoReserved: mongoReserved,
+          difference: inventory.reserved - mongoReserved
+        });
+
+        // Fix the discrepancy using a transaction
+        const inventoryRef = ref(database, INVENTORY_PATH);
+        await runTransaction(inventoryRef, (currentData) => {
+          return {
+            ...currentData,
+            reserved: mongoReserved,
+            lastUpdated: Date.now()
+          };
+        });
+
+        console.log('✅ Inventory inconsistency fixed');
+      }
+    } catch (error) {
+      console.error('❌ Inventory validation failed:', error);
+    }
+
+    // Schedule next validation
+    setTimeout(validateInventoryState, VALIDATION_INTERVAL);
+  };
+
+  // Start the validation cycle
+  setTimeout(validateInventoryState, VALIDATION_INTERVAL);
+  console.log(`Scheduled inventory validation to run every ${VALIDATION_INTERVAL / 60000} minutes`);
 };
 export const refundPayment = async (req, res) => {
   try {

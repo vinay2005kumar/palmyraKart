@@ -230,6 +230,11 @@ const Order = ({ order2, resetOrder }) => {
                 orderDetails
                   .slice()
                   .sort((a, b) => {
+                    // First, sort by status (Pending comes first)
+                    if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+                    if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+                    
+                    // If both have same status, sort by date (most recent first)
                     const dateA = new Date(a.date);
                     const dateB = new Date(b.date);
                     return dateB - dateA;
@@ -249,7 +254,7 @@ const Order = ({ order2, resetOrder }) => {
                         Delivery Address: {`${order.shippingAddress.street}`}
                       </p>
                       <p id="status">
-                        <strong>Status:</strong>{' '}
+                        <strong>Delivery Status:</strong>{' '}
                         <span style={{ color: 'orangered' }}>{order.status}</span>
                       </p>
                       {order.status !== 'Cancelled' ? (

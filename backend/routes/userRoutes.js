@@ -17,7 +17,7 @@ userRouter.put('/kart-status', updateKartStatus);
 // Order routes
 // userRouter.post('/order', userAuth, order);
 userRouter.post('/create-order', userAuth, createOrder);  // ✅ FIXED
-userRouter.post('/verify', verifyPayment);                // ✅ FIXED
+userRouter.post('/verify-payment', verifyPayment);                // ✅ FIXED
 userRouter.post('/verifyOrder', verifyOrder);
 userRouter.post('/refund',refundPayment)
 userRouter.post('/refund-all',refundAll)
