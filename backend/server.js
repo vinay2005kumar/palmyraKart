@@ -11,19 +11,19 @@ connectDB();
 const app = express();
 const port = process.env.PORT || 4000;
 
-// CORS Configuration - Set this BEFORE other middleware for best results
+// CORS Configuration - Ensure this is set **before** other middleware
 const corsOptions = {
   origin: ["https://palmyrakart.onrender.com", "http://localhost:5173"],
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "Content-Length", "X-Requested-With", "Accept"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
   exposedHeaders: ["set-cookie"]
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+app.options('*', cors(corsOptions));  // Handle preflight requests
 
-// Other middleware
+// Middleware
 app.use(express.json());
 app.use(cookieParser());
 
@@ -35,10 +35,10 @@ app.get("/", (req, res) => {
 app.use('/api/user', authRouter);
 app.use('/api/user', userRouter);
 
-// Add error handling middleware
+// Global Error Handling Middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).send('Something broke!');
+  res.status(500).json({ error: "Internal Server Error" });
 });
 
 // Start the server
