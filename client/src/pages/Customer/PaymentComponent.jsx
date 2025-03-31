@@ -67,6 +67,25 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
     setLoading(false);
   };
 
+  const sendOrderOtp = async (orderId, orderOtp) => {
+    try {
+      const response = await axios.post(
+        `${url}/send-orderOtp`,
+        { oid: orderId, orderOtp },
+        { withCredentials: true }
+      );
+      
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to send OTP');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending order OTP:', error);
+      throw error;
+    }
+  };
+
   useImperativeHandle(ref, () => ({
     initiatePayment: async (buyComponentData) => {
       if (!window.RazorpayLoaded) {
@@ -159,34 +178,46 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
                 `${url}/verify-payment`,
                 {
                   orderCreationId: orderResponse.data.orderId,
-                  razorpayOrderId:orderResponse.data.razorpayOrderId,
+                  razorpayOrderId: orderResponse.data.razorpayOrderId,
                   razorpayPaymentId: response.razorpay_payment_id,
                   razorpaySignature: response.razorpay_signature,
                   amount: orderResponse.data.finalAmount * 100,
-                  items:orderResponse.data.items
+                  items: orderResponse.data.items
                 },
                 { withCredentials: true }
               );
 
               if (verification.data.success) {
-                rzp.close();
-                showToast('Payment successfully verified!', 'success');
-                
-                if (onPaymentSuccess) {
-                  onPaymentSuccess({
-                    orderId: orderResponse.data.orderId,
-                    paymentId: response.razorpay_payment_id,
-                    amount: tprice
-                  });
-                }
-
-                if (navigate) {
-                  navigate('/order', {
-                    state: {
+                // Send order OTP after successful verification
+                try {
+                  await sendOrderOtp(
+                    orderResponse.data.orderId, 
+                    orderPayload.otp
+                  );
+                  
+                  rzp.close();
+                  showToast('Payment successfully verified! OTP sent to your registered email.', 'success');
+                  
+                  if (onPaymentSuccess) {
+                    onPaymentSuccess({
                       orderId: orderResponse.data.orderId,
-                      paymentId: response.razorpay_payment_id
-                    }
-                  });
+                      paymentId: response.razorpay_payment_id,
+                      amount: tprice
+                    });
+                  }
+
+                  if (navigate) {
+                    navigate('/order', {
+                      state: {
+                        orderId: orderResponse.data.orderId,
+                        paymentId: response.razorpay_payment_id
+                      }
+                    });
+                  }
+                } catch (otpError) {
+                  console.error('OTP sending failed:', otpError);
+                  rzp.close();
+                  showToast('Payment verified but failed to send OTP. Please contact support.', 'warning');
                 }
               } else {
                 throw new Error(verification.data.error || 'Verification failed');
@@ -230,13 +261,14 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
       setLoading(false);
     }
   }));
-  if(loading){
-    return <LoadingSpinner></LoadingSpinner>
+
+  if (loading) {
+    return <LoadingSpinner />;
   }
 
   return (
     <>
-      {loading &&<LoadingSpinner></LoadingSpinner>}
+      {loading && <LoadingSpinner />}
       <ToastContainer />
     </>
   );
