@@ -250,13 +250,6 @@
   }
 /* Responsive styles for smaller screens */
 @media screen and (max-width: 700px) {
-    body{
-        /* background-image:url('mb3.jpg');
-        background-repeat: no-repeat;
-        background-size: cover;
-        position: relative; */
-      
-    }
     .order {
         width: 100%;
         height: auto;
@@ -331,6 +324,7 @@
 
     #status {
         top: 8em;
+        left:1em;
     }
 
     #cancel {

@@ -192,6 +192,52 @@ const Order = ({ order2, resetOrder }) => {
     return `${day} ${month} ${dayOfMonth} ${year} at ${hours}:${minutes} ${ampm}`;
   };
 
+
+  
+// Function to determine status color based on status value
+function getStatusColor(status) {
+  switch(status) {
+    case 'Pending':
+      return '#FF8C00'; // Dark Orange
+    case 'Delivered':
+      return '#008000'; // Green
+    case 'Delivered*':
+      return '#006400'; // Dark Green
+    case 'Cancelled':
+      return '#FF0000'; // Red
+    case 'Refund':
+      return '#4B0082'; // Indigo
+    case 'Refunded':
+      return '#800080'; // Purple
+    case 'Refunded*':
+      return '#800080'; // Purple
+    default:
+      return '#000000'; // Black
+  }
+}
+
+// Function to get a more descriptive status display
+function getStatusDisplay(status, deliveryDate) {
+  switch(status) {
+    case 'Pending':
+      return `Delivery on ${deliveryDate}`;
+    case 'Delivered':
+      return `Successfully Delivered on ${deliveryDate}`;
+    case 'Delivered*':
+      return `Delivered on ${deliveryDate}`;
+    case 'Cancelled':
+      return 'Order Cancelled';
+    case 'Refund':
+      return 'Refund Processing';
+    case 'Refunded':
+      return 'Refund Completed';
+      case 'Refunded*':
+        return 'Refund Completed';
+    default:
+      return status;
+  }
+}
+
   // Handle payment success toast
   useEffect(() => {
     if (order2) {
@@ -239,49 +285,68 @@ const Order = ({ order2, resetOrder }) => {
                     const dateB = new Date(b.date);
                     return dateB - dateA;
                   })
-                  .map((order) => (
-                    <div key={order._id} className="box">
-                      <div className="image">
-                        <img src={order.items[0]?.imagePath} alt={order.items[0]?.itemName} />
-                      </div>
-                      <p id="itemname">Item Type: <span>{order.items[0]?.itemType}</span></p>
-                      <p id="quantity">Quantity: {order.items[0]?.quantity}</p>
-                      <p id="price">
-                        Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
-                      </p>
-                      <p id="date">Date & Time: {formatDate(order.date)}</p>
-                      <p id="oaddress">
-                        Delivery Address: {`${order.shippingAddress.street}`}
-                      </p>
-                      <p id="status">
-                        <strong>Delivery Status:</strong>{' '}
-                        <span style={{ color: 'orangered' }}>{order.status}</span>
-                      </p>
-                      {order.status !== 'Cancelled' ? (
-                        <div>
-                          <button
-                            id="cancel"
-                            onClick={() => handleCancelClick(
-                              order.orderId, 
-                              order.items[0]?.itemType, 
-                              order.items[0]?.imagePath, 
-                              order.items[0]?.quantity, 
-                              order.items[0]?.price, 
-                              order.status, 
-                              new Date(order.date).toLocaleString()
-                            )}
-                            disabled={order.status === 'delivered'}
-                          >
-                            Cancel
-                          </button>
+                  .map((order) => {
+                     // Calculate estimated delivery date (1 day after order date)
+                     const orderDate = new Date(order.date);
+                     const deliveryDate = new Date(orderDate);
+                     deliveryDate.setDate(orderDate.getDate() + 1);
+                     
+                     // Format date as dd/mm/yyyy with leading zeros
+                     const formatDeliveryDate = (date) => {
+                       const day = String(date.getDate()).padStart(2, '0');
+                       const month = String(date.getMonth() + 1).padStart(2, '0');
+                       const year = date.getFullYear();
+                       return `${day}/${month}/${year}`;
+                     };
+ 
+                     const formattedDeliveryDate = formatDeliveryDate(deliveryDate);
+                    
+                    return (
+                      <div key={order._id} className="box">
+                        <div className="image">
+                          <img src={order.items[0]?.imagePath} alt={order.items[0]?.itemName} />
                         </div>
-                      ) : (
-                        <button id='cancel' onClick={() => confirmDelete(order.orderId, order.status)}>
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  ))
+                        <p id="itemname">Item Type: <span>{order.items[0]?.itemType}</span></p>
+                        <p id="quantity">Quantity: {order.items[0]?.quantity}</p>
+                        <p id="price">
+                          Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
+                        </p>
+                        <p id="date">Date & Time: {formatDate(order.date)}</p>
+                        <p id="oaddress">
+                          Delivery Address: {`${order.shippingAddress.street}`}
+                        </p>
+                        <p id="status">
+                          <strong>Order Status:</strong>{' '}
+                          <span style={{ color: getStatusColor(order.status) }}>
+                            {getStatusDisplay(order.status, formattedDeliveryDate)}
+                          </span>
+                        </p>
+                        {order.status !== 'Cancelled' ? (
+                          <div>
+                            <button
+                              id="cancel"
+                              onClick={() => handleCancelClick(
+                                order.orderId, 
+                                order.items[0]?.itemType, 
+                                order.items[0]?.imagePath, 
+                                order.items[0]?.quantity, 
+                                order.items[0]?.price, 
+                                order.status, 
+                                new Date(order.date).toLocaleString()
+                              )}
+                              disabled={order.status === 'Delivered' || order.status === 'Delivered*'}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button id='cancel' onClick={() => confirmDelete(order.orderId, order.status)}>
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
               ) : (
                 <p style={{ textAlign: 'center', fontSize: '1.5em' }}>No orders found...</p>
               )}
