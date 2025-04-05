@@ -410,6 +410,7 @@ tr:hover {
   .select-all-btn,.delete-selected-btn,.refund-all-btn{
     font-size: 0.8em;
     padding: 7px;
+    margin: 3px;
   }
 }
 
