@@ -13,12 +13,13 @@ import { useAuth } from '../../context/AuthContext';
 const Order = ({ order2, resetOrder }) => {
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true);
   const [cancel, setCancel] = useState(false);
+  const [isCancel,setIsCancel]=useState(false)
   const [orderId, setOrderId] = useState();
   const [item, setItem] = useState({});
   const [cancellationReason, setCancellationReason] = useState('order cancel');
   const isMobile = window.innerWidth <= 768;
   const [email, setEmail] = useState('');
-  const { orderDetails, userDetails, checkAuth, removeOrder, isLoading } = useAuth();
+  const { orderDetails, userDetails, checkAuth, removeOrder, isLoading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [date, setDate] = useState();
   const url = 'https://palmyra-fruit.onrender.com/api/user';
@@ -69,6 +70,7 @@ const Order = ({ order2, resetOrder }) => {
 
   // Cancel order
   const cancelOrder = async (orderId, email) => {
+     setIsCancel(true)
     try {
       const deleteUrl = `${url}/order/${orderId}`;
       await axios.delete(deleteUrl, {
@@ -78,6 +80,7 @@ const Order = ({ order2, resetOrder }) => {
 
       checkAuth();
       setCancel(false);
+      setIsCancel(false)
       toastfun('Order Cancelled Successfully', 'success', `cancel-success-${orderId}`);
     } catch (error) {
       toastfun('Failed to cancel the order. Please try again.', 'error', `cancel-error-${orderId}`);
@@ -252,8 +255,61 @@ function getStatusDisplay(status, deliveryDate) {
   useEffect(() => {
     checkAuth();
     checkIfBeforeTenAM();
-    setEmail(userDetails.email);
+    if (userDetails && userDetails.email) {
+      setEmail(userDetails.email);
+    }
   }, []);
+
+  // Render when user is not authenticated
+  const renderNotAuthenticated = () => {
+    return (
+      <div className="not-authenticated-container">
+        <div className="auth-message">
+          <img src="ap10.jpeg" alt="Palmyra Fruit" className="auth-image" />
+          <h2>Please Sign In to View Your Orders</h2>
+          <p>Sign in to track your deliveries, view order history, and enjoy fresh Palmyra fruit!</p>
+          <div className="auth-buttons">
+            <button className="auth-button login" onClick={() => navigate('/auth')}>
+              Sign In
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render when user has no orders
+  const renderNoOrders = () => {
+    return (
+      <div className="no-orders-container">
+        <div className="no-orders-message">
+          <img src="palmyra4.jpeg" alt="Fresh Palmyra Fruit" className="no-orders-image" />
+          <h2>No Orders Yet!</h2>
+          <p>
+            Experience the refreshing taste of summer with our juicy Palmyra fruit. 
+            Rich in vitamins and minerals, it's the perfect healthy treat for hot days!
+          </p>
+          <div className="benefit-points">
+            <div className="benefit-point">
+              <span className="benefit-icon">✓</span>
+              <span>Rich in vitamins</span>
+            </div>
+            <div className="benefit-point">
+              <span className="benefit-icon">✓</span>
+              <span>Natural hydration</span>
+            </div>
+            <div className="benefit-point">
+              <span className="benefit-icon">✓</span>
+              <span>Boosts immunity</span>
+            </div>
+          </div>
+          <button className="order-now-button" onClick={() => navigate('/ordermenu')}>
+            Order Now
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -262,95 +318,104 @@ function getStatusDisplay(status, deliveryDate) {
         <h1>Your Orders</h1>
         {isLoading ? (
           <FruitLoader></FruitLoader>
+        ) : !isAuthenticated ? (
+          renderNotAuthenticated()
         ) : (
           <>
-            {orderDetails.length > 0 && (
-              <div className="omsg">
-                <marquee behavior="" direction="" className="time-message">
-                  Orders can only be canceled before 10:00 AM!
-                </marquee>
-              </div>
-            )}
-            <div className="items" id="items" style={{ display: cancel ? 'none' : 'block' }}>
-              {orderDetails.length > 0 ? (
-                orderDetails
-                  .slice()
-                  .sort((a, b) => {
-                    // First, sort by status (Pending comes first)
-                    if (a.status === 'Pending' && b.status !== 'Pending') return -1;
-                    if (a.status !== 'Pending' && b.status === 'Pending') return 1;
-                    
-                    // If both have same status, sort by date (most recent first)
-                    const dateA = new Date(a.date);
-                    const dateB = new Date(b.date);
-                    return dateB - dateA;
-                  })
-                  .map((order) => {
-                     // Calculate estimated delivery date (1 day after order date)
-                     const orderDate = new Date(order.date);
-                     const deliveryDate = new Date(orderDate);
-                     deliveryDate.setDate(orderDate.getDate() + 1);
-                     
-                     // Format date as dd/mm/yyyy with leading zeros
-                     const formatDeliveryDate = (date) => {
-                       const day = String(date.getDate()).padStart(2, '0');
-                       const month = String(date.getMonth() + 1).padStart(2, '0');
-                       const year = date.getFullYear();
-                       return `${day}/${month}/${year}`;
-                     };
- 
-                     const formattedDeliveryDate = formatDeliveryDate(deliveryDate);
-                    
-                    return (
-                      <div key={order._id} className="box">
-                        <div className="image">
-                          <img src={order.items[0]?.imagePath} alt={order.items[0]?.itemName} />
-                        </div>
-                        <p id="itemname">Item Type: <span>{order.items[0]?.itemType}</span></p>
-                        <p id="quantity">Quantity: {order.items[0]?.quantity}</p>
-                        <p id="price">
-                          Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
-                        </p>
-                        <p id="date">Date & Time: {formatDate(order.date)}</p>
-                        <p id="oaddress">
-                          Delivery Address: {`${order.shippingAddress.street}`}
-                        </p>
-                        <p id="status">
-                          <strong>Order Status:</strong>{' '}
-                          <span style={{ color: getStatusColor(order.status) }}>
-                            {getStatusDisplay(order.status, formattedDeliveryDate)}
-                          </span>
-                        </p>
-                        {order.status !== 'Cancelled' ? (
-                          <div>
-                            <button
-                              id="cancel"
-                              onClick={() => handleCancelClick(
-                                order.orderId, 
-                                order.items[0]?.itemType, 
-                                order.items[0]?.imagePath, 
-                                order.items[0]?.quantity, 
-                                order.items[0]?.price, 
-                                order.status, 
-                                new Date(order.date).toLocaleString()
-                              )}
-                              disabled={order.status === 'Delivered' || order.status === 'Delivered*'}
-                            >
-                              Cancel
-                            </button>
+            {orderDetails.length > 0 ? (
+              <>
+                <div className="omsg">
+                  <marquee behavior="" direction="" className="time-message">
+                    Orders can only be canceled before 10:00 AM!
+                  </marquee>
+                </div>
+                <div className="items" id="items" style={{ display: cancel ? 'none' : 'block' }}>
+                  {orderDetails
+                    .slice()
+                    .sort((a, b) => {
+                      // First, sort by status (Pending comes first)
+                      if (a.status === 'Pending' && b.status !== 'Pending') return -1;
+                      if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+                      
+                      // If both have same status, sort by date (most recent first)
+                      const dateA = new Date(a.date);
+                      const dateB = new Date(b.date);
+                      return dateB - dateA;
+                    })
+                    .map((order) => {
+                      const orderDate = new Date(order.date);
+                      const orderHour = orderDate.getHours(); // Get hours (0-23)
+                      
+                      const deliveryDate = new Date(orderDate);
+                      
+                      // Check the time range
+                      if (orderHour >= 12 || orderHour === 0) { // 4:00 PM - 11:59 PM or exactly 12:00 AM
+                        deliveryDate.setDate(orderDate.getDate() + 1);
+                      } else {
+                        deliveryDate.setDate(orderDate.getDate());
+                      }
+                      
+                      // Format date as dd/mm/yyyy with leading zeros
+                      const formatDeliveryDate = (date) => {
+                        const day = String(date.getDate()).padStart(2, '0');
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const year = date.getFullYear();
+                        return `${day}/${month}/${year}`;
+                      };
+                      
+                      const formattedDeliveryDate = formatDeliveryDate(deliveryDate);
+                      
+                      return (
+                        <div key={order._id} className="box">
+                          <div className="image">
+                            <img src={order.items[0]?.imagePath} alt={order.items[0]?.itemName} />
                           </div>
-                        ) : (
-                          <button id='cancel' onClick={() => confirmDelete(order.orderId, order.status)}>
-                            Delete
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-              ) : (
-                <p style={{ textAlign: 'center', fontSize: '1.5em' }}>No orders found...</p>
-              )}
-            </div>
+                          <p id="itemname">Item Type: <span>{order.items[0]?.itemType}</span></p>
+                          <p id="quantity">Quantity: {order.items[0]?.quantity}</p>
+                          <p id="price">
+                            Price: <span className="ovalues"><PiCurrencyInr id="inr" />{order.items[0]?.price}</span>
+                          </p>
+                          <p id="date">Date & Time: {formatDate(order.date)}</p>
+                          <p id="oaddress">
+                            Delivery Address: {`${order.shippingAddress.street}`}
+                          </p>
+                          <p id="status">
+                            <strong>Order Status:</strong>{' '}
+                            <span style={{ color: getStatusColor(order.status) }}>
+                              {getStatusDisplay(order.status, formattedDeliveryDate)}
+                            </span>
+                          </p>
+                          {order.status !== 'Cancelled' ? (
+                            <div>
+                              <button
+                                id="cancel"
+                                onClick={() => handleCancelClick(
+                                  order.orderId, 
+                                  order.items[0]?.itemType, 
+                                  order.items[0]?.imagePath, 
+                                  order.items[0]?.quantity, 
+                                  order.items[0]?.price, 
+                                  order.status, 
+                                  new Date(order.date).toLocaleString()
+                                )}
+                                disabled={order.status === 'Delivered' || order.status === 'Delivered*'}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button id='cancel' onClick={() => confirmDelete(order.orderId, order.status)}>
+                              Delete
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </>
+            ) : (
+              renderNoOrders()
+            )}
             {cancel && (
               <div className="cancel-box">
                 <img src={item.itemimg} alt="" id="itemimg" />
@@ -360,7 +425,7 @@ function getStatusDisplay(status, deliveryDate) {
                 <p className="tcancel tc2" id="tc2">Quantity: {item.itemquantity}</p>
                 <p className="tcancel tc3" id="tc3">Item Price: <PiCurrencyInr id="cinr" />{item.itemprice}</p>
                 <button onClick={() => setCancel(false)} id="cback">Back</button>
-                <button onClick={() => cancelOrder(orderId, email)} id="ccancel">Confirm</button>
+                <button onClick={() => cancelOrder(orderId, email)} id="ccancel"   disabled={isCancel}>{isCancel?'Cancelling..':'Confirm'}</button>
               </div>
             )}
           </>

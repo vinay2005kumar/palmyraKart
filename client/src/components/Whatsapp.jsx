@@ -129,7 +129,7 @@ const Whatsapp = () => {
       }}
     >
       <div style={{
-    width:isMobile?'100%':'100%',
+    width:isMobile?'100%':'90%',
     height: 'auto',
     border: '1px solid black',
     padding: '10px',

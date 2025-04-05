@@ -2,6 +2,7 @@
     display: flex;
     justify-content: center;
     overflow-x: hidden;
+    /* background: linear-gradient(120deg, #e8f5e9, #ffffff); */
 }
 .items {
     width:50em;
@@ -247,6 +248,221 @@
     display: block;
     top:-0.8em;
     margin-left: -3.5em;
+  }
+
+
+
+  /* Add these styles to your Order.css file */
+
+/* Not authenticated container */
+.not-authenticated-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 60vh;
+    animation: order 1s ease 0s forwards;
+    margin-top: 4em;
+  }
+  
+  .auth-message {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px;
+    padding: 2em;
+    max-width: 500px;
+    text-align: center;
+    position: relative;
+    margin-top: 2em;
+  }
+  
+  .auth-image {
+    width:15em;
+    height:10em;
+    border-radius: 10%;
+    object-fit: cover;
+    margin-bottom: 1em;
+    border: 4px solid #f0f0f0;
+  }
+  
+  .auth-message h2 {
+    color: #333;
+    margin-bottom: 0.5em;
+    font-size: 1.6em;
+  }
+  
+  .auth-message p {
+    color: #666;
+    font-size: 1.1em;
+    margin-bottom: 1.5em;
+    line-height: 1.5;
+  }
+  
+  .auth-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1em;
+    margin-top: 1em;
+  }
+  
+  .auth-button {
+    padding: 0.8em 1.5em;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .auth-button.login {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+  }
+  
+  .auth-button.login:hover {
+    background-color: #3e8e41;
+  }
+  
+  .auth-button.register {
+    background-color: white;
+    color: #4CAF50;
+    border: 1px solid #4CAF50;
+  }
+  
+  .auth-button.register:hover {
+    background-color: #f9f9f9;
+  }
+  
+  /* No orders container */
+  .no-orders-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    min-height: 60vh;
+    animation: order 1s ease 0s forwards;
+  }
+  
+  .no-orders-message {
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: rgba(0, 0, 0, 0.1) 0px 10px 15px -3px, rgba(0, 0, 0, 0.05) 0px 4px 6px -2px;
+    padding: 2em;
+    max-width: 500px;
+    text-align: center;
+    position: relative;
+    margin-top: 2em;
+  }
+  
+  .no-orders-image {
+    width: 120px;
+    height: 120px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-bottom: 1em;
+    border: 3px solid #f0f0f0;
+  }
+  
+  .no-orders-message h2 {
+    color: #333;
+    margin-bottom: 0.5em;
+    font-size: 1.6em;
+  }
+  
+  .no-orders-message p {
+    color: #666;
+    font-size: 1.1em;
+    margin-bottom: 1em;
+    line-height: 1.5;
+  }
+  
+  .benefit-points {
+    margin: 1.5em 0;
+    text-align: left;
+  }
+  
+  .benefit-point {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.7em;
+  }
+  
+  .benefit-icon {
+    color: #4CAF50;
+    font-weight: bold;
+    margin-right: 0.5em;
+    font-size: 1.2em;
+  }
+  
+  .order-now-button {
+    background-color: #FF8C00;
+    color: white;
+    border: none;
+    padding: 0.8em 2em;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 1em;
+  }
+  
+  .order-now-button:hover {
+    background-color: #FF7000;
+    transform: scale(1.03);
+  }
+  
+  /* Responsive styles */
+  @media screen and (max-width: 700px) {
+    .auth-message, .no-orders-message {
+      width: 90%;
+      padding: 1.5em;
+      margin-top: 1em;
+    }
+    
+    .auth-image, .no-orders-image {
+      width: 15em;
+      height: 10em;
+    }
+    
+    .auth-message h2, .no-orders-message h2 {
+      font-size: 1.4em;
+    }
+    
+    .auth-message p, .no-orders-message p {
+      font-size: 1em;
+    }
+    
+    .auth-buttons {
+      flex-direction: column;
+      gap: 0.7em;
+    }
+    
+    .auth-button, .order-now-button {
+      width: 100%;
+      padding: 0.7em;
+      font-size: 1rem;
+    }
+    
+    .benefit-point {
+      font-size: 0.9em;
+    }
+  }
+  
+  @media screen and (max-width: 400px) {
+    .auth-image, .no-orders-image {
+      width:13em;
+      height:10em;
+    }
+    
+    .auth-message h2, .no-orders-message h2 {
+      font-size: 1.3em;
+    }
+    
+    .benefit-points {
+      margin: 1em 0;
+    }
   }
 /* Responsive styles for smaller screens */
 @media screen and (max-width: 700px) {
