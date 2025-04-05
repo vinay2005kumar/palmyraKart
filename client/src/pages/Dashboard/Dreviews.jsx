@@ -27,6 +27,7 @@ const Dreviews = () => {
     try {
       const response = await axios.get(`${url}/reviews`);
       const reviews = response.data.reviews || [];
+      console.log('review',reviews)
       setAllReviews(reviews.sort((a, b) => new Date(b.date) - new Date(a.date))); // Sort by date
     } catch (error) {
       toastfun("Failed to fetch reviews.", "error");
@@ -162,9 +163,9 @@ const Dreviews = () => {
     <>
       <Dtopbar />
       <ToastContainer />
-      <div className="reviews-section">
+      <div className="dreviews-section">
         {/* Reply to Review Section */}
-        <div className="rsec1">
+        <div className="rsection1">
           <h1>Reply To A Review</h1>
           {selectedReview ? (
             <div className="reply-section">
@@ -202,7 +203,7 @@ const Dreviews = () => {
         </div>
 
         {/* All Reviews Section */}
-        <div className="rsec2">
+        <div className="rsection2">
           <h1>All Customers' Reviews</h1>
           {allReviews.length === 0 ? (
             <p style={{ textAlign: "center", fontSize: "1.1em", color: "green" }}>No reviews yet.</p>
@@ -242,9 +243,9 @@ const Dreviews = () => {
                   <p className="comment">{review.comment}</p>
                   <p className="rdate rdate3">
                     Date: {review.date ? new Date(review.date).toLocaleDateString() : "N/A"}
-                  </p>
+                  </p><span className="dremail" style={{ textAlign: "end",display:'inline' }}>{review.email || "N/A"}</span>
                   <div className="reply-button">
-                    <span style={{ textAlign: "end" }}>{review.email || "N/A"}</span>
+                    
                     <button className="reply" onClick={() => handleSelectedReview(review)}>
                       Reply
                     </button>

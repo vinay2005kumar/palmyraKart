@@ -406,6 +406,11 @@ tr:hover {
     padding: 20px;
     width: 95%;
   }
+
+  .select-all-btn,.delete-selected-btn,.refund-all-btn{
+    font-size: 0.8em;
+    padding: 7px;
+  }
 }
 
 /* Additional styles for mobile horizontal scrolling */

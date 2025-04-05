@@ -1,25 +1,29 @@
-.reviews-section{
+.dreviews-section{
     width:95%;
     display: flex;
-    margin: 2em;
     height: 100%;
+
+    
+   
 }
-.rsec1,.rsec2{
+.rsection1,.rsection2{
     height: 80vh;
     margin:0.5%;
     box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
     overflow-y:scroll;
     overflow-x: hidden;
     position: relative;
+    margin-top: 2em;
+    margin-left: 1em;
 }
-.rsec1 h1,.rsec2 h1{
+.rsection1 h1,.rsection2 h1{
     text-align: center;
 }
-.rsec1{ 
+.rsection1{ 
     width:45%;
   
 }
-.rsec2{
+.rsection2{
     width: 60%;
    
 }
@@ -145,6 +149,9 @@ button{
 .reply-section{
     padding: 0.5% 5%;
 }
+.comment{
+    word-break: break-all;
+}
 .submit-reply{
     position:relative!important;
     bottom: 15%;
@@ -170,10 +177,12 @@ button{
     text-wrap: nowrap;
 }
 .reply-button{
-    position:relative;
-    left: 0%;
-    /* position: absolute;
-    display: block; */
+    display: flex;
+    left:0%!important;
+    position: absolute;
+    bottom:11%;
+    left: 70%!important;
+   
 }
 .rdate3{
     text-wrap: nowrap;
@@ -208,22 +217,24 @@ button{
     white-space: normal; /* Ensures text can wrap to the next line */
 }
 @media screen and (max-width:700px) {
-    .reviews-section{
+    .dreviews-section{
         flex-direction: column;
     }
-    .rsec1,.rsec2{
+    .rsection1,.rsection2{
         width: 90%;
     }
-    .rsec1{
+    .rsection1{
         margin-top: 3em;
     }
     .reply-button{
         display: flex;
         left:0%!important;
+        position: absolute;
+        bottom:11%;
+        left: 50%!important;
+       
     }
-    .reply-button span{
-        font-size: 0.85em;
-    }
+   
     .rvalue{
         margin-left:0.5em;
         font-size:0.8em;
@@ -245,11 +256,11 @@ button{
         margin:0.5em!important;
         
     }
-    .rsec1,.rsec2{
+    .rsection1,.rsection2{
         width:100%!important;
         overflow-x: hidden!important;
     }
-    .rsec1{
+    .rsection1{
         /* height: 40%!important; */
         overflow:auto;
     }
@@ -281,5 +292,9 @@ button{
     position:relative;
     top:0%;
     font-size: 0.8em;
+   }
+   .dremail{
+    position:relative;
+    bottom: 0.5em;
    }
 }

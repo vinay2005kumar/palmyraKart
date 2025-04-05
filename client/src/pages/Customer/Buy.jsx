@@ -76,8 +76,8 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
 
     const unsubscribe = onValue(inventoryRef, (snapshot) => {
       if (snapshot.exists()) {
-        const { limit, stock } = snapshot.val();
-        setAvailableStock(limit - stock);
+        const { limit, stock,reserved } = snapshot.val();
+        setAvailableStock(limit - stock -reserved);
       }
     });
 
@@ -200,7 +200,7 @@ const Buy = ({ count, price, path, itemtype, handlePaymentSuccess }) => {
         </div>
         <div className="snote">
           (<span>Note</span>: Other customers are buying these pieces in real time. 
-          You can see the updated stock here. Grab yours quickly before they sell out!)
+          You can see <strong>Live Stock</strong> here. Grab yours quickly before they sell out!)
         </div>
       </div>
       <div id="bmain">

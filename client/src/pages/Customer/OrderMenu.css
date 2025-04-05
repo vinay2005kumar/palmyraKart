@@ -78,7 +78,7 @@ marquee p{
     display: flex;
     width: 11.1em;
     height: 3em;
-    border: 1px solid rgb(174, 171, 171);
+    /* border: 1px solid rgb(174, 171, 171); */
     position: absolute;
     right: 8em;
     bottom: 6.5em;
@@ -92,8 +92,8 @@ marquee p{
     background-color: rgb(248, 67, 1);
     color: white;
     font-size: 2em;
-    border-right: 1px solid grey;
-    border-left: 1px solid grey;
+    /* border-right: 1px solid grey;
+    border-left: 1px solid grey; */
     /* background-color: white; */
 }
 .inr{
