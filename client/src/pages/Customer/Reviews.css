@@ -27,6 +27,7 @@
     padding: 1.5em 0;
     transition: all 0.4s ease;
     scroll-behavior: smooth;
+    height:40em!important;
 }
 
 .rsec1:hover,
