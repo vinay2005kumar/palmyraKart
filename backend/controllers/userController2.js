@@ -730,10 +730,7 @@ export const sendOrderOtp = async (req, res) => {
     const formattedDate = new Date(date).toLocaleString('en-US', {
       timeZone: 'Asia/Kolkata',
       month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
+      day: 'numeric'
     });
 
     // Calculate the next day's date and day
@@ -953,15 +950,7 @@ export const sendOrderOtp = async (req, res) => {
         <p><strong>Quantity:</strong> ${quantity}</p>
         <p><strong>Total Price:</strong> <span class="highlight">₹${price}</span></p>
         <p><strong>Status:</strong> ${status}</p>
-        <p><strong>Ordered Date:</strong> ${order.date}</p>
-      </div>
-
-      <div class="payment-details">
-        <h3>💳 Payment Information</h3>
-        <p><strong>Payment ID:</strong> ${order.paymentId}</p>
-        <p><strong>Payment Method:</strong> ${order.paymentMethod}</p>
-        <p><strong>Payment Date:</strong> ${order.date}</p>
-        <p><strong>Payment Status:</strong> <span class="highlight">Successful</span></p>
+        <p><strong>Ordered Date:</strong> ${formattedDate}</p>
       </div>
 
       <div class="customer-details">
@@ -969,7 +958,6 @@ export const sendOrderOtp = async (req, res) => {
         <p><strong>Name:</strong> ${userDetails.name || 'Not provided'}</p>
         <p><strong>Email:</strong> ${userDetails.email}</p>
         <p><strong>Phone:</strong> ${order.shippingAddress.phoneNumber || userDetails.phone || 'Not provided'}</p>
-        <p><strong>Collection Address:</strong> ${order.shippingAddress.street || 'Not provided'}</p>
       </div>
 
       <div class="otp-container">
@@ -983,7 +971,7 @@ export const sendOrderOtp = async (req, res) => {
         <ul>
           <li><strong>Ready for Collection:</strong> <span class="highlight">After 10:00 AM</span></li>
           <li><strong>Collection Deadline:</strong> <span class="highlight">5:00 PM on ${pickupDeadline}</span></li>
-          <li><strong>Collection Point:</strong> <span class="highlight">PalmyraKart Store, Main Street</span></li>
+          <li><strong>Collection Point:</strong> <span class="highlight">${order.shippingAddress.street}</span></li>
           <li>If you're unable to collect your order, <span class="highlight">don't worry!</span> A refund may be available as per our Terms & Conditions.</li>
           <li>You can also <span class="highlight">place a fresh order for tomorrow.</span> We'd love to serve you again!</li>
         </ul>
@@ -992,7 +980,7 @@ export const sendOrderOtp = async (req, res) => {
       <div class="help-section">
         <h3>🛠️ Need Help?</h3>
         <p>If you have any questions about your order or need assistance, don't hesitate to contact our customer support team.</p>
-        <p><strong>Contact:</strong> +91 1234567890</p>
+        <p><strong>Contact:</strong> +91 9704089217</p>
         <a href="mailto:vinaybuttala@gmail.com" class="btn">Contact Support</a>
       </div>
       

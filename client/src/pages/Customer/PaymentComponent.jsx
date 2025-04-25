@@ -9,7 +9,7 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
   const [rzpInstance, setRzpInstance] = useState(null);
   const isMobile = window.innerWidth <= 765;
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-  // const url = "http://localhost:4000/api/user";
+   //const url = "http://localhost:4000/api/user";
 
   // Load Razorpay script
   useEffect(() => {
@@ -114,12 +114,12 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
         } = buyComponentData;
 
         const orderPayload = {
-          amount: 1 * 100,
+          amount: 10 * 100,
           totalAmount: tprice,
           tax: 0,
           shippingCost: 0,
           discount: 0,
-          finalAmount: 1,
+          finalAmount: 10,
           productName: btype,
           description: `Purchase of ${bcount} ${btype}`,
           shippingAddress: {
