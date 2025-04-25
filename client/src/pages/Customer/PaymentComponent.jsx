@@ -114,12 +114,12 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
         } = buyComponentData;
 
         const orderPayload = {
-          amount: tprice * 100,
+          amount: 1 * 100,
           totalAmount: tprice,
           tax: 0,
           shippingCost: 0,
           discount: 0,
-          finalAmount: tprice,
+          finalAmount: 1,
           productName: btype,
           description: `Purchase of ${bcount} ${btype}`,
           shippingAddress: {

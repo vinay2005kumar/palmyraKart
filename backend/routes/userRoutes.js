@@ -18,8 +18,8 @@ userRouter.put('/kart-status', updateKartStatus);
 // userRouter.post('/order', userAuth, order);
 userRouter.post('/create-order', userAuth, createOrder);
 userRouter.post('/verify-payment', userAuth, verifyPayment);
-userRouter.post('/refund', userAuth, paymentRateLimiter, refundPayment);
-userRouter.post('/refund-all', userAuth, paymentRateLimiter, refundAll);               // ✅ FIXED
+userRouter.post('/refund', userAuth, refundPayment);
+userRouter.post('/refund-all', userAuth, refundAll);               // ✅ FIXED
 userRouter.post('/release-inventory',userAuth,releaseInventory)
 userRouter.post('/verifyOrder', verifyOrder);
 userRouter.post('/send-orderOtp', userAuth, sendOrderOtp);

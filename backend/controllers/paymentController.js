@@ -34,7 +34,6 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
-
 // Rate limiter for payment endpoints
 export const paymentRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

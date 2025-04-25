@@ -217,7 +217,7 @@ const Expired = () => {
         orderId,
         email,
         name,
-      });
+      },{withCredentials:true});
 
       if (refundResponse.data.success) {
         toastfun('Refund initiated successfully', 'success');
@@ -282,7 +282,7 @@ const Expired = () => {
                     email: users.find((user) => user._id === order.user)?.email,
                     name: users.find((user) => user._id === order.user)?.name,
                   })),
-                });
+                },{withCredentials:true});
   
                 if (refundAllResponse.data.success) {
                   // Loop through the results array and show a toast for each order
