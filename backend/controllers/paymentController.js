@@ -1176,7 +1176,7 @@ export const handleRefundWebhook = async (req, res) => {
         // ADD THIS CODE:
         await Order.findOneAndUpdate(
           { refundId: body.payload.refund.id },
-          { status: 'Cancelled' }
+          { status: 'RefundFailed' }
         );
         break;
 

@@ -212,11 +212,10 @@ const Order = ({ order2, resetOrder }) => {
   }
 
   function getStatusDisplay(status, deliveryDate) {
-    if (status.includes('Refund')) {
-      if (status.includes('Processing')) return 'Refund Processing';
-      if (status.includes('Failed')) return 'Refund Failed';
-      return 'Refund Completed';
-    }
+    if (status === 'Refunded') return 'Refund Completed';
+    if (status === 'RefundProcessing') return 'Refund Processing';
+    if (status === 'RefundInitiated') return 'Refund Initiated';
+    if (status === 'RefundFailed') return 'Refund Failed';
     switch(status) {
       case 'Pending': return `Delivery on ${deliveryDate}`;
       case 'Delivered': return `Successfully Delivered on ${deliveryDate}`;
