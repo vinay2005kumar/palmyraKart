@@ -681,7 +681,7 @@ export const removeOrder=async(req,res)=>{
 
 export const sendOrderOtp = async (req, res) => {
   const { oid, orderOtp } = req.body;
-
+   console.log(req.body)
   if (!oid || !orderOtp) {
     return res.json({ success: false, message: 'Order ID or OTP is missing' });
   }

@@ -1,7 +1,7 @@
 import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData, getKartStatus, updateKartStatus, sendNotification, closeOrder, limitUpdate, getReviews, isUserReviews, addReviews, updateReview, deleteReview, replyReview, getUser, verifyOrder, quantity, getAllUsers, sendOrderOtp, deleteOrder, orderCancel, removeOrder, cancelSelectedOrders } from '../controllers/userController2.js';
-import { createOrder, refundAll, refundPayment, releaseInventory, verifyPayment } from '../controllers/paymentController.js';
+import { createOrder, refundAll, refundPayment, releaseInventory, verifyPayment,paymentRateLimiter } from '../controllers/paymentController.js';
 
 const userRouter = express.Router();
 
@@ -16,12 +16,12 @@ userRouter.put('/kart-status', updateKartStatus);
 
 // Order routes
 // userRouter.post('/order', userAuth, order);
-userRouter.post('/create-order', userAuth, createOrder);  // ✅ FIXED
-userRouter.post('/verify-payment',userAuth, verifyPayment);                // ✅ FIXED
+userRouter.post('/create-order', userAuth, paymentRateLimiter, createOrder);
+userRouter.post('/verify-payment', userAuth, paymentRateLimiter, verifyPayment);
+userRouter.post('/refund', userAuth, paymentRateLimiter, refundPayment);
+userRouter.post('/refund-all', userAuth, paymentRateLimiter, refundAll);               // ✅ FIXED
 userRouter.post('/release-inventory',userAuth,releaseInventory)
 userRouter.post('/verifyOrder', verifyOrder);
-userRouter.post('/refund',refundPayment)
-userRouter.post('/refund-all',refundAll)
 userRouter.post('/send-orderOtp', userAuth, sendOrderOtp);
 userRouter.get('/quantity', quantity);
 userRouter.delete('/order/:id', orderCancel);

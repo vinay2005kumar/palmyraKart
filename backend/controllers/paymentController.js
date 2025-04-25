@@ -5,10 +5,11 @@ import { Order } from '../models/orderSchema.js';
 import mongoose from 'mongoose';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, runTransaction, get, set } from "firebase/database";
-
+import Joi from 'joi'; // Added for input validation
+import rateLimit from 'express-rate-limit'; // Added for rate limiting
 // Configurations
 dotenv.config();
-
+const RAZORPAY_IPS = ['54.209.155.0/24', '54.208.86.0/24']; 
 // Constants
 const INVENTORY_USER_ID = process.env.FIREBASE_COLLECTION || 'AmIewDOW747kvqkfhNE2';
 const INVENTORY_PATH = `users/${INVENTORY_USER_ID}`;
@@ -32,6 +33,13 @@ const database = getDatabase(app);
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+// Rate limiter for payment endpoints
+export const paymentRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many payment attempts, please try again later'
 });
 
 const calculateActualQuantity = (item) => {
@@ -810,38 +818,7 @@ export const refundPayment = async (req, res) => {
     });
   }
 };
-export const handleRefundWebhook = async (req, res) => {
-  try {
-    const body = req.body;
-    const signature = req.headers['x-razorpay-signature'];
 
-    // Verify the webhook signature
-    const isValid = razorpay.webhooks.validateWebhookSignature(
-      JSON.stringify(body),
-      signature,
-      process.env.RAZORPAY_WEBHOOK_SECRET
-    );
-
-    if (!isValid) {
-      return res.status(400).json({ success: false, message: 'Invalid signature' });
-    }
-
-    // Handle the refund event
-    switch (body.event) {
-      case 'refund.processed':
-        console.log('Refund processed:', body.payload.refund);
-        // Update your database or notify the customer
-        break;
-      default:
-        console.log('Unhandled event:', body.event);
-    }
-
-    res.status(200).json({ success: true });
-  } catch (error) {
-    console.error('Error handling refund webhook:', error);
-    res.status(500).json({ error: 'Webhook processing failed' });
-  }
-};
 
 export const refundAll = async (req, res) => {
   try {
@@ -1205,5 +1182,44 @@ export const refundAll = async (req, res) => {
       success: false,
       error: 'Failed to process bulk refunds. Please try again or contact support.',
     });
+  }
+};
+
+
+export const handleRefundWebhook = async (req, res) => {
+  try {
+    const body = req.body;
+      // 1. IP Whitelisting
+      if (!RAZORPAY_IPS.some(ip => req.ip.startsWith(ip))) {
+        console.warn(`Blocked webhook from unauthorized IP: ${req.ip}`);
+        return res.status(403).send('Forbidden');
+      }
+    const signature = req.headers['x-razorpay-signature'];
+
+    // Verify the webhook signature
+    const isValid = razorpay.webhooks.validateWebhookSignature(
+      JSON.stringify(body),
+      signature,
+      process.env.RAZORPAY_WEBHOOK_SECRET
+    );
+
+    if (!isValid) {
+      return res.status(400).json({ success: false, message: 'Invalid signature' });
+    }
+
+    // Handle the refund event
+    switch (body.event) {
+      case 'refund.processed':
+        console.log('Refund processed:', body.payload.refund);
+        // Update your database or notify the customer
+        break;
+      default:
+        console.log('Unhandled event:', body.event);
+    }
+
+    res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error handling refund webhook:', error);
+    res.status(500).json({ error: 'Webhook processing failed' });
   }
 };
