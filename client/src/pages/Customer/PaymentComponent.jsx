@@ -52,9 +52,9 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
       response: error.response?.data,
       stack: error.stack
     });
-    
+
     let message = error.message || 'Payment processing failed';
-    
+
     if (error.response?.data?.code === 'OUT_OF_STOCK') {
       message = 'Item is out of stock. Please try again later.';
     } else if (error.response?.data?.code === 'ORDER_CREATION_FAILED') {
@@ -64,7 +64,7 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
     } else if (error.response?.data?.error) {
       message = error.response.data.error;
     }
-    
+
     showToast(message, 'error');
     setLoading(false);
   };
@@ -98,16 +98,16 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
 
       try {
         setLoading(true);
-        
-        const { 
-          bname, 
-          btype, 
-          bcount, 
-          tprice, 
-          baddress, 
-          bphone2, 
-          generateOrderId, 
-          navigate, 
+
+        const {
+          bname,
+          btype,
+          bcount,
+          tprice,
+          baddress,
+          bphone2,
+          generateOrderId,
+          navigate,
           userId,
           customerEmail,
           bpath
@@ -163,9 +163,9 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           order_id: orderResponse.data.razorpayOrderId,
           name: 'Your Business',
           description: `Purchase of ${bcount} ${btype}`,
-          handler: async function(response) {
+          handler: async function (response) {
             try {
-              rzp.modal = { 
+              rzp.modal = {
                 ondismiss: () => false,
                 escape: false,
                 backdropclose: false
@@ -187,7 +187,15 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
               if (verification.data.success) {
                 rzp.close();
                 showToast('Payment successfully verified!', 'success');
-                
+                // Send OTP after successful verification
+                await axios.post(
+                  `${url}/send-orderOtp`,
+                  {
+                    oid: orderResponse.data.orderId,
+                    orderOtp: orderPayload.otp // The OTP you generated earlier
+                  },
+                  { withCredentials: true }
+                );
                 if (onPaymentSuccess) {
                   onPaymentSuccess({
                     orderId: orderResponse.data.orderId,

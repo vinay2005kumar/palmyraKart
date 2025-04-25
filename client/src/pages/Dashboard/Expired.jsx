@@ -210,7 +210,7 @@ const Expired = () => {
   const confirmRefund = async (paymentId, amount, orderId, email, name) => {
     try {
       setRefundLoading((prev) => ({ ...prev, [orderId]: true }));
-
+     console.log('details',paymentId,amount,orderId,email,name)
       const refundResponse = await axios.post(`${url}/refund`, {
         paymentId,
         amount,

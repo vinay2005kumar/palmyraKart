@@ -385,7 +385,7 @@ function getStatusDisplay(status, deliveryDate) {
                               {getStatusDisplay(order.status, formattedDeliveryDate)}
                             </span>
                           </p>
-                          {order.status !== 'Cancelled' ? (
+                          {order.status == 'Pending' ? (
                             <div>
                               <button
                                 id="cancel"
