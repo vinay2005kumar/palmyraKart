@@ -13,9 +13,16 @@ import { useAuth } from '../../context/AuthContext';
 const Order = ({ order2, resetOrder }) => {
   const [isBeforeTenAM, setIsBeforeTenAM] = useState(true);
   const [cancel, setCancel] = useState(false);
-  const [isCancel,setIsCancel]=useState(false)
+  const [isCancel, setIsCancel] = useState(false);
   const [orderId, setOrderId] = useState();
-  const [item, setItem] = useState({});
+  const [item, setItem] = useState({
+    itemtype: '',
+    itemimg: '',
+    itemquantity: 0,
+    itemprice: 0,
+    itemdate: '',
+    itemstatus: ''
+  });
   const [cancellationReason, setCancellationReason] = useState('order cancel');
   const isMobile = window.innerWidth <= 768;
   const [email, setEmail] = useState('');
@@ -24,21 +31,16 @@ const Order = ({ order2, resetOrder }) => {
   const [date, setDate] = useState();
   const url = 'https://palmyra-fruit.onrender.com/api/user';
   //const url = "http://localhost:4000/api/user";
-
-  // Toast function with proper management
   const toastfun = (msg, type, toastId = 'default-toast') => {
     if (!toast.isActive(toastId)) {
-      // Calculate approximate dimensions based on message length
       const messageLength = msg.length;
-      const lineLength = isMobile ? 30 : 50; // Characters per line
+      const lineLength = isMobile ? 30 : 50;
       const lines = Math.ceil(messageLength / lineLength);
       
-      // Calculate dynamic dimensions
       const minWidth = isMobile ? '80vw' : '30vw';
       const maxWidth = isMobile ? '90vw' : '40vw';
       const baseHeight = isMobile ? '10vh' : '10vh';
       const lineHeight = '1.5rem';
-      const padding = 20; // px
       
       const dynamicHeight = `calc(${baseHeight} + ${Math.max(0, lines - 3)} * ${lineHeight})`;
       
@@ -53,13 +55,13 @@ const Order = ({ order2, resetOrder }) => {
           right: isMobile ? '5%' : '20px',
           minWidth: minWidth,
           maxWidth: maxWidth,
-          width: 'auto', // Let it grow based on content
-          height: 'auto', // Let it grow based on content
+          width: 'auto',
+          height: 'auto',
           minHeight: baseHeight,
           fontSize: '1.2rem',
           padding: '10px',
-          whiteSpace: 'pre-wrap', // Preserve line breaks and wrap text
-          wordWrap: 'break-word', // Break long words
+          whiteSpace: 'pre-wrap',
+          wordWrap: 'break-word',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -68,26 +70,29 @@ const Order = ({ order2, resetOrder }) => {
     }
   };
 
-  // Cancel order
   const cancelOrder = async (orderId, email) => {
-     setIsCancel(true)
+    setIsCancel(true);
     try {
       const deleteUrl = `${url}/order/${orderId}`;
-      await axios.delete(deleteUrl, {
+      const response = await axios.delete(deleteUrl, {
         headers: { 'Content-Type': 'application/json' },
         data: { email, cancellationReason },
       });
 
+      if (response.data.status === 'RefundProcessing') {
+        toastfun('Refund initiated. Processing may take 5-7 business days.', 'info', `refund-initiated-${orderId}`);
+      }
+
       checkAuth();
       setCancel(false);
-      setIsCancel(false)
+      setIsCancel(false);
       toastfun('Order Cancelled Successfully', 'success', `cancel-success-${orderId}`);
     } catch (error) {
       toastfun('Failed to cancel the order. Please try again.', 'error', `cancel-error-${orderId}`);
+      setIsCancel(false);
     }
   };
 
-  // Check if the current time is before 10:00 AM
   const checkIfBeforeTenAM = () => {
     const now = new Date();
     const currentHour = now.getHours();
@@ -95,7 +100,6 @@ const Order = ({ order2, resetOrder }) => {
     setIsBeforeTenAM(currentHour < 10 || (currentHour === 10 && currentMinutes === 0));
   };
 
-  // Handle cancel button click
   const handleCancelClick = (id, type, img, quantity, price, status, date) => {
     setCancel(true);
     setItem({
@@ -109,11 +113,8 @@ const Order = ({ order2, resetOrder }) => {
     setOrderId(id);
   };
 
-  // Function to handle the actual deletion
   const confirmDelete = async (orderId, status) => {
     const toastId = `delete-toast-${orderId}`;
-    
-    // Dismiss any existing toast with this ID
     toast.dismiss(toastId);
 
     toast.info(
@@ -123,8 +124,8 @@ const Order = ({ order2, resetOrder }) => {
           onClick={async () => {
             toast.dismiss(toastId);
             try {
-              if (status === 'Cancelled') {
-                toastfun('Order cannot be deleted until Refunded.', 'error', `delete-error-${orderId}`);
+              if (status.includes('Refund')) {
+                toastfun('Order cannot be deleted until Refund is completed.', 'error', `delete-error-${orderId}`);
               } else {
                 const deleteUrl = `${url}/deleteOrder/${orderId}`;
                 await axios.delete(deleteUrl, {
@@ -195,53 +196,36 @@ const Order = ({ order2, resetOrder }) => {
     return `${day} ${month} ${dayOfMonth} ${year} at ${hours}:${minutes} ${ampm}`;
   };
 
-
-  
-// Function to determine status color based on status value
-function getStatusColor(status) {
-  switch(status) {
-    case 'Pending':
-      return '#FF8C00'; // Dark Orange
-    case 'Delivered':
-      return '#008000'; // Green
-    case 'Delivered*':
-      return '#006400'; // Dark Green
-    case 'Cancelled':
-      return '#FF0000'; // Red
-    case 'Refund':
-      return '#4B0082'; // Indigo
-    case 'Refunded':
-      return '#800080'; // Purple
-    case 'Refunded*':
-      return '#800080'; // Purple
-    default:
-      return '#000000'; // Black
+  function getStatusColor(status) {
+    if (status.includes('Refund')) {
+      if (status.includes('Processing')) return '#4B0082'; // Indigo for processing
+      if (status.includes('Failed')) return '#FF0000'; // Red for failed
+      return '#800080'; // Purple for completed
+    }
+    switch(status) {
+      case 'Pending': return '#FF8C00';
+      case 'Delivered': return '#008000';
+      case 'Delivered*': return '#006400';
+      case 'Cancelled': return '#FF0000';
+      default: return '#000000';
+    }
   }
-}
 
-// Function to get a more descriptive status display
-function getStatusDisplay(status, deliveryDate) {
-  switch(status) {
-    case 'Pending':
-      return `Delivery on ${deliveryDate}`;
-    case 'Delivered':
-      return `Successfully Delivered on ${deliveryDate}`;
-    case 'Delivered*':
-      return `Delivered on ${deliveryDate}`;
-    case 'Cancelled':
-      return 'Order Cancelled';
-    case 'Refund':
-      return 'Refund Processing';
-    case 'Refunded':
+  function getStatusDisplay(status, deliveryDate) {
+    if (status.includes('Refund')) {
+      if (status.includes('Processing')) return 'Refund Processing';
+      if (status.includes('Failed')) return 'Refund Failed';
       return 'Refund Completed';
-      case 'Refunded*':
-        return 'Refund Completed';
-    default:
-      return status;
+    }
+    switch(status) {
+      case 'Pending': return `Delivery on ${deliveryDate}`;
+      case 'Delivered': return `Successfully Delivered on ${deliveryDate}`;
+      case 'Delivered*': return `Delivered on ${deliveryDate}`;
+      case 'Cancelled': return 'Order Cancelled';
+      default: return status;
+    }
   }
-}
 
-  // Handle payment success toast
   useEffect(() => {
     if (order2) {
       if (!toast.isActive('payment-success')) {
@@ -251,7 +235,6 @@ function getStatusDisplay(status, deliveryDate) {
     }
   }, [order2, resetOrder]);
 
-  // Fetch data on component mount
   useEffect(() => {
     checkAuth();
     checkIfBeforeTenAM();
@@ -260,7 +243,6 @@ function getStatusDisplay(status, deliveryDate) {
     }
   }, []);
 
-  // Render when user is not authenticated
   const renderNotAuthenticated = () => {
     return (
       <div className="not-authenticated-container">
@@ -278,7 +260,6 @@ function getStatusDisplay(status, deliveryDate) {
     );
   };
 
-  // Render when user has no orders
   const renderNoOrders = () => {
     return (
       <div className="no-orders-container">
@@ -333,29 +314,23 @@ function getStatusDisplay(status, deliveryDate) {
                   {orderDetails
                     .slice()
                     .sort((a, b) => {
-                      // First, sort by status (Pending comes first)
                       if (a.status === 'Pending' && b.status !== 'Pending') return -1;
                       if (a.status !== 'Pending' && b.status === 'Pending') return 1;
-                      
-                      // If both have same status, sort by date (most recent first)
                       const dateA = new Date(a.date);
                       const dateB = new Date(b.date);
                       return dateB - dateA;
                     })
                     .map((order) => {
                       const orderDate = new Date(order.date);
-                      const orderHour = orderDate.getHours(); // Get hours (0-23)
+                      const orderHour = orderDate.getHours();
                       
                       const deliveryDate = new Date(orderDate);
-                      
-                      // Check the time range
-                      if (orderHour >= 12 || orderHour === 0) { // 4:00 PM - 11:59 PM or exactly 12:00 AM
+                      if (orderHour >= 12 || orderHour === 0) {
                         deliveryDate.setDate(orderDate.getDate() + 1);
                       } else {
                         deliveryDate.setDate(orderDate.getDate());
                       }
                       
-                      // Format date as dd/mm/yyyy with leading zeros
                       const formatDeliveryDate = (date) => {
                         const day = String(date.getDate()).padStart(2, '0');
                         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -385,7 +360,7 @@ function getStatusDisplay(status, deliveryDate) {
                               {getStatusDisplay(order.status, formattedDeliveryDate)}
                             </span>
                           </p>
-                          {order.status == 'Pending' ? (
+                          {order.status === 'Pending' ? (
                             <div>
                               <button
                                 id="cancel"
@@ -398,13 +373,17 @@ function getStatusDisplay(status, deliveryDate) {
                                   order.status, 
                                   new Date(order.date).toLocaleString()
                                 )}
-                                disabled={order.status === 'Delivered' || order.status === 'Delivered*'}
+                                disabled={order.status.includes('Delivered')}
                               >
                                 Cancel
                               </button>
                             </div>
                           ) : (
-                            <button id='cancel' onClick={() => confirmDelete(order.orderId, order.status)}>
+                            <button 
+                              id='cancel' 
+                              onClick={() => confirmDelete(order.orderId, order.status)}
+                              disabled={order.status.includes('Refund') && !order.status.includes('Completed')}
+                            >
                               Delete
                             </button>
                           )}
@@ -425,7 +404,9 @@ function getStatusDisplay(status, deliveryDate) {
                 <p className="tcancel tc2" id="tc2">Quantity: {item.itemquantity}</p>
                 <p className="tcancel tc3" id="tc3">Item Price: <PiCurrencyInr id="cinr" />{item.itemprice}</p>
                 <button onClick={() => setCancel(false)} id="cback">Back</button>
-                <button onClick={() => cancelOrder(orderId, email)} id="ccancel"   disabled={isCancel}>{isCancel?'Cancelling..':'Confirm'}</button>
+                <button onClick={() => cancelOrder(orderId, email)} id="ccancel" disabled={isCancel}>
+                  {isCancel ? 'Cancelling..' : 'Confirm'}
+                </button>
               </div>
             )}
           </>
