@@ -119,6 +119,22 @@ const inventoryService = {
     }
   }
 };
+// Generate Razorpay order without saving to DBe
+
+export const generateRazorpay= async (req, res) => {
+  try {
+    const { amount } = req.body;
+    const options = {
+      amount,
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`
+    };
+    const razorpayOrder = await razorpay.orders.create(options);
+    res.json({ razorpayOrderId: razorpayOrder.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create Razorpay order' });
+  }
+};
 
 export const createOrder = async (req, res) => {
   const session = await mongoose.startSession();
@@ -320,7 +336,7 @@ export const verifyPayment = async (req, res) => {
     await session.abortTransaction();
     console.error('Payment verification failed:', error);
 
-    // Release inventory if payment verification fails
+    // Release inventory and delete order if payment verification fails
     try {
       if (req.body.orderCreationId) {
         const order = await Order.findOne({ orderId: req.body.orderCreationId });
@@ -328,10 +344,14 @@ export const verifyPayment = async (req, res) => {
           const orderQuantity = order.items.reduce((sum, item) =>
             sum + calculateActualQuantity(item), 0);
           await inventoryService.updateInventory(orderQuantity, 'release', req.body.orderCreationId);
+          
+          // Delete the failed order
+          await Order.deleteOne({ orderId: req.body.orderCreationId });
+          console.log(`Deleted failed order: ${req.body.orderCreationId}`);
         }
       }
     } catch (releaseError) {
-      console.error('Failed to release inventory after payment failure:', releaseError);
+      console.error('Failed to release inventory and delete order after payment failure:', releaseError);
     }
 
     res.status(400).json({
@@ -534,7 +554,7 @@ export const refundPayment = async (req, res) => {
 
     // Update order status
     try {
-      const order = await Order.findOne({ orderId: orderNumber });
+      const order = await Order.findOne({ orderId:String(orderNumber).trim()});
       
       if (!order) {
         console.log('Order not found:', orderNumber);
@@ -1140,7 +1160,7 @@ export const handleRefundWebhook = async (req, res) => {
   try {
     const signature = req.headers['x-razorpay-signature'];
     const body = req.body;
-
+    
     // Validate signature
     const isValid = razorpay.webhooks.validateWebhookSignature(
       JSON.stringify(body),

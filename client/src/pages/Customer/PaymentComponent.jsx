@@ -9,9 +9,8 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
   const [rzpInstance, setRzpInstance] = useState(null);
   const isMobile = window.innerWidth <= 765;
   const url = 'https://palmyra-fruit.onrender.com/api/user';
-   //const url = "http://localhost:4000/api/user";
+ // const url = "http://localhost:4000/api/user";
 
-  // Load Razorpay script
   useEffect(() => {
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -35,10 +34,6 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
     toast[type](msg, {
       position: "top-center",
       autoClose: 5000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
       style: {
         width: isMobile ? '80vw' : '400px',
         fontSize: isMobile ? '14px' : '16px'
@@ -47,43 +42,20 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
   };
 
   const handleError = (error) => {
-    console.error('Payment error details:', {
-      message: error.message,
-      response: error.response?.data,
-      stack: error.stack
-    });
-
-    let message = error.message || 'Payment processing failed';
-
-    if (error.response?.data?.code === 'OUT_OF_STOCK') {
-      message = 'Item is out of stock. Please try again later.';
-    } else if (error.response?.data?.code === 'ORDER_CREATION_FAILED') {
-      message = 'Failed to create order. Please try again.';
-    } else if (error.response?.data?.code === 'VERIFICATION_FAILED') {
-      message = 'Payment verification failed. Please contact support.';
-    } else if (error.response?.data?.error) {
-      message = error.response.data.error;
-    }
-
+    console.error('Payment error details:', error);
+    const message = error.response?.data?.error || error.message || 'Payment failed';
     showToast(message, 'error');
-    setLoading(false);
+    setLoading(false); // Ensure loading state is reset on error
   };
 
   const calculateActualQuantity = (item) => {
-    if (item.itemType && item.itemType.toLowerCase() === 'dozen') {
-      return item.quantity * 12;
-    }
-    return item.quantity;
+    return item.itemType?.toLowerCase() === 'dozen' ? item.quantity * 12 : item.quantity;
   };
 
   const releaseInventory = async (orderId, items) => {
     try {
       const quantity = items.reduce((sum, item) => sum + calculateActualQuantity(item), 0);
-      await axios.post(
-        `${url}/release-inventory`,
-        { orderId, quantity },
-        { withCredentials: true }
-      );
+      await axios.post(`${url}/release-inventory`, { orderId, quantity }, { withCredentials: true });
     } catch (error) {
       console.error('Failed to release inventory:', error);
     }
@@ -113,21 +85,28 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           bpath
         } = buyComponentData;
 
-        const orderPayload = {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        let orderPayload = null;
+
+        // STEP 1: Generate Razorpay Order (no DB save here)
+        const razorpayOrderRes = await axios.post(`${url}/generate-razorpay-order`, {
+          amount: 5 * 100
+        }, { withCredentials: true });
+
+        const razorpayOrderId = razorpayOrderRes.data.razorpayOrderId;
+
+        // Prepare order payload - moved outside the handler for access in ondismiss
+        orderPayload = {
           amount: 5 * 100,
           totalAmount: tprice,
+          finalAmount: 5,
           tax: 0,
           shippingCost: 0,
           discount: 0,
-          finalAmount:5,
           productName: btype,
           description: `Purchase of ${bcount} ${btype}`,
           shippingAddress: {
             street: baddress || '',
-            city: '',
-            state: '',
-            country: '',
-            zipCode: '',
             phoneNumber: bphone2 || ''
           },
           items: [{
@@ -135,70 +114,68 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
             itemName: 'Palmyra Fruit',
             quantity: bcount,
             price: tprice,
-            imagePath: bpath || '',
+            imagePath: bpath || ''
           }],
           paymentMethod: 'Credit Card',
           date: new Date().toISOString(),
-          otp: Math.floor(100000 + Math.random() * 900000).toString(),
+          otp,
           orderId: generateOrderId(),
-          user: {
-            id: userId
-          }
+          user: { id: userId }
         };
-
-        const orderResponse = await axios.post(
-          `${url}/create-order`,
-          orderPayload,
-          { withCredentials: true }
-        );
-
-        if (!orderResponse.data.success) {
-          throw new Error(orderResponse.data.error || 'Order creation failed');
-        }
 
         const rzp = new window.Razorpay({
           key: import.meta.env.VITE_APP_RAZORPAY_KEY_ID,
-          amount: orderResponse.data.finalAmount * 100,
+          amount: 5 * 100,
           currency: 'INR',
-          order_id: orderResponse.data.razorpayOrderId,
+          order_id: razorpayOrderId,
           name: 'Your Business',
           description: `Purchase of ${bcount} ${btype}`,
           handler: async function (response) {
             try {
-              rzp.modal = {
-                ondismiss: () => false,
-                escape: false,
-                backdropclose: false
-              };
+              // Add razorpay details to order payload
+              orderPayload.razorpayPaymentId = response.razorpay_payment_id;
+              orderPayload.razorpayOrderId = response.razorpay_order_id;
+              orderPayload.razorpaySignature = response.razorpay_signature;
 
-              const verification = await axios.post(
-                `${url}/verify-payment`,
-                {
-                  orderCreationId: orderResponse.data.orderId,
-                  razorpayOrderId: orderResponse.data.razorpayOrderId,
-                  razorpayPaymentId: response.razorpay_payment_id,
-                  razorpaySignature: response.razorpay_signature,
-                  amount: orderResponse.data.finalAmount * 100,
-                  items: orderResponse.data.items
-                },
-                { withCredentials: true }
-              );
+              // STEP 2: Create actual Order in DB after successful payment
+              let orderResponse;
+              try {
+                orderResponse = await axios.post(`${url}/create-order`, orderPayload, { withCredentials: true });
+              } catch (error) {
+                if (error.response) {
+                  showToast(`Error creating order: ${error.response.data.message || 'An error occurred while creating the order'}`, 'error');
+                } else if (error.request) {
+                  showToast('Error: Network issue or server is down when creating the order', 'error');
+                } else {
+                  showToast(`Error: ${error.message}`, 'error');
+                }
+                setLoading(false); // Stop loading if there's an error
+                return;
+              }
+
+              // STEP 3: Verify payment
+              const verification = await axios.post(`${url}/verify-payment`, {
+                orderCreationId: orderPayload.orderId,
+                razorpayOrderId,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+                amount: 5 * 100,
+                items: orderPayload.items
+              }, { withCredentials: true });
 
               if (verification.data.success) {
                 rzp.close();
+                setLoading(false); // Reset loading state after successful payment
                 showToast('Payment successfully verified!', 'success');
-                // Send OTP after successful verification
-                await axios.post(
-                  `${url}/send-orderOtp`,
-                  {
-                    oid: orderResponse.data.orderId,
-                    orderOtp: orderPayload.otp // The OTP you generated earlier
-                  },
-                  { withCredentials: true }
-                );
+
+                await axios.post(`${url}/send-orderOtp`, {
+                  oid: orderPayload.orderId,
+                  orderOtp: otp
+                }, { withCredentials: true });
+
                 if (onPaymentSuccess) {
                   onPaymentSuccess({
-                    orderId: orderResponse.data.orderId,
+                    orderId: orderPayload.orderId,
                     paymentId: response.razorpay_payment_id,
                     amount: tprice
                   });
@@ -207,15 +184,16 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
                 if (navigate) {
                   navigate('/order', {
                     state: {
-                      orderId: orderResponse.data.orderId,
+                      orderId: orderPayload.orderId,
                       paymentId: response.razorpay_payment_id
                     }
                   });
                 }
               } else {
-                await releaseInventory(orderResponse.data.orderId, orderPayload.items);
+                await releaseInventory(orderPayload.orderId, orderPayload.items);
                 throw new Error(verification.data.error || 'Verification failed');
               }
+
             } catch (error) {
               handleError(error);
               rzp.close();
@@ -229,17 +207,31 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
           theme: { color: '#3399cc' },
           modal: {
             ondismiss: async () => {
+              setLoading(false); // Reset loading state when modal is dismissed
               showToast('Payment was cancelled', 'info');
-              await releaseInventory(orderResponse.data.orderId, orderPayload.items);
-              setLoading(false);
+              
+              // Only attempt to release inventory if we have an orderId
+              if (orderPayload && orderPayload.orderId) {
+                await releaseInventory(orderPayload.orderId, orderPayload.items);
+              }
             }
           }
         });
 
         rzp.on('payment.failed', async (response) => {
           showToast(`Payment failed: ${response.error.description}`, 'error');
-          await releaseInventory(orderResponse.data.orderId, orderPayload.items);
-          setLoading(false);
+          setLoading(false); // Reset loading state on payment failure
+          
+          // Only attempt operations if we have an orderId
+          if (orderPayload && orderPayload.orderId) {
+            await releaseInventory(orderPayload.orderId, orderPayload.items);
+            try {
+              await axios.delete(`${url}/deleteOrder/${orderPayload.orderId}`);
+              console.log('Order deleted due to payment failure');
+            } catch (deleteError) {
+              console.error('Failed to delete order after payment failure:', deleteError);
+            }
+          }
         });
 
         rzp.open();
@@ -249,18 +241,15 @@ const PaymentComponent = forwardRef(({ onPaymentSuccess }, ref) => {
         handleError(error);
       }
     },
+
     closePayment: () => {
       if (rzpInstance) {
         rzpInstance.close();
         setRzpInstance(null);
       }
-      setLoading(false);
+      setLoading(false); // Reset loading state when payment is closed
     }
   }));
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
 
   return (
     <>

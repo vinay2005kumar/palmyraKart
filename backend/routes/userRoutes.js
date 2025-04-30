@@ -1,7 +1,7 @@
 import express from 'express';
 import userAuth from '../middleware/userAuth.js';
 import { getUserData, getKartStatus, updateKartStatus, sendNotification, closeOrder, limitUpdate, getReviews, isUserReviews, addReviews, updateReview, deleteReview, replyReview, getUser, verifyOrder, quantity, getAllUsers, sendOrderOtp, deleteOrder, orderCancel, removeOrder, cancelSelectedOrders } from '../controllers/userController2.js';
-import { createOrder, refundAll, refundPayment, releaseInventory, verifyPayment,paymentRateLimiter,handleRefundWebhook } from '../controllers/paymentController.js';
+import { createOrder, refundAll, refundPayment, releaseInventory, verifyPayment,paymentRateLimiter,handleRefundWebhook, generateRazorpay } from '../controllers/paymentController.js';
 
 const userRouter = express.Router();
 
@@ -18,13 +18,15 @@ userRouter.put('/kart-status', updateKartStatus);
 // userRouter.post('/order', userAuth, order);
 // Webhook endpoint for Razorpay
 userRouter.post('/webhooks/razorpay', express.raw({type: 'application/json'}), handleRefundWebhook);
-userRouter.post('/create-order', userAuth, createOrder);
-userRouter.post('/verify-payment', userAuth, verifyPayment);
+userRouter.post('/generate-razorpay-order',userAuth,generateRazorpay)
+userRouter.post('/create-order',userAuth,createOrder);
+userRouter.post('/verify-payment',userAuth,verifyPayment);
+
 userRouter.post('/refund', userAuth, refundPayment);
 userRouter.post('/refund-all', userAuth, refundAll);               // ✅ FIXED
-userRouter.post('/release-inventory',userAuth,releaseInventory)
+userRouter.post('/release-inventory',releaseInventory)
 userRouter.post('/verifyOrder', verifyOrder);
-userRouter.post('/send-orderOtp', userAuth, sendOrderOtp);
+userRouter.post('/send-orderOtp', sendOrderOtp);
 userRouter.get('/quantity', quantity);
 userRouter.delete('/order/:id', orderCancel);
 userRouter.delete('/removeOrder/:orderId',removeOrder)
