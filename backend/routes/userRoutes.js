@@ -25,8 +25,8 @@ userRouter.post('/verify-payment',userAuth,verifyPayment);
 userRouter.post('/refund', userAuth, refundPayment);
 userRouter.post('/refund-all', userAuth, refundAll);               // ✅ FIXED
 userRouter.post('/release-inventory',releaseInventory)
-userRouter.post('/verifyOrder', verifyOrder);
-userRouter.post('/send-orderOtp', sendOrderOtp);
+userRouter.post('/verifyOrder',userAuth, verifyOrder);
+userRouter.post('/send-orderOtp',userAuth, sendOrderOtp);
 userRouter.get('/quantity', quantity);
 userRouter.delete('/order/:id', orderCancel);
 userRouter.delete('/removeOrder/:orderId',removeOrder)

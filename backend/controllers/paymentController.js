@@ -5,11 +5,13 @@ import { Order } from '../models/orderSchema.js';
 import mongoose from 'mongoose';
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, runTransaction, get, set } from "firebase/database";
-import Joi from 'joi'; // Added for input validation
-import rateLimit from 'express-rate-limit'; // Added for rate limiting
+import Joi from 'joi';
+import rateLimit from 'express-rate-limit';
+
 // Configurations
 dotenv.config();
 const RAZORPAY_IPS = ['54.209.155.0/24', '54.208.86.0/24'];
+
 // Constants
 const INVENTORY_USER_ID = process.env.FIREBASE_COLLECTION || 'AmIewDOW747kvqkfhNE2';
 const INVENTORY_PATH = `users/${INVENTORY_USER_ID}`;
@@ -34,6 +36,7 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+
 // Rate limiter for payment endpoints
 export const paymentRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -119,20 +122,39 @@ const inventoryService = {
     }
   }
 };
-// Generate Razorpay order without saving to DBe
 
-export const generateRazorpay= async (req, res) => {
+// Generate Razorpay order without saving to DB
+export const generateRazorpay = async (req, res) => {
   try {
+    // Validate the request
+    const schema = Joi.object({
+      amount: Joi.number().required().min(1)
+    });
+    
+    const { error } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+    
     const { amount } = req.body;
+    
+    // Create Razorpay order
     const options = {
       amount,
       currency: "INR",
       receipt: `receipt_${Date.now()}`
     };
+    
     const razorpayOrder = await razorpay.orders.create(options);
-    res.json({ razorpayOrderId: razorpayOrder.id });
+    console.log('Razorpay order created:', razorpayOrder.id);
+    
+    res.json({ 
+      razorpayOrderId: razorpayOrder.id,
+      success: true 
+    });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create Razorpay order' });
+    console.error('Failed to create Razorpay order:', err);
+    res.status(500).json({ error: 'Failed to create Razorpay order', details: err.message });
   }
 };
 
@@ -141,16 +163,32 @@ export const createOrder = async (req, res) => {
   session.startTransaction();
 
   try {
+    // Validate required fields
+    const schema = Joi.object({
+      items: Joi.array().required().min(1),
+      orderId: Joi.string().required(),
+      finalAmount: Joi.number().required(),
+      user: Joi.object({
+        id: Joi.string().required()
+      }).required()
+    });
+
+    const { error } = schema.validate(req.body, { allowUnknown: true });
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
+
     const {
       items,
       orderId,
       finalAmount,
-      user
+      user,
+      razorpayOrderId, // From frontend after payment success
+      razorpayPaymentId, // From frontend after payment success
+      razorpaySignature // From frontend after payment success
     } = req.body;
 
-    if (!user?.id || !orderId || !items?.length) {
-      throw new Error('MISSING_REQUIRED_FIELDS');
-    }
+    console.log('Creating order with ID:', orderId);
 
     // Check inventory availability first
     const currentInventory = await inventoryService.getInventory();
@@ -165,21 +203,11 @@ export const createOrder = async (req, res) => {
     // Reserve inventory
     await inventoryService.updateInventory(orderQuantity, 'reserve', orderId);
 
-    // Create Razorpay order
-    const razorpayOrder = await razorpay.orders.create({
-      amount: finalAmount * 100,
-      currency: 'INR',
-      receipt: orderId,
-      notes: {
-        items: JSON.stringify(items),
-        userId: user.id
-      }
-    });
-
     // Create order document
     const newOrder = new Order({
       orderId,
-      razorpayOrderId: razorpayOrder.id,
+      razorpayOrderId,
+      razorpayPaymentId,
       user: user.id,
       items: items.map(item => ({
         itemType: item.itemType,
@@ -195,7 +223,7 @@ export const createOrder = async (req, res) => {
       finalAmount,
       paymentMethod: req.body.paymentMethod || 'Credit Card',
       shippingAddress: req.body.shippingAddress || {},
-      paymentStatus: 'reserved',
+      paymentStatus: 'reserved', // Will be updated to 'Completed' after verification
       status: 'Pending',
       date: req.body.date || new Date().toISOString(),
       otp: req.body.otp,
@@ -204,6 +232,7 @@ export const createOrder = async (req, res) => {
     });
 
     await newOrder.save({ session });
+    console.log(`Order ${orderId} saved to database`);
 
     // Set timeout to release inventory if payment not completed
     const releaseTimeout = setTimeout(async () => {
@@ -234,9 +263,7 @@ export const createOrder = async (req, res) => {
     res.json({
       success: true,
       orderId,
-      razorpayOrderId: razorpayOrder.id,
-      amount: finalAmount * 100,
-      finalAmount,
+      amount: finalAmount,
       items
     });
 
@@ -259,6 +286,32 @@ export const verifyPayment = async (req, res) => {
   session.startTransaction();
 
   try {
+    // Log the verification attempt
+    console.log('Verifying payment with data:', {
+      orderCreationId: req.body.orderCreationId,
+      razorpayOrderId: req.body.razorpayOrderId,
+      razorpayPaymentId: req.body.razorpayPaymentId,
+      amount: req.body.amount
+    });
+
+    // Validate required fields
+    const schema = Joi.object({
+      orderCreationId: Joi.string().required(),
+      razorpayOrderId: Joi.string().required(),
+      razorpayPaymentId: Joi.string().required(),
+      razorpaySignature: Joi.string().required(),
+      amount: Joi.number().required(),
+      items: Joi.array().required()
+    });
+
+    const { error } = schema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ 
+        success: false, 
+        error: error.details[0].message 
+      });
+    }
+
     const {
       orderCreationId,
       razorpayOrderId,
@@ -276,6 +329,7 @@ export const verifyPayment = async (req, res) => {
     });
 
     if (existingOrder) {
+      console.log('Payment already verified:', orderCreationId);
       return res.json({
         success: true,
         orderId: orderCreationId,
@@ -290,40 +344,66 @@ export const verifyPayment = async (req, res) => {
       .update(`${razorpayOrderId}|${razorpayPaymentId}`)
       .digest('hex');
 
+    console.log('Signature comparison:', { 
+      received: razorpaySignature,
+      generated: generatedSignature,
+      matches: generatedSignature === razorpaySignature
+    });
+
     if (generatedSignature !== razorpaySignature) {
       throw new Error('INVALID_SIGNATURE');
     }
-
+    
     // Validate order exists
     const order = await Order.findOne({
       orderId: orderCreationId,
-      razorpayOrderId: razorpayOrderId,
-      paymentStatus: 'reserved'
     }).session(session);
 
     if (!order) {
-      throw new Error('INVALID_ORDER_STATE');
+      console.error('Order not found:', orderCreationId);
+      throw new Error('ORDER_NOT_FOUND');
     }
 
+    console.log('Found order:', order.orderId);
+
     // Verify payment with Razorpay
-    const payment = await razorpay.payments.fetch(razorpayPaymentId);
-    if (payment.status !== 'captured' || payment.amount !== Number(amount)) {
-      throw new Error('PAYMENT_VALIDATION_FAILED');
+    try {
+      const payment = await razorpay.payments.fetch(razorpayPaymentId);
+      console.log('Razorpay payment details:', {
+        status: payment.status,
+        amount: payment.amount,
+        expected: Number(amount)
+      });
+      
+      if (payment.status !== 'captured') {
+        throw new Error(`PAYMENT_INVALID_STATUS: ${payment.status}`);
+      }
+      
+      if (payment.amount !== Number(amount)) {
+        throw new Error(`AMOUNT_MISMATCH: Expected ${amount}, got ${payment.amount}`);
+      }
+    } catch (razorpayError) {
+      console.error('Error fetching payment from Razorpay:', razorpayError);
+      throw new Error(`RAZORPAY_FETCH_ERROR: ${razorpayError.message}`);
     }
 
     // Confirm inventory reservation
     const orderQuantity = items.reduce((sum, item) => {
       return sum + calculateActualQuantity(item);
     }, 0);
+    
     await inventoryService.updateInventory(orderQuantity, 'confirm', orderCreationId);
+    console.log('Inventory confirmed for order:', orderCreationId);
 
     // Update order status
     order.paymentStatus = 'Completed';
     order.paymentId = razorpayPaymentId;
-    order.status = 'Pending';
+    order.status = 'Pending'; // Order is confirmed but pending delivery
     await order.save({ session });
+    console.log('Order updated to Completed status:', orderCreationId);
 
     await session.commitTransaction();
+    console.log('Payment verification successful for order:', orderCreationId);
 
     res.json({
       success: true,
@@ -345,18 +425,21 @@ export const verifyPayment = async (req, res) => {
             sum + calculateActualQuantity(item), 0);
           await inventoryService.updateInventory(orderQuantity, 'release', req.body.orderCreationId);
           
-          // Delete the failed order
-          await Order.deleteOne({ orderId: req.body.orderCreationId });
-          console.log(`Deleted failed order: ${req.body.orderCreationId}`);
+          // Update order status instead of deleting
+          order.paymentStatus = 'Failed';
+          order.status = 'Failed';
+          await order.save();
+          console.log(`Updated failed order status: ${req.body.orderCreationId}`);
         }
       }
     } catch (releaseError) {
-      console.error('Failed to release inventory and delete order after payment failure:', releaseError);
+      console.error('Failed to release inventory after payment failure:', releaseError);
     }
 
     res.status(400).json({
       success: false,
       error: error.message,
+      details: error.toString(),
       code: error.message === 'RESERVATION_MISMATCH' ? 'INVENTORY_CONFIRM_FAILED' : 'VERIFICATION_FAILED'
     });
   } finally {
@@ -370,6 +453,7 @@ export const releaseInventory = async (req, res) => {
 
   try {
     const { orderId, quantity } = req.body;
+    console.log('Release inventory request for order:', orderId);
 
     const order = await Order.findOne({ orderId }).session(session);
     if (!order || order.paymentStatus !== 'reserved') {
@@ -378,9 +462,11 @@ export const releaseInventory = async (req, res) => {
     }
 
     await inventoryService.updateInventory(quantity, 'release', orderId);
+    console.log('Inventory released for order:', orderId);
 
     order.paymentStatus = 'Cancelled';
     await order.save({ session });
+    console.log('Order status updated to Cancelled:', orderId);
 
     await session.commitTransaction();
 
@@ -426,7 +512,7 @@ export const getInventoryStatus = async (req, res) => {
       error: 'Failed to get inventory status'
     });
   }
-};
+}
 
 export const scheduleInventoryValidation = () => {
   const VALIDATION_INTERVAL = 30 * 60 * 1000; // 30 minutes
@@ -851,7 +937,7 @@ export const refundAll = async (req, res) => {
       error: 'INVALID_ORDERS_DATA'
     });
   }
-
+console.log('orders',orders)
   const results = [];
   const batchSize = 5; // Process 5 at a time to avoid rate limiting
 
@@ -861,6 +947,7 @@ export const refundAll = async (req, res) => {
     await Promise.all(batch.map(async (order) => {
       const { paymentId, orderId, email, name, currency = "INR" } = order;
       const result = { orderId };
+      console.log('pid',paymentId)
 
       try {
         // Fetch payment details

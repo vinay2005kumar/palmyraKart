@@ -250,7 +250,7 @@ const handleOtpSubmit = async () => {
       number: vno,
       orderId,
       otp,
-    });
+    },{withCredentials:true});
 
     if (response.status === 200) {
       toastfun("Order verified successfully", 'success');
