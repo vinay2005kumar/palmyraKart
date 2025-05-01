@@ -134,9 +134,16 @@
 }
 
 #status {
-    position: absolute;
-    top: 5.5em;
-    left: 9.7em;
+  position: relative; /* Consider relative unless you have a reason for absolute */
+  margin-top: 1rem;
+
+}
+
+#status span {
+  display: inline-block;
+  border-radius: 4px;
+  word-break: break-word; /* better than break-all for readability */
+  max-width: 150px; /* optional: limits width to wrap text */
 }
 
 #status p {
@@ -713,6 +720,15 @@
     }
     #ccancel{
         right: 1em;
+    }
+    #status{
+      left: 0.2em;
+    }
+    #status span {
+      display: inline-block;
+      border-radius: 4px;
+      word-break: break-word; /* better than break-all for readability */
+      max-width: 155px; /* optional: limits width to wrap text */
     }
 }
 @media screen and (max-width:360px) {

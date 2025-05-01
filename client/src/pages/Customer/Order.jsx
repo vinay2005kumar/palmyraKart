@@ -218,7 +218,7 @@ const Order = ({ order2, resetOrder }) => {
     if (status === 'RefundFailed') return 'Refund Failed';
     switch(status) {
       case 'Pending': return `Delivery on ${deliveryDate}`;
-      case 'Delivered': return `Successfully Delivered on ${deliveryDate}`;
+      case 'Delivered': return `Delivered on ${deliveryDate}`;
       case 'Delivered*': return `Delivered on ${deliveryDate}`;
       case 'Cancelled': return 'Order Cancelled';
       default: return status;

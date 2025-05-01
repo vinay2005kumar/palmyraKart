@@ -35,7 +35,7 @@ const Expired = () => {
   const [refundall,setRefundAll]=useState(false)
   // Filter orders with status 'Cancelled' or 'Refunded'
   const expiredOrders = orders.filter(
-    (order) => order.status === 'Cancelled' || order.status === 'Refunded'
+    (order) => order.status === 'Cancelled' || order.status === 'Refunded'||'RefundInitiated'||'RefundFailed'||'Refunded'||'RefundProcessing'
   );
 
   // Calculate totals for expired orders
