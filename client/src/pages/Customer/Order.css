@@ -135,7 +135,8 @@
 
 #status {
   position: relative; /* Consider relative unless you have a reason for absolute */
-  margin-top: 1rem;
+  margin-top:6.5em;
+  left: 0.5em;
 
 }
 
@@ -143,7 +144,6 @@
   display: inline-block;
   border-radius: 4px;
   word-break: break-word; /* better than break-all for readability */
-  max-width: 150px; /* optional: limits width to wrap text */
 }
 
 #status p {
@@ -549,6 +549,20 @@
         top: 8em;
         left:1em;
     }
+    
+#status {
+  position: relative; /* Consider relative unless you have a reason for absolute */
+  margin-top:1.2em;
+  left: -6em!important;
+
+}
+
+#status span {
+  display: inline!important;
+  border-radius: 4px;
+  word-break: break-word; /* better than break-all for readability */
+  max-width: 160px!important;
+}
 
     #cancel {
         width: 6.5em;
@@ -723,12 +737,16 @@
     }
     #status{
       left: 0.2em;
+      top:7.3em;
+      width: fit-content;
+      height: fit-content;
+    
     }
     #status span {
       display: inline-block;
       border-radius: 4px;
       word-break: break-word; /* better than break-all for readability */
-      max-width: 155px; /* optional: limits width to wrap text */
+      /* optional: limits width to wrap text */
     }
 }
 @media screen and (max-width:360px) {
